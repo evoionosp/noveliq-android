@@ -24,3 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "noveliq-android"
 include(":app")
+include(":data")
+include(":domain")
+include(":presentation")
+include(":common")

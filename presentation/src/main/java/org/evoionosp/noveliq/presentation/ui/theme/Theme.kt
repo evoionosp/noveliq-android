@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.ui.theme
+package org.evoionosp.noveliq.presentation.ui.theme
 
 import android.app.Activity
 import android.os.Build

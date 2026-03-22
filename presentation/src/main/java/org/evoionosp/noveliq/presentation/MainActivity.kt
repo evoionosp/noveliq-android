@@ -4,22 +4,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import dagger.hilt.android.AndroidEntryPoint
 import org.evoionosp.noveliq.presentation.server.ServerSetupScreen
 import org.evoionosp.noveliq.presentation.ui.theme.NoveliqTheme
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             NoveliqTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ServerSetupScreen(modifier = Modifier.padding(innerPadding))
-                }
+                ServerSetupScreen(modifier = Modifier)
             }
         }
     }

@@ -7,7 +7,8 @@ data class ServerSetupUiState(
     val username: String = "",
     val password: String = "",
     val isChecking: Boolean = false,
+    val isLoggingIn: Boolean = false,
     val showLoginFields: Boolean = false,
     val serverStatus: ServerStatus? = null,
-    val errorMessage: String? = null
+    val uiMessageResId: Int? = null
 )

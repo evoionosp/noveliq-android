@@ -1,7 +1,7 @@
 [versions]
-compileSdk = "35"
+compileSdk = "36"
 minSdk = "24"
-targetSdk = "35"
+targetSdk = "36"
 versionCode = "1"
 versionName = "1.0"
 
@@ -12,6 +12,7 @@ hilt = "2.52"
 retrofit = "3.0.0"
 okhttp = "4.12.0"
 coroutines = "1.10.2"
+javaxInject = "1"
 
 coreKtx = "1.15.0"
 lifecycleRuntimeKtx = "2.8.7"
@@ -55,6 +56,7 @@ retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-
 retrofit-converter-scalars = { group = "com.squareup.retrofit2", name = "converter-scalars", version.ref = "retrofit" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

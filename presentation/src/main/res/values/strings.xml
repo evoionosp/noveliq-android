@@ -1,3 +1,28 @@
 <resources>
     <string name="app_name">presentation</string>
+    <string name="connect_to_server">Connect to Server</string>
+    <string name="server_url_label">Server URL</string>
+    <string name="server_url_placeholder">https://example.com</string>
+    <string name="check_server">Check Server</string>
+    <string name="checking_server">Checking...</string>
+    <string name="server_label">Server: %1$s %2$s</string>
+    <string name="language_label">Language: %1$s</string>
+    <string name="username_label">Username</string>
+    <string name="password_label">Password</string>
+    <string name="login_button">Login</string>
+    <string name="logging_in">Logging in...</string>
+    <string name="login_success">Login successful.</string>
+
+    <string name="error_server_url_required">Please enter a server URL.</string>
+    <string name="error_server_url_scheme">Server URL must start with http:// or https://</string>
+    <string name="error_invalid_base_url">Invalid base URL.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_http">Server error. Please try again.</string>
+    <string name="error_ping_failed">Ping failed. Please check the server URL.</string>
+    <string name="error_healthcheck_failed">Healthcheck failed.</string>
+    <string name="error_healthcheck_unexpected">Healthcheck returned unexpected response.</string>
+    <string name="error_unknown">Something went wrong.</string>
+    <string name="error_username_required">Please enter your username.</string>
+    <string name="error_password_required">Please enter your password.</string>
+    <string name="error_login_failed">Login failed. Please check your credentials.</string>
 </resources>

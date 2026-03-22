@@ -4,8 +4,11 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ServerServiceFactory(
+@Singleton
+class ServerServiceFactory @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) {
     private val serviceCache = mutableMapOf<String, ServerApiService>()

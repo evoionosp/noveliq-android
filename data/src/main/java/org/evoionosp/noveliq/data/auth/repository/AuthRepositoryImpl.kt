@@ -1,19 +1,21 @@
 package org.evoionosp.noveliq.data.auth.repository
 
-import java.io.IOException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.auth.remote.api.LoginServiceFactory
 import org.evoionosp.noveliq.data.auth.remote.dto.LoginRequestDto
 import org.evoionosp.noveliq.data.auth.remote.mapper.toDomain
 import org.evoionosp.noveliq.domain.auth.AuthRepository
+import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import retrofit2.HttpException
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AuthRepositoryImpl(
-    private val serviceFactory: LoginServiceFactory,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+@Singleton
+class AuthRepositoryImpl @Inject constructor(
+    private val serviceFactory: LoginServiceFactory
 ) : AuthRepository {
 
     override suspend fun login(
@@ -21,7 +23,7 @@ class AuthRepositoryImpl(
         username: String,
         password: String
     ): LoginResult {
-        return withContext(dispatcher) {
+        return withContext(Dispatchers.IO) {
             try {
                 val service = serviceFactory.create(baseUrl)
                 val response = service.login(
@@ -33,15 +35,15 @@ class AuthRepositoryImpl(
                 LoginResult.Success(response.toDomain())
             } catch (exception: HttpException) {
                 LoginResult.Failure(
-                    message = exception.message(),
+                    error = AuthError.HTTP,
                     code = exception.code()
                 )
             } catch (exception: IllegalArgumentException) {
-                LoginResult.Failure(message = exception.message ?: "Invalid base URL.")
+                LoginResult.Failure(error = AuthError.INVALID_BASE_URL)
             } catch (exception: IOException) {
-                LoginResult.Failure(message = "Network error. Please check your connection.")
+                LoginResult.Failure(error = AuthError.NETWORK)
             } catch (exception: Exception) {
-                LoginResult.Failure(message = exception.message ?: "Unexpected error.")
+                LoginResult.Failure(error = AuthError.UNEXPECTED)
             }
         }
     }

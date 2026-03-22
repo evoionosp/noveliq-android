@@ -1,7 +1,7 @@
 package org.evoionosp.noveliq.data.auth
 
 import org.evoionosp.noveliq.data.auth.remote.api.LoginServiceFactory
-import org.evoionosp.noveliq.data.auth.remote.client.OkHttpProvider
+import org.evoionosp.noveliq.data.network.OkHttpProvider
 import org.evoionosp.noveliq.data.auth.repository.AuthRepositoryImpl
 import org.evoionosp.noveliq.domain.auth.AuthRepository
 

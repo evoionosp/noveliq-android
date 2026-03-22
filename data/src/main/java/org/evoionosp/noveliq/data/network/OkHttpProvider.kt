@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.data.auth.remote.client
+package org.evoionosp.noveliq.data.network
 
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient

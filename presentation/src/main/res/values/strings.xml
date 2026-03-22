@@ -12,6 +12,16 @@
     <string name="login_button">Login</string>
     <string name="logging_in">Logging in...</string>
     <string name="login_success">Login successful.</string>
+    <string name="login_title">Login</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_icon_desc">Open settings</string>
+    <string name="dark_mode_preference">Dark Mode Preference</string>
+    <string name="theme_system_default">System Default</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="dynamic_color_section">Dynamic Color</string>
+    <string name="use_dynamic_color">Use Dynamic Color</string>
+    <string name="close">Close</string>
 
     <string name="error_server_url_required">Please enter a server URL.</string>
     <string name="error_server_url_scheme">Server URL must start with http:// or https://</string>

@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.domain.auth
+package org.evoionosp.noveliq.domain.auth.repository
 
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 

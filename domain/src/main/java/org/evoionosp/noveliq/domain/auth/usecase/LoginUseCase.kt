@@ -1,6 +1,6 @@
 package org.evoionosp.noveliq.domain.auth.usecase
 
-import org.evoionosp.noveliq.domain.auth.AuthRepository
+import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import javax.inject.Inject
 

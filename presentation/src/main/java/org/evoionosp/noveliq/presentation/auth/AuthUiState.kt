@@ -1,8 +1,8 @@
-package org.evoionosp.noveliq.presentation.server
+package org.evoionosp.noveliq.presentation.auth
 
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
 
-data class ServerSetupUiState(
+data class AuthUiState(
     val baseUrl: String = "",
     val username: String = "",
     val password: String = "",

@@ -2,7 +2,7 @@ package org.evoionosp.noveliq.data.server.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-data class StatusResponseDto(
+data class LoginStatusResponseDto(
     @SerializedName("app") val app: String? = null,
     @SerializedName("serverVersion") val serverVersion: String? = null,
     @SerializedName("isInit") val isInit: Boolean? = null,

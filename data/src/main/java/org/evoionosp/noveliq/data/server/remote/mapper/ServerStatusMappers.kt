@@ -1,9 +1,9 @@
 package org.evoionosp.noveliq.data.server.remote.mapper
 
-import org.evoionosp.noveliq.data.server.remote.dto.StatusResponseDto
+import org.evoionosp.noveliq.data.server.remote.dto.LoginStatusResponseDto
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
 
-internal fun StatusResponseDto.toDomain(): ServerStatus {
+internal fun LoginStatusResponseDto.toDomain(): ServerStatus {
     return ServerStatus(
         app = app.orEmpty(),
         serverVersion = serverVersion.orEmpty(),

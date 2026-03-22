@@ -1,20 +1,20 @@
 package org.evoionosp.noveliq.domain.server.usecase
 
-import org.evoionosp.noveliq.domain.server.ServerRepository
+import org.evoionosp.noveliq.domain.server.repository.ServerRepository
 import org.evoionosp.noveliq.domain.server.model.ServerError
-import org.evoionosp.noveliq.domain.server.model.ServerResult
+import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
 import javax.inject.Inject
 
-class CheckServerUseCase @Inject constructor(
+class ServerPingUseCase @Inject constructor(
     private val repository: ServerRepository
 ) {
-    suspend operator fun invoke(baseUrl: String): ServerResult<ServerStatus> {
+    suspend operator fun invoke(baseUrl: String): ServerCheckResult<ServerStatus> {
         return when (val pingResult = repository.ping(baseUrl)) {
-            is ServerResult.Failure -> pingResult
-            is ServerResult.Success -> {
+            is ServerCheckResult.Failure -> pingResult
+            is ServerCheckResult.Success -> {
                 if (!pingResult.data) {
-                    ServerResult.Failure(ServerError.PING_FAILED)
+                    ServerCheckResult.Failure(ServerError.PING_FAILED)
                 } else {
                     repository.getStatus(baseUrl)
                 }

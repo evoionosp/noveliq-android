@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.server
+package org.evoionosp.noveliq.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,19 +14,19 @@ import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.usecase.LoginUseCase
 import org.evoionosp.noveliq.domain.server.model.ServerError
-import org.evoionosp.noveliq.domain.server.model.ServerResult
-import org.evoionosp.noveliq.domain.server.usecase.CheckServerUseCase
-import org.evoionosp.noveliq.domain.server.usecase.HealthCheckUseCase
+import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
+import org.evoionosp.noveliq.domain.server.usecase.ServerPingUseCase
+import org.evoionosp.noveliq.domain.server.usecase.ServerHealthCheckUseCase
 import javax.inject.Inject
 
 @HiltViewModel
-class ServerSetupViewModel @Inject constructor(
-    private val checkServerUseCase: CheckServerUseCase,
-    private val healthCheckUseCase: HealthCheckUseCase,
+class AuthViewModel @Inject constructor(
+    private val serverPingUseCase: ServerPingUseCase,
+    private val serverHealthCheckUseCase: ServerHealthCheckUseCase,
     private val loginUseCase: LoginUseCase
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(ServerSetupUiState())
-    val uiState: StateFlow<ServerSetupUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun onBaseUrlChange(value: String) {
         _uiState.update { it.copy(baseUrl = value) }
@@ -44,30 +44,30 @@ class ServerSetupViewModel @Inject constructor(
         _uiState.update { it.copy(uiMessageResId = null) }
     }
 
-    fun checkServer() {
+    fun checkLoginSetup() {
         val baseUrl = _uiState.value.baseUrl.trim()
         if (baseUrl.isBlank()) {
-            setServerError(R.string.error_server_url_required)
+            setLoginSetupError(R.string.error_server_url_required)
             return
         }
         if (!baseUrl.lowercase(Locale.US).startsWith("http://") &&
             !baseUrl.lowercase(Locale.US).startsWith("https://")
         ) {
-            setServerError(R.string.error_server_url_scheme)
+            setLoginSetupError(R.string.error_server_url_scheme)
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isChecking = true, uiMessageResId = null) }
 
-            when (val checkResult = checkServerUseCase(baseUrl)) {
-                is ServerResult.Failure -> {
-                    setServerError(toServerErrorRes(checkResult.error))
+            when (val checkResult = serverPingUseCase(baseUrl)) {
+                is ServerCheckResult.Failure -> {
+                    setLoginSetupError(toLoginCheckErrorRes(checkResult.error))
                 }
-                is ServerResult.Success -> {
-                    when (val healthResult = healthCheckUseCase(baseUrl)) {
-                        is ServerResult.Failure -> setServerError(toServerErrorRes(healthResult.error))
-                        is ServerResult.Success -> {
+                is ServerCheckResult.Success -> {
+                    when (val healthResult = serverHealthCheckUseCase(baseUrl)) {
+                        is ServerCheckResult.Failure -> setLoginSetupError(toLoginCheckErrorRes(healthResult.error))
+                        is ServerCheckResult.Success -> {
                             if (healthResult.data) {
                                 _uiState.update {
                                     it.copy(
@@ -77,7 +77,7 @@ class ServerSetupViewModel @Inject constructor(
                                     )
                                 }
                             } else {
-                                setServerError(R.string.error_healthcheck_failed)
+                                setLoginSetupError(R.string.error_healthcheck_failed)
                             }
                         }
                     }
@@ -116,7 +116,7 @@ class ServerSetupViewModel @Inject constructor(
         }
     }
 
-    private fun setServerError(messageResId: Int) {
+    private fun setLoginSetupError(messageResId: Int) {
         _uiState.update {
             it.copy(
                 isChecking = false,
@@ -137,7 +137,7 @@ class ServerSetupViewModel @Inject constructor(
         }
     }
 
-    private fun toServerErrorRes(error: ServerError): Int {
+    private fun toLoginCheckErrorRes(error: ServerError): Int {
         return when (error) {
             ServerError.INVALID_BASE_URL -> R.string.error_invalid_base_url
             ServerError.NETWORK -> R.string.error_network

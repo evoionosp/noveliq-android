@@ -5,7 +5,7 @@ import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.auth.remote.api.LoginServiceFactory
 import org.evoionosp.noveliq.data.auth.remote.dto.LoginRequestDto
 import org.evoionosp.noveliq.data.auth.remote.mapper.toDomain
-import org.evoionosp.noveliq.domain.auth.AuthRepository
+import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import retrofit2.HttpException

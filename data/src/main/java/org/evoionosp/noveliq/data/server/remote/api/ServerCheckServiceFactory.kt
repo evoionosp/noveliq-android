@@ -8,13 +8,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ServerServiceFactory @Inject constructor(
+class ServerCheckServiceFactory @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) {
-    private val serviceCache = mutableMapOf<String, ServerApiService>()
+    private val serviceCache = mutableMapOf<String, ServerCheckApiService>()
 
     @Synchronized
-    fun create(baseUrl: String): ServerApiService {
+    fun create(baseUrl: String): ServerCheckApiService {
         val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
         return serviceCache.getOrPut(normalizedBaseUrl) {
             Retrofit.Builder()
@@ -23,7 +23,7 @@ class ServerServiceFactory @Inject constructor(
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
-                .create(ServerApiService::class.java)
+                .create(ServerCheckApiService::class.java)
         }
     }
 

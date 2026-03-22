@@ -6,8 +6,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.evoionosp.noveliq.data.auth.repository.AuthRepositoryImpl
 import org.evoionosp.noveliq.data.server.repository.ServerRepositoryImpl
-import org.evoionosp.noveliq.domain.auth.AuthRepository
-import org.evoionosp.noveliq.domain.server.ServerRepository
+import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.server.repository.ServerRepository
 
 @Module
 @InstallIn(SingletonComponent::class)

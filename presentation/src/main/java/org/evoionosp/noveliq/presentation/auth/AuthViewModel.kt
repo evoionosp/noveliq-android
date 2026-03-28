@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
+import org.evoionosp.noveliq.common.session.LoginSession
+import org.evoionosp.noveliq.common.session.SessionDataStore
 import org.evoionosp.noveliq.presentation.R
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
@@ -23,7 +25,8 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val serverPingUseCase: ServerPingUseCase,
     private val serverHealthCheckUseCase: ServerHealthCheckUseCase,
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val sessionDataStore: SessionDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -105,6 +108,22 @@ class AuthViewModel @Inject constructor(
                 password = currentState.password
             )) {
                 is LoginResult.Success -> {
+                    val accessToken = result.data.accessToken?.trim().orEmpty()
+                    if (accessToken.isBlank()) {
+                        setLoginError(R.string.error_login_failed)
+                        return@launch
+                    }
+
+                    sessionDataStore.saveSession(
+                        LoginSession(
+                            accessToken = accessToken,
+                            refreshToken = result.data.refreshToken?.trim(),
+                            userId = result.data.userId?.trim(),
+                            username = currentState.username.trim(),
+                            baseUrl = currentState.baseUrl.trim()
+                        )
+                    )
+
                     _uiState.update {
                         it.copy(isLoggingIn = false, uiMessageResId = R.string.login_success)
                     }

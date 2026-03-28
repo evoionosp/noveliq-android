@@ -22,6 +22,8 @@
     <string name="dynamic_color_section">Dynamic Color</string>
     <string name="use_dynamic_color">Use Dynamic Color</string>
     <string name="close">Close</string>
+    <string name="welcome_user">Welcome %1$s</string>
+    <string name="loading">Loading...</string>
 
     <string name="error_server_url_required">Please enter a server URL.</string>
     <string name="error_server_url_scheme">Server URL must start with http:// or https://</string>

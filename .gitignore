@@ -14,3 +14,8 @@
 .cxx
 local.properties
 /.vscode/settings.json
+/.idea/codeStyles/codeStyleConfig.xml
+/.idea/appInsightsSettings.xml
+/.idea/deviceManager.xml
+/.idea/codeStyles/Project.xml
+/.idea/studiobot.xml

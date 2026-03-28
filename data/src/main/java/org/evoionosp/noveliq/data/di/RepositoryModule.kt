@@ -5,8 +5,10 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.evoionosp.noveliq.data.auth.repository.AuthRepositoryImpl
+import org.evoionosp.noveliq.data.library.repository.LibraryRepositoryImpl
 import org.evoionosp.noveliq.data.server.repository.ServerRepositoryImpl
 import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.library.repository.LibraryRepository
 import org.evoionosp.noveliq.domain.server.repository.ServerRepository
 
 @Module
@@ -21,4 +23,9 @@ abstract class RepositoryModule {
     abstract fun bindServerRepository(
         impl: ServerRepositoryImpl
     ): ServerRepository
+
+    @Binds
+    abstract fun bindLibraryRepository(
+        impl: LibraryRepositoryImpl
+    ): LibraryRepository
 }

@@ -11,12 +11,13 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.common.session.SessionDataStore
-import org.evoionosp.noveliq.domain.library.usecase.LoadLibraryUseCase
+import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
+import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val sessionDataStore: SessionDataStore,
-    private val loadLibraryUseCase: LoadLibraryUseCase
+    private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
@@ -29,7 +30,7 @@ class SplashViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             session = null,
-                            isLibraryLoaded = false
+                            isCatalogReady = false
                         )
                     }
                     return@collect
@@ -39,11 +40,11 @@ class SplashViewModel @Inject constructor(
                     it.copy(
                         isLoading = true,
                         session = session,
-                        isLibraryLoaded = false
+                        isCatalogReady = false
                     )
                 }
 
-                val isLibraryLoaded = loadLibraryUseCase(
+                val bootstrapResult = bootstrapHomeCatalogUseCase(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken
                 )
@@ -52,7 +53,7 @@ class SplashViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         session = session,
-                        isLibraryLoaded = isLibraryLoaded
+                        isCatalogReady = bootstrapResult is BootstrapHomeCatalogResult.Success
                     )
                 }
             }

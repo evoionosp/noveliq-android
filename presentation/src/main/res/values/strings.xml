@@ -23,6 +23,18 @@
     <string name="use_dynamic_color">Use Dynamic Color</string>
     <string name="close">Close</string>
     <string name="welcome_user">Welcome %1$s</string>
+    <string name="home_title">Library</string>
+    <string name="refresh_library">Refresh library</string>
+    <string name="home_syncing">Syncing with server…</string>
+    <string name="home_synced">Up to date</string>
+    <string name="home_showing_cached">Showing cached books</string>
+    <string name="home_sync_failed">Sync failed</string>
+    <string name="home_refresh_complete">Library updated.</string>
+    <string name="home_no_libraries">No audiobook libraries found.</string>
+    <string name="home_no_libraries_hint">Add or enable an audiobook library on your Audiobookshelf server.</string>
+    <string name="home_no_books">No audiobooks yet.</string>
+    <string name="home_no_books_hint">This library is connected, but it does not have any audiobook items to show.</string>
+    <string name="error_home_library_select">Could not switch libraries.</string>
     <string name="loading">Loading...</string>
 
     <string name="error_server_url_required">Please enter a server URL.</string>

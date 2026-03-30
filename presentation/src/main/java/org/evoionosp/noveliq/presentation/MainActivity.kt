@@ -40,8 +40,9 @@ class MainActivity : ComponentActivity() {
             ) {
                 when {
                     splashState.isLoading -> SplashScreen(modifier = Modifier)
-                    splashState.session != null && splashState.isLibraryLoaded -> HomeScreen(
+                    splashState.session != null && splashState.isCatalogReady -> HomeScreen(
                         username = splashState.session!!.username,
+                        accessToken = splashState.session!!.accessToken,
                         modifier = Modifier
                     )
                     else -> AuthScreen(

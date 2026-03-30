@@ -1,12 +1,7 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea
 .DS_Store
 /build
 /captures
@@ -14,3 +9,9 @@
 .cxx
 local.properties
 /.vscode/settings.json
+/.idea/codeStyles/codeStyleConfig.xml
+/.idea/appInsightsSettings.xml
+/.idea/deviceManager.xmls
+/.idea/codeStyles/Project.xml
+/.idea/studiobot.xml
+/.vscode/

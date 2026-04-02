@@ -12,6 +12,9 @@ interface AudiobookDao {
     @Query("SELECT * FROM audiobooks WHERE libraryId = :libraryId ORDER BY title COLLATE NOCASE ASC")
     fun observeAudiobooks(libraryId: String): Flow<List<AudiobookEntity>>
 
+    @Query("SELECT * FROM audiobooks WHERE libraryId = :libraryId AND id = :audiobookId LIMIT 1")
+    fun observeAudiobook(libraryId: String, audiobookId: String): Flow<AudiobookEntity?>
+
     @Query("SELECT * FROM audiobooks WHERE libraryId = :libraryId ORDER BY title COLLATE NOCASE ASC")
     suspend fun getAudiobooks(libraryId: String): List<AudiobookEntity>
 

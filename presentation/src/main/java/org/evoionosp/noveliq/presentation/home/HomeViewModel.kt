@@ -5,9 +5,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -16,7 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.common.session.SessionDataStore
+import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveHomeAudiobooksUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveLibrarySyncStatusUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
@@ -32,7 +35,7 @@ import org.evoionosp.noveliq.presentation.R
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val sessionDataStore: SessionDataStore,
+    private val sessionStore: SessionStore,
     private val observeLibrariesUseCase: ObserveLibrariesUseCase,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val observeHomeAudiobooksUseCase: ObserveHomeAudiobooksUseCase,
@@ -43,6 +46,8 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<HomeUiEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<HomeUiEvent> = _events.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -53,7 +58,12 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             observeSelectedLibraryUseCase().collect { selectedLibrary ->
-                _uiState.update { it.copy(selectedLibraryId = selectedLibrary?.id) }
+                _uiState.update {
+                    it.copy(
+                        selectedLibraryId = selectedLibrary?.id,
+                        selectedLibraryName = selectedLibrary?.name
+                    )
+                }
             }
         }
 
@@ -82,17 +92,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onMessageShown() {
-        _uiState.update { it.copy(uiMessageResId = null) }
-    }
-
     fun onLibrarySelected(libraryId: String) {
         if (_uiState.value.selectedLibraryId == libraryId) return
 
         viewModelScope.launch {
             when (selectLibraryUseCase(libraryId)) {
                 is DomainResult.Success -> {
-                    val session = sessionDataStore.session.first() ?: return@launch
+                    val session = sessionStore.session.first() ?: return@launch
                     refreshSelectedLibraryAudiobooksUseCase(
                         baseUrl = session.baseUrl,
                         accessToken = session.accessToken,
@@ -100,9 +106,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 is DomainResult.Failure -> {
-                    _uiState.update { state ->
-                        state.copy(uiMessageResId = R.string.error_home_library_select)
-                    }
+                    emitMessage(R.string.error_home_library_select)
                 }
             }
         }
@@ -110,8 +114,8 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            val session = sessionDataStore.session.first() ?: return@launch
-            _uiState.update { it.copy(isRefreshing = true, uiMessageResId = null) }
+            val session = sessionStore.session.first() ?: return@launch
+            _uiState.update { it.copy(isRefreshing = true) }
 
             val libraryRefreshResult = refreshLibrariesUseCase(
                 baseUrl = session.baseUrl,
@@ -131,17 +135,19 @@ class HomeViewModel @Inject constructor(
                 DomainResult.Failure(CatalogError.NO_AUDIOBOOK_LIBRARIES)
             }
 
-            _uiState.update { state ->
-                state.copy(
-                    isRefreshing = false,
-                    uiMessageResId = when {
-                        libraryRefreshResult is DomainResult.Failure -> toMessageRes(libraryRefreshResult.error)
-                        audiobookRefreshResult is DomainResult.Failure -> toMessageRes(audiobookRefreshResult.error)
-                        else -> R.string.home_refresh_complete
-                    }
-                )
-            }
+            _uiState.update { it.copy(isRefreshing = false) }
+            emitMessage(
+                when {
+                    libraryRefreshResult is DomainResult.Failure -> toMessageRes(libraryRefreshResult.error)
+                    audiobookRefreshResult is DomainResult.Failure -> toMessageRes(audiobookRefreshResult.error)
+                    else -> R.string.home_refresh_complete
+                }
+            )
         }
+    }
+
+    private fun emitMessage(messageResId: Int) {
+        _events.tryEmit(HomeUiEvent.ShowMessage(messageResId))
     }
 
     private fun toMessageRes(error: CatalogError): Int {

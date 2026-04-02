@@ -9,6 +9,5 @@ data class AuthUiState(
     val isChecking: Boolean = false,
     val isLoggingIn: Boolean = false,
     val showLoginFields: Boolean = false,
-    val serverStatus: ServerStatus? = null,
-    val uiMessageResId: Int? = null
+    val serverStatus: ServerStatus? = null
 )

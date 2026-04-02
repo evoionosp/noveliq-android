@@ -1,30 +1,29 @@
 package org.evoionosp.noveliq.catalog
 
+import javax.inject.Named
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.common.session.SessionDataStore
-import org.evoionosp.noveliq.data.connectivity.ConnectivityObserver
+import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
 import org.evoionosp.noveliq.domain.library.usecase.ObserveSelectedLibraryUseCase
 import org.evoionosp.noveliq.domain.library.usecase.RefreshLibrariesUseCase
 
 @Singleton
 class CatalogSyncCoordinator @Inject constructor(
-    private val sessionDataStore: SessionDataStore,
+    @param:Named("application_scope") private val scope: CoroutineScope,
+    private val sessionStore: SessionStore,
     private val connectivityObserver: ConnectivityObserver,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
     private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var started = false
 
     fun start() {
@@ -45,7 +44,7 @@ class CatalogSyncCoordinator @Inject constructor(
             observeSelectedLibraryUseCase()
                 .filterNotNull()
                 .collect { library ->
-                    val session = sessionDataStore.session.first() ?: return@collect
+                    val session = sessionStore.session.first() ?: return@collect
                     if (connectivityObserver.isConnected()) {
                         refreshSelectedLibraryAudiobooksUseCase(
                             baseUrl = session.baseUrl,
@@ -58,7 +57,7 @@ class CatalogSyncCoordinator @Inject constructor(
     }
 
     private suspend fun syncCurrentSelection() {
-        val session = sessionDataStore.session.first() ?: return
+        val session = sessionStore.session.first() ?: return
         refreshLibrariesUseCase(
             baseUrl = session.baseUrl,
             accessToken = session.accessToken

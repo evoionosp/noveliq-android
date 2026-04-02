@@ -7,8 +7,8 @@ import org.evoionosp.noveliq.domain.library.model.SyncStatus
 data class HomeUiState(
     val libraries: List<AudiobookLibrary> = emptyList(),
     val selectedLibraryId: String? = null,
+    val selectedLibraryName: String? = null,
     val audiobooks: List<Audiobook> = emptyList(),
     val syncStatus: SyncStatus = SyncStatus.Idle,
-    val isRefreshing: Boolean = false,
-    val uiMessageResId: Int? = null
+    val isRefreshing: Boolean = false
 )

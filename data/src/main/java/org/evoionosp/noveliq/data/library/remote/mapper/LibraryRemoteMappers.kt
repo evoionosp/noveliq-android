@@ -4,6 +4,7 @@ import java.util.Locale
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookEntity
 import org.evoionosp.noveliq.data.library.local.entity.LibraryEntity
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
+import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryDto
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryItemDto
 
@@ -36,7 +37,10 @@ internal fun LibraryItemDto.toEntity(
 
     val metadata = media?.metadata
     val titleValue = metadata?.title.orEmpty().ifBlank { "Untitled" }
-    val authorValue = metadata?.authorName.orEmpty().ifBlank { "Unknown Author" }
+    val authorValue = metadata?.authorName
+        .orEmpty()
+        .toDisplayAuthorName()
+        .ifBlank { "Unknown Author" }
     val normalizedBaseUrl = serviceFactory.normalizeBaseUrl(baseUrl)
     val coverUrl = "${normalizedBaseUrl}api/items/$idValue/cover?width=400&format=webp"
 
@@ -49,4 +53,29 @@ internal fun LibraryItemDto.toEntity(
         series = metadata?.series?.firstOrNull()?.name,
         durationInSeconds = media?.durationInSeconds?.toLong()
     )
+}
+
+internal fun LibraryItemDto.toChapterDomainList(): List<AudiobookChapter> {
+    return media?.chapters.orEmpty().mapIndexed { index, chapter ->
+        AudiobookChapter(
+            title = chapter.title.orEmpty().ifBlank { "Chapter ${index + 1}" },
+            startInSeconds = chapter.startInSeconds?.toLong() ?: 0L,
+            endInSeconds = chapter.endInSeconds?.toLong()
+        )
+    }.sortedBy { it.startInSeconds }
+}
+
+private fun String.toDisplayAuthorName(): String {
+    val trimmed = trim()
+    val commaIndex = trimmed.indexOf(',')
+    if (commaIndex <= 0 || commaIndex >= trimmed.lastIndex) {
+        return trimmed
+    }
+
+    val lastName = trimmed.substring(0, commaIndex).trim()
+    val firstName = trimmed.substring(commaIndex + 1).trim()
+    if (firstName.isBlank() || lastName.isBlank()) {
+        return trimmed
+    }
+    return "$firstName $lastName"
 }

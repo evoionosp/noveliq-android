@@ -22,4 +22,11 @@ interface AudiobookshelfLibraryApiService {
         @Query("minified") minified: Int = 1,
         @Query("collapseseries") collapseSeries: Int = 0
     ): LibraryItemsResponseDto
+
+    @GET("api/items/{itemId}")
+    suspend fun item(
+        @Header("Authorization") authorization: String,
+        @Path("itemId") itemId: String,
+        @Query("expanded") expanded: Int = 1
+    ): org.evoionosp.noveliq.data.library.remote.dto.LibraryItemDto
 }

@@ -3,15 +3,18 @@ package org.evoionosp.noveliq.presentation.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import java.util.Locale
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import dagger.hilt.android.lifecycle.HiltViewModel
-import org.evoionosp.noveliq.common.session.LoginSession
-import org.evoionosp.noveliq.common.session.SessionDataStore
-import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.core.session.LoginSession
+import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.usecase.LoginUseCase
@@ -19,17 +22,19 @@ import org.evoionosp.noveliq.domain.server.model.ServerError
 import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
 import org.evoionosp.noveliq.domain.server.usecase.ServerPingUseCase
 import org.evoionosp.noveliq.domain.server.usecase.ServerHealthCheckUseCase
-import javax.inject.Inject
+import org.evoionosp.noveliq.presentation.R
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val serverPingUseCase: ServerPingUseCase,
     private val serverHealthCheckUseCase: ServerHealthCheckUseCase,
     private val loginUseCase: LoginUseCase,
-    private val sessionDataStore: SessionDataStore
+    private val sessionStore: SessionStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<AuthUiEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<AuthUiEvent> = _events.asSharedFlow()
 
     fun onBaseUrlChange(value: String) {
         _uiState.update { it.copy(baseUrl = value) }
@@ -41,10 +46,6 @@ class AuthViewModel @Inject constructor(
 
     fun onPasswordChange(value: String) {
         _uiState.update { it.copy(password = value) }
-    }
-
-    fun onMessageShown() {
-        _uiState.update { it.copy(uiMessageResId = null) }
     }
 
     fun checkLoginSetup() {
@@ -61,7 +62,7 @@ class AuthViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isChecking = true, uiMessageResId = null) }
+            _uiState.update { it.copy(isChecking = true) }
 
             when (val checkResult = serverPingUseCase(baseUrl)) {
                 is ServerCheckResult.Failure -> {
@@ -101,7 +102,7 @@ class AuthViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoggingIn = true, uiMessageResId = null) }
+            _uiState.update { it.copy(isLoggingIn = true) }
             when (val result = loginUseCase(
                 baseUrl = currentState.baseUrl.trim(),
                 username = currentState.username.trim(),
@@ -114,7 +115,7 @@ class AuthViewModel @Inject constructor(
                         return@launch
                     }
 
-                    sessionDataStore.saveSession(
+                    sessionStore.saveSession(
                         LoginSession(
                             accessToken = accessToken,
                             refreshToken = result.data.refreshToken?.trim(),
@@ -124,9 +125,8 @@ class AuthViewModel @Inject constructor(
                         )
                     )
 
-                    _uiState.update {
-                        it.copy(isLoggingIn = false, uiMessageResId = R.string.login_success)
-                    }
+                    _uiState.update { it.copy(isLoggingIn = false) }
+                    emitMessage(R.string.login_success)
                 }
                 is LoginResult.Failure -> {
                     setLoginError(toAuthErrorRes(result.error))
@@ -140,20 +140,24 @@ class AuthViewModel @Inject constructor(
             it.copy(
                 isChecking = false,
                 isLoggingIn = false,
-                showLoginFields = false,
-                uiMessageResId = messageResId
+                showLoginFields = false
             )
         }
+        emitMessage(messageResId)
     }
 
     private fun setLoginError(messageResId: Int) {
         _uiState.update {
             it.copy(
                 isChecking = false,
-                isLoggingIn = false,
-                uiMessageResId = messageResId
+                isLoggingIn = false
             )
         }
+        emitMessage(messageResId)
+    }
+
+    private fun emitMessage(messageResId: Int) {
+        _events.tryEmit(AuthUiEvent.ShowMessage(messageResId))
     }
 
     private fun toLoginCheckErrorRes(error: ServerError): Int {

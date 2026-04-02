@@ -7,7 +7,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import org.evoionosp.noveliq.common.session.SessionDataStore
+import org.evoionosp.noveliq.core.session.SessionDataStore
+import org.evoionosp.noveliq.core.session.SessionStore
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -19,4 +20,8 @@ object SessionModule {
     ): SessionDataStore {
         return SessionDataStore(context)
     }
+
+    @Provides
+    @Singleton
+    fun provideSessionStore(sessionDataStore: SessionDataStore): SessionStore = sessionDataStore
 }

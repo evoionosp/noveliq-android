@@ -3,13 +3,14 @@ package org.evoionosp.noveliq.data.library.repository
 import androidx.room.withTransaction
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
-import org.evoionosp.noveliq.data.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.data.library.local.dao.LibraryDao
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
@@ -21,6 +22,7 @@ import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.repository.LibraryRepository
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import retrofit2.HttpException
 
 @Singleton
@@ -30,7 +32,8 @@ class LibraryRepositoryImpl @Inject constructor(
     private val audiobookDao: AudiobookDao,
     private val syncStateDao: LibrarySyncStateDao,
     private val serviceFactory: AudiobookshelfLibraryServiceFactory,
-    private val connectivityObserver: ConnectivityObserver
+    private val connectivityObserver: ConnectivityObserver,
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
 ) : LibraryRepository {
     override fun observeLibraries(): Flow<List<AudiobookLibrary>> {
         return libraryDao.observeLibraries().map { entities ->
@@ -48,7 +51,7 @@ class LibraryRepositoryImpl @Inject constructor(
         baseUrl: String,
         accessToken: String
     ): DomainResult<Unit> {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             if (!connectivityObserver.isConnected()) {
                 val hasCachedLibraries = libraryDao.countLibraries() > 0
                 if (hasCachedLibraries) {
@@ -107,6 +110,8 @@ class LibraryRepositoryImpl @Inject constructor(
                     } else {
                         DomainResult.Failure(CatalogError.NETWORK)
                     }
+                } catch (exception: CancellationException) {
+                    throw exception
                 } catch (exception: Exception) {
                     DomainResult.Failure(CatalogError.UNKNOWN)
                 }
@@ -115,7 +120,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun selectLibrary(libraryId: String): DomainResult<Unit> {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             val libraryExists = libraryDao.getLibraries().any { it.id == libraryId }
             if (!libraryExists) {
                 return@withContext DomainResult.Failure(CatalogError.NOT_FOUND)

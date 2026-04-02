@@ -11,10 +11,10 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
 import org.evoionosp.noveliq.data.connectivity.AndroidConnectivityObserver
-import org.evoionosp.noveliq.data.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.data.library.local.dao.LibraryDao
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 
 @Module
 @InstallIn(SingletonComponent::class)

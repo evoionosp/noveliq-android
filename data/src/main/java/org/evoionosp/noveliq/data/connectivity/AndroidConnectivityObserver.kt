@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 
 @Singleton
 class AndroidConnectivityObserver @Inject constructor(

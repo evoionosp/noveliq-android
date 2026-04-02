@@ -21,6 +21,8 @@ data class LibraryItemDto(
 data class LibraryItemMediaDto(
     @SerializedName("duration")
     val durationInSeconds: Float? = null,
+    @SerializedName("chapters")
+    val chapters: List<ChapterDto>? = null,
     @SerializedName("metadata")
     val metadata: LibraryItemMetadataDto? = null
 )
@@ -37,4 +39,13 @@ data class LibraryItemMetadataDto(
 data class SeriesDto(
     @SerializedName("name")
     val name: String? = null
+)
+
+data class ChapterDto(
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName(value = "start", alternate = ["startTime", "startOffset"])
+    val startInSeconds: Float? = null,
+    @SerializedName(value = "end", alternate = ["endTime", "endOffset"])
+    val endInSeconds: Float? = null
 )

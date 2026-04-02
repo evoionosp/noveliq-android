@@ -3,22 +3,26 @@ package org.evoionosp.noveliq.data.audiobook.repository
 import androidx.room.withTransaction
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
 import org.evoionosp.noveliq.data.audiobook.local.mapper.toDomain
-import org.evoionosp.noveliq.data.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
 import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
 import org.evoionosp.noveliq.data.library.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
+import org.evoionosp.noveliq.data.library.remote.mapper.toChapterDomainList
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.model.SyncStatus
@@ -30,7 +34,8 @@ class AudiobookRepositoryImpl @Inject constructor(
     private val audiobookDao: AudiobookDao,
     private val syncStateDao: LibrarySyncStateDao,
     private val serviceFactory: AudiobookshelfLibraryServiceFactory,
-    private val connectivityObserver: ConnectivityObserver
+    private val connectivityObserver: ConnectivityObserver,
+    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
 ) : AudiobookRepository {
     override fun observeAudiobooks(libraryId: String): Flow<List<Audiobook>> {
         return audiobookDao.observeAudiobooks(libraryId).map { entities ->
@@ -38,8 +43,56 @@ class AudiobookRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeAudiobook(libraryId: String, audiobookId: String): Flow<Audiobook?> {
+        return audiobookDao.observeAudiobook(
+            libraryId = libraryId,
+            audiobookId = audiobookId
+        ).map { entity ->
+            entity?.toDomain()
+        }
+    }
+
     override fun observeLibrarySyncStatus(libraryId: String): Flow<SyncStatus> {
         return syncStateDao.observeSyncState(libraryId).map { it.toDomain() }
+    }
+
+    override suspend fun getAudiobookChapters(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String
+    ): DomainResult<List<AudiobookChapter>> {
+        return withContext(ioDispatcher) {
+            if (!connectivityObserver.isConnected()) {
+                return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
+            }
+
+            try {
+                val item = serviceFactory.create(baseUrl).item(
+                    authorization = "Bearer $accessToken",
+                    itemId = audiobookId
+                )
+                if (item.id.isNullOrBlank()) {
+                    DomainResult.Failure(CatalogError.NOT_FOUND)
+                } else {
+                    DomainResult.Success(item.toChapterDomainList())
+                }
+            } catch (exception: HttpException) {
+                val error = when (exception.code()) {
+                    401, 403 -> CatalogError.AUTH
+                    404 -> CatalogError.NOT_FOUND
+                    else -> CatalogError.UNKNOWN
+                }
+                DomainResult.Failure(error)
+            } catch (exception: IllegalArgumentException) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            } catch (exception: IOException) {
+                DomainResult.Failure(CatalogError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            }
+        }
     }
 
     override suspend fun refreshAudiobooks(
@@ -47,7 +100,7 @@ class AudiobookRepositoryImpl @Inject constructor(
         accessToken: String,
         libraryId: String
     ): DomainResult<Unit> {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             if (!connectivityObserver.isConnected()) {
                 markSyncFailure(libraryId, CatalogError.CONNECTIVITY_UNAVAILABLE)
                 return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
@@ -104,6 +157,8 @@ class AudiobookRepositoryImpl @Inject constructor(
             } catch (exception: IOException) {
                 markSyncFailure(libraryId, CatalogError.NETWORK)
                 DomainResult.Failure(CatalogError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
             } catch (exception: Exception) {
                 markSyncFailure(libraryId, CatalogError.UNKNOWN)
                 DomainResult.Failure(CatalogError.UNKNOWN)

@@ -38,7 +38,7 @@ android {
 
 dependencies {
     implementation(project(":domain"))
-    implementation(project(":common"))
+    implementation(project(":core"))
     implementation(project(":data"))
 
     implementation(libs.androidx.core.ktx)
@@ -59,4 +59,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.coil.compose)
     ksp(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

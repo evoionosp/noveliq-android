@@ -11,14 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,13 +73,12 @@ fun AudiobookDetailScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                modifier = Modifier.statusBarsPadding(),
                 title = { Text(text = stringResource(R.string.audiobook_detail_title)) },
                 navigationIcon = {
                     FilledTonalIconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.preferences_back)
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.close)
                         )
                     }
                 }
@@ -211,10 +209,6 @@ fun AudiobookDetailScreen(
                     DetailRow(
                         label = stringResource(R.string.audiobook_detail_author_label),
                         value = audiobook.author
-                    )
-                    DetailRow(
-                        label = stringResource(R.string.audiobook_detail_library_label),
-                        value = audiobook.libraryId
                     )
                     DetailRow(
                         label = stringResource(R.string.audiobook_detail_duration_label),

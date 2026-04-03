@@ -93,6 +93,8 @@ Details: `milestones/07-quality-and-release.md`
 
 ## Immediate Next Focus
 
-1. Replace the current `Play` placeholder with the first real playback architecture slice.
-2. Decide whether audiobook detail data should remain partially network-backed or become more fully cached locally.
-3. Keep the chapter-capable detail screen as the starting point for later playback entry and download actions.
+1. Finish polishing the main browsing surfaces: `Home`, `Library`, and `Authors`, including stronger navigation structure and production-ready section design.
+2. After the home/dashboard polish pass, add server-backed `Continue Listening` sync and cache it locally so Room remains the source of truth for the home screen.
+3. Decide whether audiobook detail data should remain partially network-backed or become more fully cached locally.
+4. Keep the chapter-capable detail screen as the starting point for later playback entry and download actions.
+5. Start the first real playback architecture slice only after the browsing shell and near-term home data model are stable.

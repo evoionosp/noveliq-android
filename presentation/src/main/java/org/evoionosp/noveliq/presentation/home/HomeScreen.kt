@@ -1,153 +1,344 @@
 package org.evoionosp.noveliq.presentation.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Book
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import kotlinx.coroutines.flow.collectLatest
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
-import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
-import org.evoionosp.noveliq.domain.library.model.SyncStatus
 import org.evoionosp.noveliq.presentation.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    username: String,
     accessToken: String,
     onOpenSettings: () -> Unit,
+    bottomBarPadding: Dp,
     onOpenAudiobook: (Audiobook) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val context = LocalContext.current
-    var searchVisible by rememberSaveable { mutableStateOf(false) }
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    val filteredAudiobooks = remember(state.audiobooks, searchQuery) {
-        val query = searchQuery.trim()
-        if (query.isBlank()) {
-            state.audiobooks
-        } else {
-            state.audiobooks.filter { audiobook ->
-                audiobook.title.contains(query, ignoreCase = true) ||
-                    audiobook.author.contains(query, ignoreCase = true) ||
-                    (audiobook.series?.contains(query, ignoreCase = true) == true)
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is HomeUiEvent.ShowMessage -> snackbarHostState.showSnackbar(
+                    context.getString(event.messageResId)
+                )
             }
         }
     }
 
-    LaunchedEffect(viewModel, context) {
-        viewModel.events.collectLatest { event ->
-            when (event) {
-                is HomeUiEvent.ShowMessage -> {
-                    val message = context.getString(event.messageResId)
-                    if (message.isNotBlank()) {
-                        snackbarHostState.showSnackbar(message)
+    val continueListening = emptyList<Audiobook>()
+    val recentlyAdded = state.audiobooks.take(12)
+    val discover = state.audiobooks
+        .sortedBy { it.title.lowercase() }
+        .filterIndexed { index, _ -> index % 2 == 0 }
+        .take(12)
+    val authorCount = state.audiobooks
+        .flatMap { it.author.toAuthorNames() }
+        .distinct()
+        .size
+    val durationHours = state.audiobooks.sumOf { it.durationInSeconds ?: 0L } / 3600.0
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            RootScreenHeader(
+                title = stringResource(R.string.root_home),
+                onOpenSettings = onOpenSettings
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        if (state.libraries.isEmpty()) {
+            EmptyState(
+                title = stringResource(R.string.home_no_libraries),
+                subtitle = stringResource(R.string.home_no_libraries_hint),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceContainerLowest
+                            )
+                        )
+                    )
+                    .padding(innerPadding)
+            )
+            return@Scaffold
+        }
+
+        PullToRefreshBox(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceContainerLowest
+                        )
+                    )
+                )
+                .padding(innerPadding),
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = bottomBarPadding + 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    CatalogTopControls(
+                        libraries = state.libraries,
+                        selectedLibraryId = state.selectedLibraryId,
+                        selectedLibraryName = state.selectedLibraryName,
+                        syncStatus = state.syncStatus,
+                        onLibrarySelected = viewModel::onLibrarySelected,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+
+                item {
+                    SectionBlock(
+                        title = stringResource(R.string.home_continue_listening),
+                        subtitle = stringResource(R.string.home_continue_listening_hint)
+                    ) {
+                        if (continueListening.isEmpty()) {
+                            PlaceholderSectionCard(
+                                title = stringResource(R.string.home_continue_empty),
+                                body = stringResource(R.string.home_continue_empty_hint)
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    SectionBlock(
+                        title = stringResource(R.string.home_recently_added),
+                        subtitle = stringResource(R.string.home_recently_added_hint)
+                    ) {
+                        HorizontalBookRow(
+                            audiobooks = recentlyAdded,
+                            accessToken = accessToken,
+                            onOpenAudiobook = onOpenAudiobook
+                        )
+                    }
+                }
+
+                item {
+                    SectionBlock(
+                        title = stringResource(R.string.home_discover),
+                        subtitle = stringResource(R.string.home_discover_hint)
+                    ) {
+                        HorizontalBookRow(
+                            audiobooks = discover,
+                            accessToken = accessToken,
+                            onOpenAudiobook = onOpenAudiobook
+                        )
+                    }
+                }
+
+                item {
+                    SectionBlock(
+                        title = stringResource(R.string.home_stats),
+                        subtitle = stringResource(R.string.home_stats_hint)
+                    ) {
+                        StatsRow(
+                            booksCount = state.audiobooks.size,
+                            authorsCount = authorCount,
+                            hoursCount = durationHours
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryScreen(
+    accessToken: String,
+    onOpenSettings: () -> Unit,
+    bottomBarPadding: Dp,
+    onOpenAudiobook: (Audiobook) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                modifier = Modifier.statusBarsPadding(),
-                title = {
-                    Text(
-                        text = stringResource(R.string.home_title),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                actions = {
-                    FilledTonalIconButton(onClick = { searchVisible = !searchVisible }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = stringResource(R.string.search_library)
-                        )
-                    }
-                    Spacer(modifier = Modifier.size(10.dp))
-                    FilledTonalIconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Rounded.Settings,
-                            contentDescription = stringResource(R.string.settings_icon_desc)
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior
+            RootScreenHeader(
+                title = stringResource(R.string.root_library),
+                onOpenSettings = onOpenSettings
             )
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        }
     ) { innerPadding ->
-        Column(
+        PullToRefreshBox(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceContainerLowest
+                        )
+                    )
+                )
+                .padding(innerPadding),
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh
+        ) {
+            if (state.audiobooks.isEmpty()) {
+                EmptyState(
+                    title = stringResource(R.string.home_no_books),
+                    subtitle = stringResource(R.string.home_no_books_hint),
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = bottomBarPadding + 16.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        CatalogTopControls(
+                            libraries = state.libraries,
+                            selectedLibraryId = state.selectedLibraryId,
+                            selectedLibraryName = state.selectedLibraryName,
+                            syncStatus = state.syncStatus,
+                            onLibrarySelected = viewModel::onLibrarySelected,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 4.dp)
+                        )
+                    }
+
+                    items(state.audiobooks, key = { it.id }) { audiobook ->
+                        AudiobookGridCard(
+                            audiobook = audiobook,
+                            accessToken = accessToken,
+                            onClick = { onOpenAudiobook(audiobook) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class AuthorGridItem(
+    val name: String,
+    val bookCount: Int,
+    val photoUrl: String?
+)
+
+@Composable
+fun AuthorsScreen(
+    accessToken: String,
+    onOpenSettings: () -> Unit,
+    bottomBarPadding: Dp,
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val authors = remember(state.audiobooks) {
+        state.audiobooks
+            .flatMap { audiobook ->
+                audiobook.author.toAuthorNames().map { authorName -> authorName to audiobook }
+            }
+            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+            .map { (author, books) ->
+                AuthorGridItem(
+                    name = author,
+                    bookCount = books.size,
+                    photoUrl = books.firstOrNull()?.coverUrl
+                )
+            }
+            .sortedBy { it.name.lowercase() }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            RootScreenHeader(
+                title = stringResource(R.string.root_authors),
+                onOpenSettings = onOpenSettings
+            )
+        }
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
@@ -160,88 +351,40 @@ fun HomeScreen(
                 )
                 .padding(innerPadding)
         ) {
-            if (state.isRefreshing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            HomeHeaderCard(
-                username = username,
-                libraries = state.libraries,
-                selectedLibraryId = state.selectedLibraryId,
-                selectedLibraryName = state.selectedLibraryName,
-                syncStatus = state.syncStatus,
-                onLibrarySelected = viewModel::onLibrarySelected,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 12.dp)
-            )
-
-            if (searchVisible) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, top = 16.dp),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.search_library)) },
-                    placeholder = { Text(stringResource(R.string.search_library_placeholder)) },
-                    shape = RoundedCornerShape(22.dp)
+            if (authors.isEmpty()) {
+                EmptyState(
+                    title = stringResource(R.string.authors_empty_title),
+                    subtitle = stringResource(R.string.authors_empty_hint),
+                    modifier = Modifier.fillMaxSize()
                 )
-            }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = bottomBarPadding + 16.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        CatalogTopControls(
+                            libraries = state.libraries,
+                            selectedLibraryId = state.selectedLibraryId,
+                            selectedLibraryName = state.selectedLibraryName,
+                            syncStatus = state.syncStatus,
+                            onLibrarySelected = viewModel::onLibrarySelected,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 4.dp)
+                        )
+                    }
 
-            Text(
-                text = stringResource(R.string.home_section_title),
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            when {
-                state.libraries.isEmpty() -> {
-                    HomeEmptyState(
-                        title = stringResource(R.string.home_no_libraries),
-                        subtitle = stringResource(R.string.home_no_libraries_hint),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                filteredAudiobooks.isEmpty() -> {
-                    HomeEmptyState(
-                        title = if (searchQuery.isBlank()) {
-                            stringResource(R.string.home_no_books)
-                        } else {
-                            stringResource(R.string.search_no_results)
-                        },
-                        subtitle = if (searchQuery.isBlank()) {
-                            stringResource(R.string.home_no_books_hint)
-                        } else {
-                            stringResource(R.string.search_no_results_hint)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                else -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 156.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 14.dp,
-                            bottom = 32.dp
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        items(filteredAudiobooks, key = { it.id }) { audiobook ->
-                            AudiobookGridCard(
-                                audiobook = audiobook,
-                                accessToken = accessToken,
-                                onClick = { onOpenAudiobook(audiobook) }
-                            )
-                        }
+                    items(authors, key = { it.name }) { author ->
+                        AuthorCard(author = author, accessToken = accessToken)
                     }
                 }
             }
@@ -249,263 +392,274 @@ fun HomeScreen(
     }
 }
 
+private fun String.toAuthorNames(): List<String> {
+    return split(',')
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .ifEmpty { listOf("Unknown Author") }
+}
+
 @Composable
-private fun HomeHeaderCard(
-    username: String,
-    libraries: List<AudiobookLibrary>,
-    selectedLibraryId: String?,
-    selectedLibraryName: String?,
-    syncStatus: SyncStatus,
-    onLibrarySelected: (String) -> Unit,
+private fun RootScreenHeader(
+    title: String,
+    onOpenSettings: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(56.dp)
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            IconButton(onClick = onOpenSettings) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = stringResource(R.string.settings_icon_desc)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionBlock(
+    title: String,
+    subtitle: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        content()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HorizontalBookRow(
+    audiobooks: List<Audiobook>,
+    accessToken: String,
+    onOpenAudiobook: (Audiobook) -> Unit
+) {
+    if (audiobooks.isEmpty()) {
+        PlaceholderSectionCard(
+            title = stringResource(R.string.home_section_empty_title),
+            body = stringResource(R.string.home_section_empty_body)
+        )
+        return
+    }
+
+    HorizontalUncontainedCarousel(
+        state = rememberCarouselState { audiobooks.size },
+        modifier = Modifier.fillMaxWidth(),
+        itemWidth = 150.dp,
+        itemSpacing = 12.dp,
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) { index ->
+        AudiobookCarouselCard(
+            audiobook = audiobooks[index],
+            accessToken = accessToken,
+            onClick = { onOpenAudiobook(audiobooks[index]) }
+        )
+    }
+}
+
+@Composable
+private fun PlaceholderSectionCard(
+    title: String,
+    body: String
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 3.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatsRow(
+    booksCount: Int,
+    authorsCount: Int,
+    hoursCount: Double
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            StatCard(
+                title = stringResource(R.string.stats_books),
+                value = booksCount.toString(),
+                modifier = Modifier.fillParentMaxWidth(0.35f)
+            )
+        }
+        item {
+            StatCard(
+                title = stringResource(R.string.stats_authors),
+                value = authorsCount.toString(),
+                modifier = Modifier.fillParentMaxWidth(0.35f)
+            )
+        }
+        item {
+            StatCard(
+                title = stringResource(R.string.stats_hours),
+                value = String.format("%.1f", hoursCount),
+                modifier = Modifier.fillParentMaxWidth(0.35f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    value: String,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(34.dp),
-        tonalElevation = 4.dp,
+        shape = RoundedCornerShape(26.dp),
+        tonalElevation = 3.dp,
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_header_eyebrow),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = selectedLibraryName ?: stringResource(R.string.library_dropdown_label),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = stringResource(R.string.welcome_user, username),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.AutoStories,
-                        contentDescription = null,
-                        modifier = Modifier.padding(14.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (libraries.isNotEmpty()) {
-                    LibraryDropdownTrigger(
-                        libraries = libraries,
-                        selectedLibraryId = selectedLibraryId,
-                        selectedLibraryName = selectedLibraryName,
-                        onLibrarySelected = onLibrarySelected,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                SyncStatusChip(syncStatus = syncStatus)
-            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-private fun LibraryDropdownTrigger(
-    libraries: List<AudiobookLibrary>,
-    selectedLibraryId: String?,
-    selectedLibraryName: String?,
-    onLibrarySelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (libraries.isEmpty()) return
-
-    var expanded by rememberSaveable { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest
-        ) {
-            TextButton(
-                onClick = { expanded = true },
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Text(
-                    text = selectedLibraryName.orEmpty(),
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.size(6.dp))
-                Icon(
-                    imageVector = Icons.Rounded.ArrowDropDown,
-                    contentDescription = stringResource(R.string.library_dropdown_label)
-                )
-            }
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            libraries.forEach { library ->
-                DropdownMenuItem(
-                    text = { Text(text = library.name) },
-                    onClick = {
-                        expanded = false
-                        if (library.id != selectedLibraryId) {
-                            onLibrarySelected(library.id)
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SyncStatusChip(syncStatus: SyncStatus) {
-    val label = when (syncStatus) {
-        SyncStatus.Idle -> stringResource(R.string.home_synced)
-        SyncStatus.Syncing -> stringResource(R.string.home_syncing)
-        is SyncStatus.Success -> stringResource(R.string.home_synced)
-        is SyncStatus.Stale -> stringResource(R.string.home_showing_cached)
-        is SyncStatus.Failed -> stringResource(R.string.home_sync_failed)
-    }
-
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onTertiaryContainer
-        )
-    }
-}
-
-@Composable
-private fun AudiobookGridCard(
+private fun AudiobookCarouselCard(
     audiobook: Audiobook,
     accessToken: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(0.72f)
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(30.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                    .data(audiobook.coverUrl)
-                    .crossfade(true)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .addHeader("Authorization", "Bearer $accessToken")
-                    .build(),
-                contentDescription = audiobook.title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = audiobook.title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(304.dp)
+    ) {
+        AudiobookGridCard(
+            audiobook = audiobook,
+            accessToken = accessToken,
+            onClick = onClick,
+            coverAspectRatio = 0.72f
         )
+    }
+}
+
+@Composable
+private fun AuthorCard(
+    author: AuthorGridItem,
+    accessToken: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Card(
+            modifier = Modifier.size(72.dp),
+            shape = RoundedCornerShape(36.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        ) {
+            if (author.photoUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Home,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else {
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(author.photoUrl)
+                            .addHeader("Authorization", "Bearer $accessToken")
+                            .crossfade(true)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .build()
+                    ),
+                    contentDescription = author.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
         Text(
-            text = audiobook.author,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = author.name,
+            style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        audiobook.series?.takeIf { it.isNotBlank() }?.let { series ->
-            Text(
-                text = series,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeEmptyState(
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Book,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(18.dp))
         Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = stringResource(R.string.authors_book_count, author.bookCount),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }

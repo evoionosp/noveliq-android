@@ -117,8 +117,9 @@ Impact:
 
 ## Recommended Immediate Priorities
 
-1. Implement the first real playback slice behind the current `Play` action.
-2. Define playback/session architecture that can later power Android Auto and Wear OS.
+1. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`.
+2. Add server-backed `Continue Listening` data after the home/dashboard polish pass, while still persisting it locally for Room-first reads.
 3. Decide how much audiobook detail should be cached locally versus fetched on demand.
-4. Introduce download-domain models before adding offline behavior.
-5. Continue splitting broad modules as feature/capability complexity grows.
+4. Implement the first real playback slice behind the current `Play` action.
+5. Define playback/session architecture that can later power Android Auto and Wear OS.
+6. Introduce download-domain models before adding offline behavior.

@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.data.audiobook.repository
 
+import android.util.Log
 import androidx.room.withTransaction
 import java.io.IOException
 import javax.inject.Inject
@@ -37,6 +38,10 @@ class AudiobookRepositoryImpl @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     @param:Named("io") private val ioDispatcher: CoroutineDispatcher
 ) : AudiobookRepository {
+    companion object {
+        private const val TAG = "AudiobookRefresh"
+    }
+
     override fun observeAudiobooks(libraryId: String): Flow<List<Audiobook>> {
         return audiobookDao.observeAudiobooks(libraryId).map { entities ->
             entities.map { it.toDomain() }
@@ -116,6 +121,12 @@ class AudiobookRepositoryImpl @Inject constructor(
             )
 
             try {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.d(
+                        TAG,
+                        "Refreshing audiobooks for libraryId=$libraryId baseUrl=$baseUrl tokenPresent=${accessToken.isNotBlank()} tokenLength=${accessToken.length}"
+                    )
+                }
                 val response = serviceFactory.create(baseUrl).libraryItems(
                     authorization = "Bearer $accessToken",
                     libraryId = libraryId
@@ -142,8 +153,21 @@ class AudiobookRepositoryImpl @Inject constructor(
                         )
                     )
                 }
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.d(
+                        TAG,
+                        "Audiobook refresh success libraryId=$libraryId itemCount=${audiobooks.size}"
+                    )
+                }
                 DomainResult.Success(Unit)
             } catch (exception: HttpException) {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.w(
+                        TAG,
+                        "Audiobook refresh failed with HTTP ${exception.code()} for GET /api/libraries/$libraryId/items at baseUrl=$baseUrl",
+                        exception
+                    )
+                }
                 val error = if (exception.code() == 401 || exception.code() == 403) {
                     CatalogError.AUTH
                 } else {
@@ -152,14 +176,23 @@ class AudiobookRepositoryImpl @Inject constructor(
                 markSyncFailure(libraryId, error)
                 DomainResult.Failure(error)
             } catch (exception: IllegalArgumentException) {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.e(TAG, "Audiobook refresh invalid base URL for libraryId=$libraryId baseUrl=$baseUrl", exception)
+                }
                 markSyncFailure(libraryId, CatalogError.UNKNOWN)
                 DomainResult.Failure(CatalogError.UNKNOWN)
             } catch (exception: IOException) {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.w(TAG, "Audiobook refresh network failure for libraryId=$libraryId baseUrl=$baseUrl", exception)
+                }
                 markSyncFailure(libraryId, CatalogError.NETWORK)
                 DomainResult.Failure(CatalogError.NETWORK)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.e(TAG, "Audiobook refresh unexpected failure for libraryId=$libraryId baseUrl=$baseUrl", exception)
+                }
                 markSyncFailure(libraryId, CatalogError.UNKNOWN)
                 DomainResult.Failure(CatalogError.UNKNOWN)
             }

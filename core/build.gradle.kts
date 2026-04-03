@@ -35,6 +35,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.material)
     implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.coroutines.core)

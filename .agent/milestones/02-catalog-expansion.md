@@ -48,6 +48,9 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 
 ## Next Work Inside This Milestone
 
+- Polish the main browsing shell across the `Home`, `Library`, and `Authors` root destinations.
+- Make the `Home` dashboard sections feel production-ready before adding more server-driven shelf types.
+- After home/dashboard polish is stable, add server-backed `Continue Listening` sync and store it locally so Room remains the read source for the home surface.
 - Decide whether more detail data should be cached locally.
 - Improve the detail model so playback does not depend on ad hoc network fetches.
 - Keep preparing the detail screen to become the playback entry surface.

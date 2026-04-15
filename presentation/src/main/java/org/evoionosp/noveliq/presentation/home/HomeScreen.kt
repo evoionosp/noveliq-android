@@ -67,6 +67,7 @@ import org.evoionosp.noveliq.presentation.R
 fun HomeScreen(
     accessToken: String,
     onOpenSettings: () -> Unit,
+    onSessionExpired: () -> Unit,
     bottomBarPadding: Dp,
     onOpenAudiobook: (Audiobook) -> Unit,
     modifier: Modifier = Modifier,
@@ -82,11 +83,15 @@ fun HomeScreen(
                 is HomeUiEvent.ShowMessage -> snackbarHostState.showSnackbar(
                     context.getString(event.messageResId)
                 )
+                HomeUiEvent.SessionExpired -> {
+                    snackbarHostState.showSnackbar(context.getString(R.string.error_session_expired))
+                    onSessionExpired()
+                }
             }
         }
     }
 
-    val continueListening = emptyList<Audiobook>()
+    val continueListening = state.continueListening
     val recentlyAdded = state.audiobooks.take(12)
     val discover = state.audiobooks
         .sortedBy { it.title.lowercase() }
@@ -170,6 +175,12 @@ fun HomeScreen(
                                 title = stringResource(R.string.home_continue_empty),
                                 body = stringResource(R.string.home_continue_empty_hint)
                             )
+                        } else {
+                            HorizontalBookRow(
+                                audiobooks = continueListening,
+                                accessToken = accessToken,
+                                onOpenAudiobook = onOpenAudiobook
+                            )
                         }
                     }
                 }
@@ -222,12 +233,29 @@ fun HomeScreen(
 fun LibraryScreen(
     accessToken: String,
     onOpenSettings: () -> Unit,
+    onSessionExpired: () -> Unit,
     bottomBarPadding: Dp,
     onOpenAudiobook: (Audiobook) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is HomeUiEvent.ShowMessage -> snackbarHostState.showSnackbar(
+                    context.getString(event.messageResId)
+                )
+                HomeUiEvent.SessionExpired -> {
+                    snackbarHostState.showSnackbar(context.getString(R.string.error_session_expired))
+                    onSessionExpired()
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -236,7 +264,8 @@ fun LibraryScreen(
                 title = stringResource(R.string.root_library),
                 onOpenSettings = onOpenSettings
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         PullToRefreshBox(
             modifier = Modifier
@@ -308,11 +337,14 @@ private data class AuthorGridItem(
 fun AuthorsScreen(
     accessToken: String,
     onOpenSettings: () -> Unit,
+    onSessionExpired: () -> Unit,
     bottomBarPadding: Dp,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
     val authors = remember(state.audiobooks) {
         state.audiobooks
             .flatMap { audiobook ->
@@ -329,6 +361,20 @@ fun AuthorsScreen(
             .sortedBy { it.name.lowercase() }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is HomeUiEvent.ShowMessage -> snackbarHostState.showSnackbar(
+                    context.getString(event.messageResId)
+                )
+                HomeUiEvent.SessionExpired -> {
+                    snackbarHostState.showSnackbar(context.getString(R.string.error_session_expired))
+                    onSessionExpired()
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -336,7 +382,8 @@ fun AuthorsScreen(
                 title = stringResource(R.string.root_authors),
                 onOpenSettings = onOpenSettings
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier

@@ -50,6 +50,11 @@ class BootstrapHomeCatalogUseCase @Inject constructor(
             accessToken = accessToken,
             libraryId = selectedLibrary.id
         )
+        audiobookRepository.refreshContinueListening(
+            baseUrl = baseUrl,
+            accessToken = accessToken,
+            libraryId = selectedLibrary.id
+        )
 
         val cachedAudiobooks = audiobookRepository.observeAudiobooks(selectedLibrary.id).first()
         return when (audiobookRefreshResult) {

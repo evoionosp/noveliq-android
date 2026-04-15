@@ -33,12 +33,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +48,6 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.presentation.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +55,7 @@ import org.evoionosp.noveliq.presentation.R
 fun AudiobookDetailScreen(
     accessToken: String,
     onBackClick: () -> Unit,
+    onPlayClick: (org.evoionosp.noveliq.domain.audiobook.model.Audiobook) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AudiobookDetailViewModel = hiltViewModel()
 ) {
@@ -65,8 +63,6 @@ fun AudiobookDetailScreen(
     val audiobook = state.audiobook
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -175,6 +171,12 @@ fun AudiobookDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = audiobook.durationInSeconds?.toDurationLabel()
+                                ?: stringResource(R.string.audiobook_detail_unknown),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         audiobook.series?.takeIf { it.isNotBlank() }?.let { series ->
                             Surface(
                                 shape = RoundedCornerShape(18.dp),
@@ -192,44 +194,12 @@ fun AudiobookDetailScreen(
                 }
             }
 
-            Surface(
-                shape = RoundedCornerShape(30.dp),
-                tonalElevation = 4.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerLow
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.audiobook_detail_meta_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    DetailRow(
-                        label = stringResource(R.string.audiobook_detail_author_label),
-                        value = audiobook.author
-                    )
-                    DetailRow(
-                        label = stringResource(R.string.audiobook_detail_duration_label),
-                        value = audiobook.durationInSeconds?.toDurationLabel()
-                            ?: stringResource(R.string.audiobook_detail_unknown)
-                    )
-                }
-            }
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                message = context.getString(R.string.playback_not_ready)
-                            )
-                        }
-                    },
+                    onClick = { onPlayClick(audiobook) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(text = stringResource(R.string.play))
@@ -342,31 +312,6 @@ private fun ChapterRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun DetailRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.size(16.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.End
-        )
     }
 }
 

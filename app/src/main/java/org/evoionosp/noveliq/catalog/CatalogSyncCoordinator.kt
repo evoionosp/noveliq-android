@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
+import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshContinueListeningUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
 import org.evoionosp.noveliq.domain.library.usecase.ObserveSelectedLibraryUseCase
 import org.evoionosp.noveliq.domain.library.usecase.RefreshLibrariesUseCase
@@ -22,6 +23,7 @@ class CatalogSyncCoordinator @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
+    private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase,
     private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase
 ) {
     private var started = false
@@ -51,6 +53,11 @@ class CatalogSyncCoordinator @Inject constructor(
                             accessToken = session.accessToken,
                             libraryId = library.id
                         )
+                        refreshContinueListeningUseCase(
+                            baseUrl = session.baseUrl,
+                            accessToken = session.accessToken,
+                            libraryId = library.id
+                        )
                     }
                 }
         }
@@ -66,6 +73,11 @@ class CatalogSyncCoordinator @Inject constructor(
         val selectedLibrary = observeSelectedLibraryUseCase().first()
         if (selectedLibrary != null) {
             refreshSelectedLibraryAudiobooksUseCase(
+                baseUrl = session.baseUrl,
+                accessToken = session.accessToken,
+                libraryId = selectedLibrary.id
+            )
+            refreshContinueListeningUseCase(
                 baseUrl = session.baseUrl,
                 accessToken = session.accessToken,
                 libraryId = selectedLibrary.id

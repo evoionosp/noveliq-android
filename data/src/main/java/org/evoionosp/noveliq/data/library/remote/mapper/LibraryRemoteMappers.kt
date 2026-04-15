@@ -1,6 +1,7 @@
 package org.evoionosp.noveliq.data.library.remote.mapper
 
 import java.util.Locale
+import org.evoionosp.noveliq.data.audiobook.local.entity.ContinueListeningEntity
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookEntity
 import org.evoionosp.noveliq.data.library.local.entity.LibraryEntity
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
@@ -50,8 +51,22 @@ internal fun LibraryItemDto.toEntity(
         title = titleValue,
         author = authorValue,
         coverUrl = coverUrl,
-        series = metadata?.series?.firstOrNull()?.name,
+        series = metadata?.seriesName ?: metadata?.series?.firstOrNull()?.name,
         durationInSeconds = media?.durationInSeconds?.toLong()
+    )
+}
+
+internal fun LibraryItemDto.toContinueListeningEntity(
+    fallbackLibraryId: String
+): ContinueListeningEntity? {
+    val idValue = id.orEmpty()
+    if (idValue.isBlank()) return null
+    if (mediaType.orEmpty().lowercase(Locale.US) != "book") return null
+
+    return ContinueListeningEntity(
+        audiobookId = idValue,
+        libraryId = libraryId ?: fallbackLibraryId,
+        progressLastUpdateMillis = progressLastUpdateMillis ?: 0L
     )
 }
 

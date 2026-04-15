@@ -11,6 +11,8 @@ interface AudiobookRepository {
 
     fun observeAudiobook(libraryId: String, audiobookId: String): Flow<Audiobook?>
 
+    fun observeContinueListening(libraryId: String): Flow<List<Audiobook>>
+
     suspend fun getAudiobookChapters(
         baseUrl: String,
         accessToken: String,
@@ -20,6 +22,12 @@ interface AudiobookRepository {
     fun observeLibrarySyncStatus(libraryId: String): Flow<SyncStatus>
 
     suspend fun refreshAudiobooks(
+        baseUrl: String,
+        accessToken: String,
+        libraryId: String
+    ): DomainResult<Unit>
+
+    suspend fun refreshContinueListening(
         baseUrl: String,
         accessToken: String,
         libraryId: String

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
+import org.evoionosp.noveliq.data.audiobook.local.dao.ContinueListeningDao
 import org.evoionosp.noveliq.data.audiobook.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
@@ -19,6 +20,7 @@ import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
 import org.evoionosp.noveliq.data.library.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
 import org.evoionosp.noveliq.data.library.remote.mapper.toChapterDomainList
+import org.evoionosp.noveliq.data.library.remote.mapper.toContinueListeningEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
@@ -33,6 +35,7 @@ import retrofit2.HttpException
 class AudiobookRepositoryImpl @Inject constructor(
     private val database: NoveliqDatabase,
     private val audiobookDao: AudiobookDao,
+    private val continueListeningDao: ContinueListeningDao,
     private val syncStateDao: LibrarySyncStateDao,
     private val serviceFactory: AudiobookshelfLibraryServiceFactory,
     private val connectivityObserver: ConnectivityObserver,
@@ -54,6 +57,12 @@ class AudiobookRepositoryImpl @Inject constructor(
             audiobookId = audiobookId
         ).map { entity ->
             entity?.toDomain()
+        }
+    }
+
+    override fun observeContinueListening(libraryId: String): Flow<List<Audiobook>> {
+        return continueListeningDao.observeContinueListening(libraryId).map { entities ->
+            entities.map { it.toDomain() }
         }
     }
 
@@ -194,6 +203,80 @@ class AudiobookRepositoryImpl @Inject constructor(
                     Log.e(TAG, "Audiobook refresh unexpected failure for libraryId=$libraryId baseUrl=$baseUrl", exception)
                 }
                 markSyncFailure(libraryId, CatalogError.UNKNOWN)
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            }
+        }
+    }
+
+    override suspend fun refreshContinueListening(
+        baseUrl: String,
+        accessToken: String,
+        libraryId: String
+    ): DomainResult<Unit> {
+        return withContext(ioDispatcher) {
+            if (!connectivityObserver.isConnected()) {
+                return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
+            }
+
+            try {
+                val response = serviceFactory.create(baseUrl).itemsInProgress(
+                    authorization = "Bearer $accessToken",
+                    limit = 50
+                )
+                val entities = response.results.orEmpty().filter { item ->
+                    item.libraryId == libraryId
+                }
+                val audiobooks = entities.mapNotNull { item ->
+                    item.toEntity(
+                        serviceFactory = serviceFactory,
+                        baseUrl = baseUrl,
+                        fallbackLibraryId = libraryId
+                    )
+                }
+                val continueItems = entities.mapNotNull { item ->
+                    item.toContinueListeningEntity(fallbackLibraryId = libraryId)
+                }
+
+                database.withTransaction {
+                    if (audiobooks.isNotEmpty()) {
+                        audiobookDao.upsertAudiobooks(audiobooks)
+                    }
+                    continueListeningDao.deleteByLibraryId(libraryId)
+                    if (continueItems.isNotEmpty()) {
+                        continueListeningDao.upsert(continueItems)
+                    }
+                }
+
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.d(
+                        TAG,
+                        "Continue Listening refresh success libraryId=$libraryId itemCount=${continueItems.size}"
+                    )
+                }
+                DomainResult.Success(Unit)
+            } catch (exception: HttpException) {
+                if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                    Log.w(
+                        TAG,
+                        "Continue Listening refresh failed with HTTP ${exception.code()} for GET /api/me/items-in-progress at baseUrl=$baseUrl",
+                        exception
+                    )
+                }
+                val error = if (exception.code() == 401 || exception.code() == 403) {
+                    CatalogError.AUTH
+                } else if (exception.code() == 404) {
+                    CatalogError.NOT_FOUND
+                } else {
+                    CatalogError.UNKNOWN
+                }
+                DomainResult.Failure(error)
+            } catch (exception: IllegalArgumentException) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            } catch (exception: IOException) {
+                DomainResult.Failure(CatalogError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
                 DomainResult.Failure(CatalogError.UNKNOWN)
             }
         }

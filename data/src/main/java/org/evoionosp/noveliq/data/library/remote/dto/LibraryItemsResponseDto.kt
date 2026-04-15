@@ -15,7 +15,9 @@ data class LibraryItemDto(
     @SerializedName("mediaType")
     val mediaType: String? = null,
     @SerializedName("media")
-    val media: LibraryItemMediaDto? = null
+    val media: LibraryItemMediaDto? = null,
+    @SerializedName("progressLastUpdate")
+    val progressLastUpdateMillis: Long? = null
 )
 
 data class LibraryItemMediaDto(
@@ -32,6 +34,8 @@ data class LibraryItemMetadataDto(
     val title: String? = null,
     @SerializedName(value = "authorName", alternate = ["author", "authorNameLF"])
     val authorName: String? = null,
+    @SerializedName("seriesName")
+    val seriesName: String? = null,
     @SerializedName("series")
     val series: List<SeriesDto>? = null
 )

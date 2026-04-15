@@ -4,4 +4,6 @@ sealed interface HomeUiEvent {
     data class ShowMessage(
         val messageResId: Int
     ) : HomeUiEvent
+
+    data object SessionExpired : HomeUiEvent
 }

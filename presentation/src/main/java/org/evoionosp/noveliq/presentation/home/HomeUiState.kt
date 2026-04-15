@@ -9,6 +9,7 @@ data class HomeUiState(
     val selectedLibraryId: String? = null,
     val selectedLibraryName: String? = null,
     val audiobooks: List<Audiobook> = emptyList(),
+    val continueListening: List<Audiobook> = emptyList(),
     val syncStatus: SyncStatus = SyncStatus.Idle,
     val isRefreshing: Boolean = false
 )

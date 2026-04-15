@@ -13,6 +13,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
@@ -25,6 +27,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +45,8 @@ import org.evoionosp.noveliq.presentation.detail.AudiobookDetailScreen
 import org.evoionosp.noveliq.presentation.home.AuthorsScreen
 import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.home.LibraryScreen
+import org.evoionosp.noveliq.presentation.player.NowPlayingBar
+import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
 import org.evoionosp.noveliq.presentation.settings.PreferencesScreen
 import org.evoionosp.noveliq.presentation.settings.SettingsViewModel
@@ -194,6 +201,10 @@ class MainActivity : ComponentActivity() {
                 } else {
                     key(baseRoute, splashState.startupDestination) {
                         val navController = rememberNavController()
+                        var nowPlayingAudiobook by remember {
+                            mutableStateOf<org.evoionosp.noveliq.domain.audiobook.model.Audiobook?>(null)
+                        }
+                        var isNowPlayingExpanded by remember { mutableStateOf(false) }
                         val currentBackStackEntry by navController.currentBackStackEntryAsState()
                         val currentRoute = currentBackStackEntry?.destination?.route
                         val mainRootRoutes = setOf(
@@ -202,39 +213,51 @@ class MainActivity : ComponentActivity() {
                             RootRoute.Authors.route
                         )
 
-                        Scaffold(
-                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                            bottomBar = {
-                                if (currentRoute in mainRootRoutes) {
-                                    NavigationBar {
-                                        listOf(
-                                            Triple(RootRoute.Home, Icons.Rounded.Home, R.string.root_home),
-                                            Triple(RootRoute.Library, Icons.Rounded.AutoStories, R.string.root_library),
-                                            Triple(RootRoute.Authors, Icons.Rounded.Group, R.string.root_authors)
-                                        ).forEach { (route, icon, labelRes) ->
-                                            NavigationBarItem(
-                                                selected = currentRoute == route.route,
-                                                onClick = {
-                                                    navController.navigate(route.route) {
-                                                        popUpTo(RootRoute.Home.route) {
-                                                            saveState = true
-                                                        }
-                                                        launchSingleTop = true
-                                                        restoreState = true
-                                                    }
-                                                },
-                                                icon = { Icon(imageVector = icon, contentDescription = null) },
-                                                label = { Text(text = getString(labelRes)) }
+                        Box {
+                            Scaffold(
+                                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                bottomBar = {
+                                    Column {
+                                        if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
+                                            val startupDestination =
+                                                splashState.startupDestination as? StartupDestination.Home
+                                            NowPlayingBar(
+                                                audiobook = nowPlayingAudiobook,
+                                                accessToken = startupDestination?.session?.accessToken.orEmpty(),
+                                                onExpand = { isNowPlayingExpanded = true }
                                             )
+                                        }
+                                        if (currentRoute in mainRootRoutes) {
+                                            NavigationBar {
+                                                listOf(
+                                                    Triple(RootRoute.Home, Icons.Rounded.Home, R.string.root_home),
+                                                    Triple(RootRoute.Library, Icons.Rounded.AutoStories, R.string.root_library),
+                                                    Triple(RootRoute.Authors, Icons.Rounded.Group, R.string.root_authors)
+                                                ).forEach { (route, icon, labelRes) ->
+                                                    NavigationBarItem(
+                                                        selected = currentRoute == route.route,
+                                                        onClick = {
+                                                            navController.navigate(route.route) {
+                                                                popUpTo(RootRoute.Home.route) {
+                                                                    saveState = true
+                                                                }
+                                                                launchSingleTop = true
+                                                                restoreState = true
+                                                            }
+                                                        },
+                                                        icon = { Icon(imageVector = icon, contentDescription = null) },
+                                                        label = { Text(text = getString(labelRes)) }
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        ) { innerPadding ->
-                            NavHost(
-                                navController = navController,
-                                startDestination = baseRoute.route
-                            ) {
+                            ) { innerPadding ->
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = baseRoute.route
+                                ) {
                                 composable(
                                     route = RootRoute.Auth.route,
                                     enterTransition = { backEnterTransition() },
@@ -259,6 +282,11 @@ class MainActivity : ComponentActivity() {
                                     HomeScreen(
                                         accessToken = startupDestination.session.accessToken,
                                         onOpenSettings = { navController.navigate(RootRoute.Preferences.route) },
+                                        onSessionExpired = {
+                                            navController.navigate(RootRoute.Auth.route) {
+                                                popUpTo(0)
+                                            }
+                                        },
                                         bottomBarPadding = innerPadding.calculateBottomPadding(),
                                         onOpenAudiobook = { audiobook ->
                                             navController.navigate(
@@ -283,6 +311,11 @@ class MainActivity : ComponentActivity() {
                                     LibraryScreen(
                                         accessToken = startupDestination.session.accessToken,
                                         onOpenSettings = { navController.navigate(RootRoute.Preferences.route) },
+                                        onSessionExpired = {
+                                            navController.navigate(RootRoute.Auth.route) {
+                                                popUpTo(0)
+                                            }
+                                        },
                                         bottomBarPadding = innerPadding.calculateBottomPadding(),
                                         onOpenAudiobook = { audiobook ->
                                             navController.navigate(
@@ -307,6 +340,11 @@ class MainActivity : ComponentActivity() {
                                     AuthorsScreen(
                                         accessToken = startupDestination.session.accessToken,
                                         onOpenSettings = { navController.navigate(RootRoute.Preferences.route) },
+                                        onSessionExpired = {
+                                            navController.navigate(RootRoute.Auth.route) {
+                                                popUpTo(0)
+                                            }
+                                        },
                                         bottomBarPadding = innerPadding.calculateBottomPadding(),
                                         modifier = Modifier
                                     )
@@ -331,6 +369,11 @@ class MainActivity : ComponentActivity() {
                                     AudiobookDetailScreen(
                                         accessToken = startupDestination.session.accessToken,
                                         onBackClick = { navController.popBackStack() },
+                                        onPlayClick = { audiobook ->
+                                            nowPlayingAudiobook = audiobook
+                                            isNowPlayingExpanded = true
+                                            navController.popBackStack()
+                                        },
                                         modifier = Modifier
                                     )
                                 }
@@ -384,7 +427,18 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier
                                     )
                                 }
+                                }
                             }
+
+                            val startupDestination =
+                                splashState.startupDestination as? StartupDestination.Home
+                            NowPlayingOverlay(
+                                visible = isNowPlayingExpanded,
+                                audiobook = nowPlayingAudiobook,
+                                accessToken = startupDestination?.session?.accessToken.orEmpty(),
+                                onMinimize = { isNowPlayingExpanded = false },
+                                modifier = Modifier
+                            )
                         }
                     }
                 }

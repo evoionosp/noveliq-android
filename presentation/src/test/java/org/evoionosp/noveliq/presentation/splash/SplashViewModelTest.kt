@@ -15,6 +15,10 @@ import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
+import org.evoionosp.noveliq.domain.auth.model.AuthError
+import org.evoionosp.noveliq.domain.auth.model.LoginData
+import org.evoionosp.noveliq.domain.auth.model.LoginResult
+import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
@@ -45,6 +49,7 @@ class SplashViewModelTest {
     fun `routes to auth when session is missing`() = runTest(dispatcher) {
         val viewModel = SplashViewModel(
             sessionStore = FakeSessionStore(initialSession = null),
+            authRepository = FakeAuthRepository(),
             bootstrapHomeCatalogUseCase = bootstrapUseCase()
         )
 
@@ -59,6 +64,7 @@ class SplashViewModelTest {
         val session = testSession()
         val viewModel = SplashViewModel(
             sessionStore = FakeSessionStore(initialSession = session),
+            authRepository = FakeAuthRepository(),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),
@@ -78,6 +84,7 @@ class SplashViewModelTest {
         val session = testSession()
         val viewModel = SplashViewModel(
             sessionStore = FakeSessionStore(initialSession = session),
+            authRepository = FakeAuthRepository(),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = emptyList(),
                 selectedLibrary = null,
@@ -101,6 +108,7 @@ class SplashViewModelTest {
         val audiobookRefreshResult = AtomicReference<DomainResult<Unit>>(DomainResult.Failure(CatalogError.NETWORK))
         val viewModel = SplashViewModel(
             sessionStore = FakeSessionStore(initialSession = session),
+            authRepository = FakeAuthRepository(),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),
@@ -150,6 +158,29 @@ class SplashViewModelTest {
             baseUrl = "https://example.com"
         )
     }
+}
+
+private class FakeAuthRepository(
+    private val refreshResult: LoginResult = LoginResult.Failure(AuthError.HTTP)
+) : AuthRepository {
+    override suspend fun login(
+        baseUrl: String,
+        username: String,
+        password: String
+    ): LoginResult {
+        return LoginResult.Success(
+            LoginData(
+                accessToken = "token",
+                refreshToken = "refresh-token",
+                userId = "user-1"
+            )
+        )
+    }
+
+    override suspend fun refreshSession(
+        baseUrl: String,
+        refreshToken: String
+    ): LoginResult = refreshResult
 }
 
 private class FakeSessionStore(initialSession: LoginSession?) : SessionStore {
@@ -206,6 +237,10 @@ private class FakeAudiobookRepository(
         return MutableStateFlow(null)
     }
 
+    override fun observeContinueListening(libraryId: String): Flow<List<Audiobook>> {
+        return MutableStateFlow(emptyList())
+    }
+
     override suspend fun getAudiobookChapters(
         baseUrl: String,
         accessToken: String,
@@ -221,4 +256,10 @@ private class FakeAudiobookRepository(
         accessToken: String,
         libraryId: String
     ): DomainResult<Unit> = audiobookRefreshResultRef?.get() ?: audiobookRefreshResult
+
+    override suspend fun refreshContinueListening(
+        baseUrl: String,
+        accessToken: String,
+        libraryId: String
+    ): DomainResult<Unit> = DomainResult.Success(Unit)
 }

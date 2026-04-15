@@ -16,6 +16,7 @@ The project is not yet a playback app. It is currently a catalog and authenticat
 - Select one library.
 - Fetch audiobook list for the selected library.
 - Cache libraries and audiobooks in Room.
+- Sync server-backed Continue Listening from Audiobookshelf personalized shelves and cache it locally.
 - Show sync status for current library.
 - Navigate from the catalog grid to an audiobook detail screen.
 - Fetch and display audiobook chapters from the Audiobookshelf item-detail API.
@@ -96,6 +97,7 @@ Impact:
 - `common` renamed to `core`.
 - Audiobook detail route and screen.
 - Chapter loading from server item detail.
+- Server-backed Continue Listening shelf sync cached locally for Room-first home reads.
 
 ## Current Product Fit
 
@@ -118,8 +120,7 @@ Impact:
 ## Recommended Immediate Priorities
 
 1. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`.
-2. Add server-backed `Continue Listening` data after the home/dashboard polish pass, while still persisting it locally for Room-first reads.
-3. Decide how much audiobook detail should be cached locally versus fetched on demand.
-4. Implement the first real playback slice behind the current `Play` action.
-5. Define playback/session architecture that can later power Android Auto and Wear OS.
-6. Introduce download-domain models before adding offline behavior.
+2. Decide how much audiobook detail should be cached locally versus fetched on demand.
+3. Implement the first real playback slice behind the current `Play` action.
+4. Define playback/session architecture that can later power Android Auto and Wear OS.
+5. Introduce download-domain models before adding offline behavior.

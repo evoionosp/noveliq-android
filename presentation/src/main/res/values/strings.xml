@@ -49,9 +49,9 @@
     <string name="root_authors">Authors</string>
     <string name="home_dashboard_title">Welcome back</string>
     <string name="home_continue_listening">Continue Listening</string>
-    <string name="home_continue_listening_hint">Resume progress and keep momentum once playback is ready.</string>
+    <string name="home_continue_listening_hint">Books currently in progress on your server.</string>
     <string name="home_continue_empty">Nothing in progress yet</string>
-    <string name="home_continue_empty_hint">Your current listens and progress will appear here after playback is implemented.</string>
+    <string name="home_continue_empty_hint">Start listening on your server and in-progress books will appear here.</string>
     <string name="home_recently_added">Recently Added</string>
     <string name="home_recently_added_hint">Fresh arrivals from your selected library.</string>
     <string name="home_discover">Discover</string>
@@ -117,6 +117,7 @@
     <string name="error_username_required">Please enter your username.</string>
     <string name="error_password_required">Please enter your password.</string>
     <string name="error_login_failed">Login failed. Please check your credentials.</string>
+    <string name="error_session_expired">Your session expired. Please log in again.</string>
     <string name="startup_catalog_error_title">Couldn\'t load your library.</string>
     <string name="startup_catalog_error_body">You\'re still signed in, but Noveliq couldn\'t finish loading your catalog. Try again or log out and reconnect.</string>
     <string name="retry">Retry</string>

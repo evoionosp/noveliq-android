@@ -45,12 +45,12 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - The detail screen shows cached summary metadata from the local catalog model.
 - Chapters are fetched from the Audiobookshelf item-detail API and shown at the bottom of the detail screen.
 - The detail screen now exposes the `Play` action as the next natural entry point for playback work.
+- The Home dashboard now reads Continue Listening from a Room-backed cache populated from Audiobookshelf personalized shelves.
 
 ## Next Work Inside This Milestone
 
 - Polish the main browsing shell across the `Home`, `Library`, and `Authors` root destinations.
 - Make the `Home` dashboard sections feel production-ready before adding more server-driven shelf types.
-- After home/dashboard polish is stable, add server-backed `Continue Listening` sync and store it locally so Room remains the read source for the home surface.
 - Decide whether more detail data should be cached locally.
 - Improve the detail model so playback does not depend on ad hoc network fetches.
 - Keep preparing the detail screen to become the playback entry surface.

@@ -30,10 +30,37 @@ class AuthRepositoryImpl @Inject constructor(
             try {
                 val service = serviceFactory.create(baseUrl)
                 val response = service.login(
-                    LoginRequestDto(
+                    request = LoginRequestDto(
                         username = username,
                         password = password
                     )
+                )
+                LoginResult.Success(response.toDomain())
+            } catch (exception: HttpException) {
+                LoginResult.Failure(
+                    error = AuthError.HTTP,
+                    code = exception.code()
+                )
+            } catch (exception: IllegalArgumentException) {
+                LoginResult.Failure(error = AuthError.INVALID_BASE_URL)
+            } catch (exception: IOException) {
+                LoginResult.Failure(error = AuthError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                LoginResult.Failure(error = AuthError.UNEXPECTED)
+            }
+        }
+    }
+
+    override suspend fun refreshSession(
+        baseUrl: String,
+        refreshToken: String
+    ): LoginResult {
+        return withContext(ioDispatcher) {
+            try {
+                val response = serviceFactory.create(baseUrl).refreshToken(
+                    refreshToken = refreshToken
                 )
                 LoginResult.Success(response.toDomain())
             } catch (exception: HttpException) {

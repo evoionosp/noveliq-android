@@ -13,12 +13,16 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.core.session.LoginSession
 import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.auth.model.LoginResult
+import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
+import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val sessionStore: SessionStore,
+    private val authRepository: AuthRepository,
     private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SplashUiState())
@@ -58,10 +62,21 @@ class SplashViewModel @Inject constructor(
     private suspend fun bootstrapCatalog(session: LoginSession) {
         _uiState.value = SplashUiState(isLoading = true)
 
-        val bootstrapResult = bootstrapHomeCatalogUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken
+        var activeSession = session
+        var bootstrapResult = bootstrapHomeCatalogUseCase(
+            baseUrl = activeSession.baseUrl,
+            accessToken = activeSession.accessToken
         )
+
+        if (bootstrapResult is BootstrapHomeCatalogResult.Failure && bootstrapResult.error == CatalogError.AUTH) {
+            activeSession = refreshSession(session) ?: session
+            if (activeSession.accessToken != session.accessToken) {
+                bootstrapResult = bootstrapHomeCatalogUseCase(
+                    baseUrl = activeSession.baseUrl,
+                    accessToken = activeSession.accessToken
+                )
+            }
+        }
 
         currentCoroutineContext().ensureActive()
 
@@ -69,12 +84,36 @@ class SplashViewModel @Inject constructor(
             isLoading = false,
             startupDestination = when (bootstrapResult) {
                 is BootstrapHomeCatalogResult.Success,
-                BootstrapHomeCatalogResult.NoLibrariesAvailable -> StartupDestination.Home(session)
+                BootstrapHomeCatalogResult.NoLibrariesAvailable -> StartupDestination.Home(activeSession)
                 is BootstrapHomeCatalogResult.Failure -> StartupDestination.CatalogLoadError(
-                    session = session,
+                    session = activeSession,
                     error = bootstrapResult.error
                 )
             }
         )
+    }
+
+    private suspend fun refreshSession(session: LoginSession): LoginSession? {
+        val refreshToken = session.refreshToken?.takeIf { it.isNotBlank() } ?: return null
+        return when (
+            val result = authRepository.refreshSession(
+                baseUrl = session.baseUrl,
+                refreshToken = refreshToken
+            )
+        ) {
+            is LoginResult.Success -> {
+                val accessToken = result.data.accessToken?.trim().orEmpty()
+                if (accessToken.isBlank()) return null
+                val updatedSession = session.copy(
+                    accessToken = accessToken,
+                    refreshToken = result.data.refreshToken?.trim()?.takeIf { it.isNotBlank() }
+                        ?: session.refreshToken,
+                    userId = result.data.userId?.trim() ?: session.userId
+                )
+                sessionStore.saveSession(updatedSession)
+                updatedSession
+            }
+            is LoginResult.Failure -> null
+        }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +25,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 
@@ -31,9 +35,11 @@ fun NowPlayingBar(
     audiobook: Audiobook?,
     accessToken: String,
     onExpand: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     if (audiobook == null) return
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
 
     Surface(
         modifier = modifier
@@ -80,9 +86,9 @@ fun NowPlayingBar(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            IconButton(onClick = onExpand) {
+            IconButton(onClick = viewModel::togglePlayPause) {
                 Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
+                    imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = null
                 )
             }

@@ -6,13 +6,13 @@ Introduce a production-viable playback architecture that can be reused by phone,
 
 ## Main Work
 
-- Add Media3 player integration.
-- Introduce `MediaSession` / `MediaSessionService`.
-- Define playback queue model and queue source.
-- Support play, pause, seek, skip, and resume.
-- Persist playback position.
-- Define how playback state is exposed to UI surfaces.
-- Add notification and background playback behavior.
+- [x] Add Media3 player integration.
+- [x] Introduce `MediaSession` / `MediaSessionService`.
+- [ ] Define playback queue model and queue source.
+- [x] Support play, pause, seek, skip, and resume.
+- [ ] Persist playback position.
+- [x] Define how playback state is exposed to UI surfaces.
+- [x] Add notification and background playback behavior.
 
 ## Important Notes
 

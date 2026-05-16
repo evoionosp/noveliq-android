@@ -16,18 +16,25 @@ import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.presentation.player.PlaybackConnection
 
 @HiltViewModel
 class AudiobookDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val audiobookRepository: AudiobookRepository,
-    private val sessionStore: SessionStore
+    private val sessionStore: SessionStore,
+    private val playbackConnection: PlaybackConnection
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AudiobookDetailUiState())
     val uiState: StateFlow<AudiobookDetailUiState> = _uiState.asStateFlow()
 
     private val libraryId: String? = savedStateHandle["libraryId"]
     private val audiobookId: String? = savedStateHandle["audiobookId"]
+
+    fun startPlayback() {
+        val audiobook = uiState.value.audiobook ?: return
+        playbackConnection.playAudiobook(audiobook)
+    }
 
     init {
         val currentLibraryId = libraryId

@@ -21,7 +21,9 @@ The project is not yet a playback app. It is currently a catalog and authenticat
 - Navigate from the catalog grid to an audiobook detail screen.
 - Fetch and display audiobook chapters from the Audiobookshelf item-detail API.
 - Cache expanded audiobook detail, chapters, and ordered remote tracks in Room as a playback-ready catalog model.
-- Show a `Play` action placeholder on the detail screen.
+- Real audio playback support using AndroidX Media3 (ExoPlayer + MediaSession).
+- Background playback with system media controls and notification.
+- Real-time playback synchronization between UI surfaces (Bar, Overlay, Screen).
 - Basic settings and appearance screens.
 
 ## Current Architecture Assessment
@@ -101,6 +103,7 @@ Impact:
 - Room-backed expanded audiobook detail cache with chapters and ordered remote tracks.
 - Server-backed Continue Listening shelf sync cached locally for Room-first home reads.
 - Presentation UI files have been split into screen-specific and component-specific Kotlin files for home/catalog, detail, and now-playing surfaces.
+- App navigation, route definitions, transition helpers, root bottom navigation, and now-playing scaffold state have been extracted from `MainActivity` into a dedicated `presentation.navigation` package.
 
 ## Current Product Fit
 
@@ -123,7 +126,7 @@ Impact:
 ## Recommended Immediate Priorities
 
 1. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`.
-2. Continue extracting navigation/app shell responsibilities out of `MainActivity` before playback expands route handling.
+2. Polish library browsing with search, filtering, and sort affordances.
 3. Build the first real playback slice behind the current `Play` action using the cached detail/track model.
 4. Define playback/session architecture that can later power Android Auto and Wear OS.
 5. Introduce progress persistence and playback source resolution.

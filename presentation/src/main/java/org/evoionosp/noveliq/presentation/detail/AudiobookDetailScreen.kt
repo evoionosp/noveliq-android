@@ -90,7 +90,10 @@ fun AudiobookDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { onPlayClick(audiobook) },
+                    onClick = {
+                        viewModel.startPlayback()
+                        onPlayClick(audiobook)
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(text = stringResource(R.string.play))

@@ -50,6 +50,7 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - The detail screen observes the cached expanded detail model and refreshes it through the repository, rather than treating chapters as network-only UI state.
 - Home/catalog UI has been decomposed from one large `HomeScreen.kt` file into dedicated screen and component files.
 - Audiobook detail and now-playing placeholder UI have also been split into focused screen/component/helper files.
+- Root app navigation has been extracted from `MainActivity` into `presentation.navigation`, including route constants, transition helpers, root bottom navigation, scaffold state, and the NavHost.
 
 ## Next Work Inside This Milestone
 
@@ -57,7 +58,6 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - Make the `Home` dashboard sections feel production-ready before adding more server-driven shelf types.
 - Add search/filter affordances for the library surface.
 - Decide whether author/series detail should become first-class routes before playback.
-- Split app navigation and scaffold code out of `MainActivity` into a dedicated app/nav package.
 - Keep the detail screen as the playback entry surface and wire `Play` into the upcoming playback core.
 
 ## Milestone 2.5: Playback-Ready Detail Cache

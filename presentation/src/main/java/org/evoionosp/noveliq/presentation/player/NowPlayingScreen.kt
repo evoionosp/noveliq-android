@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 
@@ -45,10 +48,14 @@ import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 internal fun NowPlayingScreen(
     audiobook: Audiobook,
     accessToken: String,
-    onMinimize: () -> Unit
+    onMinimize: () -> Unit,
+    viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     var dragAmount by remember { mutableFloatStateOf(0f) }
-    var progress by remember { mutableFloatStateOf(0.08f) }
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    val progress = if (playbackState.durationMs > 0) {
+        playbackState.currentPositionMs.toFloat() / playbackState.durationMs
+    } else 0f
 
     Surface(
         modifier = Modifier
@@ -135,7 +142,9 @@ internal fun NowPlayingScreen(
 
             Slider(
                 value = progress,
-                onValueChange = { progress = it },
+                onValueChange = { 
+                    viewModel.seekTo((it * playbackState.durationMs).toLong())
+                },
                 modifier = Modifier.fillMaxWidth()
             )
             Row(
@@ -143,12 +152,12 @@ internal fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "00:05",
+                    text = playbackState.currentPositionMs.msToDurationLabel(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = audiobook.durationInSeconds?.toDurationLabel().orEmpty(),
+                    text = playbackState.durationMs.msToDurationLabel(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -163,11 +172,11 @@ internal fun NowPlayingScreen(
             ) {
                 SeekButton(label = "15")
                 IconButton(
-                    onClick = { },
+                    onClick = viewModel::togglePlayPause,
                     modifier = Modifier.size(88.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Pause,
+                        imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = null,
                         modifier = Modifier.size(72.dp)
                     )

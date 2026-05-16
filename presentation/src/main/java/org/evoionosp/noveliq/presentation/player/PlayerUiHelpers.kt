@@ -20,10 +20,14 @@ internal fun authorizedImageRequest(
 }
 
 internal fun Long.toDurationLabel(): String {
-    val hours = this / 3600
-    val minutes = (this % 3600) / 60
+    val totalSeconds = this
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
     return when {
-        hours > 0 -> "%d:%02d:00".format(hours, minutes)
-        else -> "%d:%02d".format(minutes, 0)
+        hours > 0 -> "%d:%02d:%02d".format(hours, minutes, seconds)
+        else -> "%d:%02d".format(minutes, seconds)
     }
 }
+
+internal fun Long.msToDurationLabel(): String = (this / 1000).toDurationLabel()

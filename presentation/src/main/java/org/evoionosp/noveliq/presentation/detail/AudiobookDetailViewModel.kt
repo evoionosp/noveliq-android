@@ -38,17 +38,40 @@ class AudiobookDetailViewModel @Inject constructor(
                     libraryId = currentLibraryId,
                     audiobookId = currentAudiobookId
                 ).collect { audiobook ->
-                    _uiState.update { it.copy(audiobook = audiobook) }
+                    _uiState.update { currentState ->
+                        currentState.copy(audiobook = currentState.detail?.audiobook ?: audiobook)
+                    }
                 }
             }
 
             viewModelScope.launch {
-                loadChapters(currentAudiobookId)
+                audiobookRepository.observeAudiobookDetail(
+                    libraryId = currentLibraryId,
+                    audiobookId = currentAudiobookId
+                ).collect { detail ->
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            audiobook = detail?.audiobook ?: currentState.audiobook,
+                            detail = detail,
+                            chapters = detail?.chapters.orEmpty()
+                        )
+                    }
+                }
+            }
+
+            viewModelScope.launch {
+                refreshDetail(
+                    libraryId = currentLibraryId,
+                    audiobookId = currentAudiobookId
+                )
             }
         }
     }
 
-    private suspend fun loadChapters(audiobookId: String) {
+    private suspend fun refreshDetail(
+        libraryId: String,
+        audiobookId: String
+    ) {
         val session = sessionStore.session.first() ?: return
         _uiState.update {
             it.copy(
@@ -58,16 +81,16 @@ class AudiobookDetailViewModel @Inject constructor(
         }
 
         when (
-            val result = audiobookRepository.getAudiobookChapters(
+            val result = audiobookRepository.refreshAudiobookDetail(
                 baseUrl = session.baseUrl,
                 accessToken = session.accessToken,
+                libraryId = libraryId,
                 audiobookId = audiobookId
             )
         ) {
             is DomainResult.Success -> {
                 _uiState.update {
                     it.copy(
-                        chapters = result.data,
                         isLoadingChapters = false,
                         chapterErrorMessageResId = null
                     )
@@ -76,7 +99,6 @@ class AudiobookDetailViewModel @Inject constructor(
             is DomainResult.Failure -> {
                 _uiState.update {
                     it.copy(
-                        chapters = emptyList(),
                         isLoadingChapters = false,
                         chapterErrorMessageResId = result.error.toMessageResId()
                     )

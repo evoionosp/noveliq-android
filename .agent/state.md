@@ -2,7 +2,7 @@
 
 ## Summary
 
-Noveliq is still early-stage, but it now has a materially better foundation than the initial prototype. The app supports login, server checks, library discovery, local caching, selected-library persistence through local DB state, listing audiobook items for the selected library, and a first-pass audiobook detail flow with server-backed chapter loading.
+Noveliq is still early-stage, but it now has a materially better foundation than the initial prototype. The app supports login, server checks, library discovery, local caching, selected-library persistence through local DB state, listing audiobook items for the selected library, and a first-pass audiobook detail flow with server-backed detail/chapter/track loading cached locally.
 
 The project is not yet a playback app. It is currently a catalog and authentication app with a cleaner foundation and the first detail-oriented catalog flow in place.
 
@@ -20,6 +20,7 @@ The project is not yet a playback app. It is currently a catalog and authenticat
 - Show sync status for current library.
 - Navigate from the catalog grid to an audiobook detail screen.
 - Fetch and display audiobook chapters from the Audiobookshelf item-detail API.
+- Cache expanded audiobook detail, chapters, and ordered remote tracks in Room as a playback-ready catalog model.
 - Show a `Play` action placeholder on the detail screen.
 - Basic settings and appearance screens.
 
@@ -57,14 +58,14 @@ Impact:
 - Offline listening is not yet possible.
 - Playback architecture should be designed with downloads in mind before the implementation gets too far.
 
-#### 3. Catalog detail data is still split between local cache and network-only detail fetches
+#### 3. Catalog detail data is now cached, but still needs richer playback semantics
 
-The audiobook detail screen uses cached local metadata for summary fields and fetches chapters on demand from the server. This is acceptable for the current stage, but it is not the final detail model.
+The audiobook detail screen now observes a Room-backed expanded detail model and refreshes item detail from the server. Chapters and ordered remote tracks are cached locally, which gives playback a stable catalog source.
 
 Impact:
 
-- The app does not yet persist full detail state locally.
-- Playback and offline support will eventually need richer local detail models than the current list-derived `Audiobook` entity.
+- Playback can now resolve cached detail and remote track URLs from the repository layer.
+- The model still needs progress, bookmarks, local-file resolution, and eventual download state before offline playback.
 
 #### 4. Sync orchestration is still app-process scoped
 
@@ -97,7 +98,9 @@ Impact:
 - `common` renamed to `core`.
 - Audiobook detail route and screen.
 - Chapter loading from server item detail.
+- Room-backed expanded audiobook detail cache with chapters and ordered remote tracks.
 - Server-backed Continue Listening shelf sync cached locally for Room-first home reads.
+- Presentation UI files have been split into screen-specific and component-specific Kotlin files for home/catalog, detail, and now-playing surfaces.
 
 ## Current Product Fit
 
@@ -120,7 +123,7 @@ Impact:
 ## Recommended Immediate Priorities
 
 1. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`.
-2. Decide how much audiobook detail should be cached locally versus fetched on demand.
-3. Implement the first real playback slice behind the current `Play` action.
+2. Continue extracting navigation/app shell responsibilities out of `MainActivity` before playback expands route handling.
+3. Build the first real playback slice behind the current `Play` action using the cached detail/track model.
 4. Define playback/session architecture that can later power Android Auto and Wear OS.
-5. Introduce download-domain models before adding offline behavior.
+5. Introduce progress persistence and playback source resolution.

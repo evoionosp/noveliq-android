@@ -25,6 +25,8 @@ data class LibraryItemMediaDto(
     val durationInSeconds: Float? = null,
     @SerializedName("chapters")
     val chapters: List<ChapterDto>? = null,
+    @SerializedName("tracks")
+    val tracks: List<AudioTrackDto>? = null,
     @SerializedName("metadata")
     val metadata: LibraryItemMetadataDto? = null
 )
@@ -34,6 +36,8 @@ data class LibraryItemMetadataDto(
     val title: String? = null,
     @SerializedName(value = "authorName", alternate = ["author", "authorNameLF"])
     val authorName: String? = null,
+    @SerializedName("description")
+    val description: String? = null,
     @SerializedName("seriesName")
     val seriesName: String? = null,
     @SerializedName("series")
@@ -52,4 +56,19 @@ data class ChapterDto(
     val startInSeconds: Float? = null,
     @SerializedName(value = "end", alternate = ["endTime", "endOffset"])
     val endInSeconds: Float? = null
+)
+
+data class AudioTrackDto(
+    @SerializedName("index")
+    val index: Int? = null,
+    @SerializedName("startOffset")
+    val startOffsetInSeconds: Float? = null,
+    @SerializedName("duration")
+    val durationInSeconds: Float? = null,
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("contentUrl")
+    val contentUrl: String? = null,
+    @SerializedName("mimeType")
+    val mimeType: String? = null
 )

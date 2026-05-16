@@ -9,9 +9,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
+import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDetailDao
 import org.evoionosp.noveliq.data.audiobook.local.dao.ContinueListeningDao
 import org.evoionosp.noveliq.data.audiobook.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
@@ -19,11 +21,13 @@ import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
 import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
 import org.evoionosp.noveliq.data.library.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
-import org.evoionosp.noveliq.data.library.remote.mapper.toChapterDomainList
+import org.evoionosp.noveliq.data.library.remote.mapper.toChapterEntities
+import org.evoionosp.noveliq.data.library.remote.mapper.toDetailEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toContinueListeningEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
+import org.evoionosp.noveliq.data.library.remote.mapper.toTrackEntities
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
-import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
+import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.library.model.CatalogError
@@ -35,6 +39,7 @@ import retrofit2.HttpException
 class AudiobookRepositoryImpl @Inject constructor(
     private val database: NoveliqDatabase,
     private val audiobookDao: AudiobookDao,
+    private val audiobookDetailDao: AudiobookDetailDao,
     private val continueListeningDao: ContinueListeningDao,
     private val syncStateDao: LibrarySyncStateDao,
     private val serviceFactory: AudiobookshelfLibraryServiceFactory,
@@ -60,6 +65,22 @@ class AudiobookRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeAudiobookDetail(
+        libraryId: String,
+        audiobookId: String
+    ): Flow<AudiobookDetail?> {
+        return combine(
+            audiobookDetailDao.observeDetail(libraryId, audiobookId),
+            audiobookDetailDao.observeChapters(audiobookId),
+            audiobookDetailDao.observeTracks(audiobookId)
+        ) { detail, chapters, tracks ->
+            detail?.toDomain(
+                chapters = chapters,
+                tracks = tracks
+            )
+        }
+    }
+
     override fun observeContinueListening(libraryId: String): Flow<List<Audiobook>> {
         return continueListeningDao.observeContinueListening(libraryId).map { entities ->
             entities.map { it.toDomain() }
@@ -70,11 +91,12 @@ class AudiobookRepositoryImpl @Inject constructor(
         return syncStateDao.observeSyncState(libraryId).map { it.toDomain() }
     }
 
-    override suspend fun getAudiobookChapters(
+    override suspend fun refreshAudiobookDetail(
         baseUrl: String,
         accessToken: String,
+        libraryId: String,
         audiobookId: String
-    ): DomainResult<List<AudiobookChapter>> {
+    ): DomainResult<Unit> {
         return withContext(ioDispatcher) {
             if (!connectivityObserver.isConnected()) {
                 return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
@@ -88,7 +110,40 @@ class AudiobookRepositoryImpl @Inject constructor(
                 if (item.id.isNullOrBlank()) {
                     DomainResult.Failure(CatalogError.NOT_FOUND)
                 } else {
-                    DomainResult.Success(item.toChapterDomainList())
+                    val now = System.currentTimeMillis()
+                    val summary = item.toEntity(
+                        serviceFactory = serviceFactory,
+                        baseUrl = baseUrl,
+                        fallbackLibraryId = libraryId
+                    )
+                    val detail = item.toDetailEntity(
+                        serviceFactory = serviceFactory,
+                        baseUrl = baseUrl,
+                        fallbackLibraryId = libraryId,
+                        refreshedAtMillis = now
+                    )
+                    if (summary == null || detail == null) {
+                        return@withContext DomainResult.Failure(CatalogError.NOT_FOUND)
+                    }
+                    val chapters = item.toChapterEntities(audiobookId = detail.audiobookId)
+                    val tracks = item.toTrackEntities(
+                        serviceFactory = serviceFactory,
+                        baseUrl = baseUrl,
+                        audiobookId = detail.audiobookId
+                    )
+                    database.withTransaction {
+                        audiobookDao.upsertAudiobooks(listOf(summary))
+                        audiobookDetailDao.upsertDetail(detail)
+                        audiobookDetailDao.deleteChapters(detail.audiobookId)
+                        audiobookDetailDao.deleteTracks(detail.audiobookId)
+                        if (chapters.isNotEmpty()) {
+                            audiobookDetailDao.upsertChapters(chapters)
+                        }
+                        if (tracks.isNotEmpty()) {
+                            audiobookDetailDao.upsertTracks(tracks)
+                        }
+                    }
+                    DomainResult.Success(Unit)
                 }
             } catch (exception: HttpException) {
                 val error = when (exception.code()) {

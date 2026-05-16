@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
-import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
+import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
@@ -178,15 +178,20 @@ private class FakeAudiobookRepository(
         return MutableStateFlow(null)
     }
 
+    override fun observeAudiobookDetail(libraryId: String, audiobookId: String): Flow<AudiobookDetail?> {
+        return MutableStateFlow(null)
+    }
+
     override fun observeContinueListening(libraryId: String): Flow<List<Audiobook>> {
         return MutableStateFlow(emptyList())
     }
 
-    override suspend fun getAudiobookChapters(
+    override suspend fun refreshAudiobookDetail(
         baseUrl: String,
         accessToken: String,
+        libraryId: String,
         audiobookId: String
-    ): DomainResult<List<AudiobookChapter>> = DomainResult.Success(emptyList())
+    ): DomainResult<Unit> = DomainResult.Success(Unit)
 
     override fun observeLibrarySyncStatus(libraryId: String): Flow<SyncStatus> {
         return MutableStateFlow(SyncStatus.Idle)

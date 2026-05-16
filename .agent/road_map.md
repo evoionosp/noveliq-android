@@ -10,8 +10,9 @@ The goal is not to add features as quickly as possible. The goal is to add them 
 
 - Milestone 1 is largely complete.
 - Milestone 2 has started.
-- The app now has a real detail route and chapter loading, but playback and downloads have not started.
+- The app now has a real detail route with Room-backed expanded detail, chapters, and ordered remote track caching, but playback and downloads have not started.
 - The app now syncs server-backed Continue Listening into Room for the home dashboard.
+- Milestone 2.5 has established a playback-ready detail cache as the bridge from catalog browsing to playback.
 
 ## Cross-Cutting Standards
 
@@ -95,6 +96,6 @@ Details: `milestones/07-quality-and-release.md`
 ## Immediate Next Focus
 
 1. Finish polishing the main browsing surfaces: `Home`, `Library`, and `Authors`, including stronger navigation structure and production-ready section design.
-2. Decide whether audiobook detail data should remain partially network-backed or become more fully cached locally.
-3. Keep the chapter-capable detail screen as the starting point for later playback entry and download actions.
-4. Start the first real playback architecture slice only after the browsing shell and near-term home data model are stable.
+2. Use the cached expanded detail/track model as the starting point for playback.
+3. Keep the chapter-capable detail screen as the playback entry and later download action surface.
+4. Start the first real playback architecture slice once the immediate browsing shell polish is acceptable.

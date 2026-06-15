@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.Protocol
 import org.evoionosp.noveliq.core.session.LoginSession
 import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.auth.model.AuthError
@@ -36,6 +37,9 @@ class AuthViewModel @Inject constructor(
     private val _events = MutableSharedFlow<AuthUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<AuthUiEvent> = _events.asSharedFlow()
 
+    fun onProtocolChange(value: String) {
+        _uiState.update { it.copy(protocol = value) }
+    }
     fun onBaseUrlChange(value: String) {
         _uiState.update { it.copy(baseUrl = value) }
     }
@@ -49,15 +53,9 @@ class AuthViewModel @Inject constructor(
     }
 
     fun checkLoginSetup() {
-        val baseUrl = _uiState.value.baseUrl.trim()
+        val baseUrl = (_uiState.value.protocol+_uiState.value.baseUrl).trim()
         if (baseUrl.isBlank()) {
             setLoginSetupError(R.string.error_server_url_required)
-            return
-        }
-        if (!baseUrl.lowercase(Locale.US).startsWith("http://") &&
-            !baseUrl.lowercase(Locale.US).startsWith("https://")
-        ) {
-            setLoginSetupError(R.string.error_server_url_scheme)
             return
         }
 
@@ -132,6 +130,17 @@ class AuthViewModel @Inject constructor(
                     setLoginError(toAuthErrorRes(result.error))
                 }
             }
+        }
+    }
+
+    fun clearServerState() {
+        _uiState.update {
+            it.copy(
+                isChecking = false,
+                isLoggingIn = false,
+                showLoginFields = false,
+                serverStatus = null
+            )
         }
     }
 

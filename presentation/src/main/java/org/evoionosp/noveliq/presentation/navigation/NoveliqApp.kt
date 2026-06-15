@@ -9,15 +9,17 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.MainActivity
 import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
 import org.evoionosp.noveliq.presentation.player.NowPlayingViewModel
 import org.evoionosp.noveliq.presentation.settings.SettingsUiState
-import org.evoionosp.noveliq.presentation.splash.SplashScreen
 import org.evoionosp.noveliq.presentation.splash.SplashUiState
 import org.evoionosp.noveliq.presentation.splash.StartupDestination
 
@@ -37,10 +39,6 @@ fun NoveliqApp(
         is StartupDestination.CatalogLoadError -> AppRoute.CatalogError
     }
 
-    if (splashState.isLoading) {
-        SplashScreen()
-        return
-    }
 
     key(baseRoute, splashState.startupDestination) {
         val navController = rememberNavController()

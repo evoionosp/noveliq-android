@@ -25,4 +25,16 @@ class NowPlayingViewModel @Inject constructor(
     fun seekTo(positionMs: Long) {
         playbackConnection.seekTo(positionMs)
     }
+
+    fun seekForward() {
+        playbackConnection.seekForward()
+    }
+
+    fun seekBackward() {
+        playbackConnection.seekBackward()
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        playbackConnection.setPlaybackSpeed(speed)
+    }
 }

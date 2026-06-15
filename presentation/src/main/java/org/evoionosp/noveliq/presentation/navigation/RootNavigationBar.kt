@@ -38,15 +38,15 @@ internal fun RootNavigationBottomBar(
     isNowPlayingExpanded: Boolean,
     onExpandNowPlaying: () -> Unit
 ) {
-    Column {
-        if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
-            NowPlayingBar(
-                audiobook = nowPlayingAudiobook,
-                accessToken = nowPlayingAccessToken,
-                onExpand = onExpandNowPlaying
-            )
-        }
-        if (currentRoute in mainRootRoutes) {
+    if (currentRoute in mainRootRoutes) {
+        Column {
+            if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
+                NowPlayingBar(
+                    audiobook = nowPlayingAudiobook,
+                    accessToken = nowPlayingAccessToken,
+                    onExpand = onExpandNowPlaying
+                )
+            }
             NavigationBar {
                 rootNavItems.forEach { item ->
                     NavigationBarItem(

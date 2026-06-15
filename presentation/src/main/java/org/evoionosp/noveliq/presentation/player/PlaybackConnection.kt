@@ -88,6 +88,16 @@ class PlaybackConnection @Inject constructor(
         mediaController?.seekTo(positionMs)
     }
 
+    fun seekForward(amountMs: Long = 30000) {
+        val controller = mediaController ?: return
+        controller.seekTo(controller.currentPosition + amountMs)
+    }
+
+    fun seekBackward(amountMs: Long = 15000) {
+        val controller = mediaController ?: return
+        controller.seekTo((controller.currentPosition - amountMs).coerceAtLeast(0))
+    }
+
     private fun startProgressUpdateLoop() {
         connectionScope.launch {
             while (true) {
@@ -102,13 +112,22 @@ class PlaybackConnection @Inject constructor(
         _playbackState.update { it.copy(currentPositionMs = controller.currentPosition) }
     }
 
+    // Inside PlaybackConnection class
+    fun setPlaybackSpeed(speed: Float) {
+        val controller = mediaController ?: return
+        controller.setPlaybackSpeed(speed)
+        _playbackState.update { it.copy(playbackSpeed = speed) }
+    }
+
+    // Update updateState() to capture initial speed
     private fun updateState() {
         val controller = mediaController ?: return
         _playbackState.update {
             it.copy(
                 isPlaying = controller.isPlaying,
                 durationMs = controller.duration,
-                currentPositionMs = controller.currentPosition
+                currentPositionMs = controller.currentPosition,
+                playbackSpeed = controller.playbackParameters.speed // Added this
             )
         }
     }

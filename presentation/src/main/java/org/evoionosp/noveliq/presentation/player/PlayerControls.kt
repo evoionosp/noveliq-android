@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.player
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,18 +17,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-internal fun SeekButton(label: String) {
-    Box(
-        modifier = Modifier.size(64.dp),
-        contentAlignment = Alignment.Center
+internal fun SeekButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.size(64.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
+        Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -38,11 +41,13 @@ internal fun SeekButton(label: String) {
 @Composable
 internal fun PlayerAction(
     title: String,
-    icon: String
+    icon: String,
+    onClick: (() -> Unit)? = null // Add optional click
 ) {
     Column(
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = icon,

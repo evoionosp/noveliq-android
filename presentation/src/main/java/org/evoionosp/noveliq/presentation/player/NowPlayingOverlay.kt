@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -18,6 +19,10 @@ fun NowPlayingOverlay(
     onMinimize: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    BackHandler(enabled = visible) {
+        onMinimize()
+    }
+
     AnimatedVisibility(
         visible = visible && audiobook != null,
         enter = slideInVertically(

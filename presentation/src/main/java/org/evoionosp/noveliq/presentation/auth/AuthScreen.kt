@@ -38,6 +38,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -76,7 +77,7 @@ fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -130,10 +131,11 @@ fun AuthScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
 
-            WelcomeCard()
+
 
             when(state.serverStatus){
                 null -> {
+                    WelcomeCard()
                     ConnectToServerCard(state,
                         onProtocolChange = viewModel::onProtocolChange,
                         onUrlChange = viewModel::onBaseUrlChange,

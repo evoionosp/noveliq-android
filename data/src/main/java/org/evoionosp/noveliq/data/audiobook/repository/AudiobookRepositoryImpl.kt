@@ -112,12 +112,10 @@ class AudiobookRepositoryImpl @Inject constructor(
                 } else {
                     val now = System.currentTimeMillis()
                     val summary = item.toEntity(
-                        serviceFactory = serviceFactory,
                         baseUrl = baseUrl,
                         fallbackLibraryId = libraryId
                     )
                     val detail = item.toDetailEntity(
-                        serviceFactory = serviceFactory,
                         baseUrl = baseUrl,
                         fallbackLibraryId = libraryId,
                         refreshedAtMillis = now
@@ -127,7 +125,6 @@ class AudiobookRepositoryImpl @Inject constructor(
                     }
                     val chapters = item.toChapterEntities(audiobookId = detail.audiobookId)
                     val tracks = item.toTrackEntities(
-                        serviceFactory = serviceFactory,
                         baseUrl = baseUrl,
                         audiobookId = detail.audiobookId
                     )
@@ -197,7 +194,6 @@ class AudiobookRepositoryImpl @Inject constructor(
                 )
                 val audiobooks = response.results.orEmpty().mapNotNull { item ->
                     item.toEntity(
-                        serviceFactory = serviceFactory,
                         baseUrl = baseUrl,
                         fallbackLibraryId = libraryId
                     )
@@ -283,7 +279,6 @@ class AudiobookRepositoryImpl @Inject constructor(
                 }
                 val audiobooks = entities.mapNotNull { item ->
                     item.toEntity(
-                        serviceFactory = serviceFactory,
                         baseUrl = baseUrl,
                         fallbackLibraryId = libraryId
                     )

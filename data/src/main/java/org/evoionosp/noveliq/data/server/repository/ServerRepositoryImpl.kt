@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.data.server.repository
 
+import android.util.Log
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Named
@@ -22,6 +23,7 @@ class ServerRepositoryImpl @Inject constructor(
 ) : ServerRepository {
 
     override suspend fun ping(baseUrl: String): ServerCheckResult<Boolean> {
+        Log.d("ServerRepositoryImpl", "getStatus: $baseUrl")
         return safeCall {
             val service = serviceFactory.create(baseUrl)
             service.ping().success
@@ -29,6 +31,7 @@ class ServerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getStatus(baseUrl: String): ServerCheckResult<ServerStatus> {
+        Log.d("ServerRepositoryImpl", "getStatus: $baseUrl")
         return safeCall {
             val service = serviceFactory.create(baseUrl)
             service.status().toDomain()
@@ -36,6 +39,7 @@ class ServerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun healthCheck(baseUrl: String): ServerCheckResult<Boolean> {
+        Log.d("ServerRepositoryImpl", "getStatus: $baseUrl")
         return withContext(ioDispatcher) {
             try {
                 val service = serviceFactory.create(baseUrl)

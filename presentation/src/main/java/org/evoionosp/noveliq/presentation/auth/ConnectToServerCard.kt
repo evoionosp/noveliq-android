@@ -84,7 +84,6 @@ fun ConnectToServerCard(
                 prefix = { Text(text = state.protocol) },
                 label = { Text(stringResource(R.string.server_url_label)) },
                 placeholder = { Text(stringResource(R.string.server_url_placeholder)) },
-                singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
             )

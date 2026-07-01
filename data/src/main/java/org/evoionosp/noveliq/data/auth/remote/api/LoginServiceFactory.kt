@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.data.auth.remote.api
 
+import org.evoionosp.noveliq.data.network.UrlUtils
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -14,7 +15,7 @@ class LoginServiceFactory @Inject constructor(
 
     @Synchronized
     fun create(baseUrl: String): LoginApiService {
-        val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+        val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
         return serviceCache.getOrPut(normalizedBaseUrl) {
             Retrofit.Builder()
                 .baseUrl(normalizedBaseUrl)
@@ -25,9 +26,4 @@ class LoginServiceFactory @Inject constructor(
         }
     }
 
-    private fun normalizeBaseUrl(baseUrl: String): String {
-        val trimmed = baseUrl.trim()
-        require(trimmed.isNotEmpty()) { "Base URL must not be blank." }
-        return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
-    }
 }

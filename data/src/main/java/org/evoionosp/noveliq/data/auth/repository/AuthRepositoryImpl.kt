@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.data.auth.repository
 
+import android.util.Log
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Named
@@ -26,6 +27,9 @@ class AuthRepositoryImpl @Inject constructor(
         username: String,
         password: String
     ): LoginResult {
+
+        Log.d("AuthRepositoryImpl", "login: $baseUrl")
+
         return withContext(ioDispatcher) {
             try {
                 val service = serviceFactory.create(baseUrl)

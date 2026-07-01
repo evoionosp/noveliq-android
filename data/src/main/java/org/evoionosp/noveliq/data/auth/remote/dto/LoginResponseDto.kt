@@ -15,6 +15,8 @@ data class LoginResponseDto(
     data class UserDto(
         @SerializedName(value = "token", alternate = ["accessToken", "access_token"])
         val token: String? = null,
+        @SerializedName(value = "refreshToken", alternate = ["refresh_token"])
+        val refreshToken: String? = null,
         @SerializedName(value = "id", alternate = ["userId"])
         val id: String? = null,
         @SerializedName(value = "username", alternate = ["userName"])

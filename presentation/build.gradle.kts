@@ -30,6 +30,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+        )
     }
     buildFeatures {
         compose = true
@@ -38,7 +41,7 @@ android {
 
 dependencies {
     implementation(project(":domain"))
-    implementation(project(":common"))
+    implementation(project(":core"))
     implementation(project(":data"))
 
     implementation(libs.androidx.core.ktx)
@@ -58,5 +61,13 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.datasource)
     ksp(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -19,7 +19,10 @@ object OkHttpProvider {
 
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor()
-                .apply { level = HttpLoggingInterceptor.Level.BODY }
+                .apply {
+                    redactHeader("Authorization")
+                    level = HttpLoggingInterceptor.Level.BASIC
+                }
             builder.addInterceptor(loggingInterceptor)
         }
 

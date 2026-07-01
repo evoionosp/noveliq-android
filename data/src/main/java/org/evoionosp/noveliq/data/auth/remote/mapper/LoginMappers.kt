@@ -5,10 +5,11 @@ import org.evoionosp.noveliq.domain.auth.model.LoginData
 
 internal fun LoginResponseDto.toDomain(): LoginData {
     val resolvedAccessToken = accessToken ?: user?.token
+    val resolvedRefreshToken = refreshToken ?: user?.refreshToken
     val resolvedUserId = userId ?: user?.id
     return LoginData(
         accessToken = resolvedAccessToken,
-        refreshToken = refreshToken,
+        refreshToken = resolvedRefreshToken,
         userId = resolvedUserId
     )
 }

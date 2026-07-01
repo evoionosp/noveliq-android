@@ -6,15 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
-import org.evoionosp.noveliq.presentation.auth.AuthScreen
-import org.evoionosp.noveliq.presentation.home.HomeScreen
+import org.evoionosp.noveliq.presentation.navigation.NoveliqApp
 import org.evoionosp.noveliq.presentation.settings.SettingsViewModel
-import org.evoionosp.noveliq.presentation.splash.SplashScreen
 import org.evoionosp.noveliq.presentation.splash.SplashViewModel
 import org.evoionosp.noveliq.presentation.ui.theme.AppTheme
 
@@ -28,7 +25,6 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition {
             splashViewModel.uiState.value.isLoading
         }
-        enableEdgeToEdge()
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
@@ -38,20 +34,14 @@ class MainActivity : ComponentActivity() {
                 themePreference = settingsState.themePreference,
                 dynamicColor = settingsState.useDynamicColor
             ) {
-                when {
-                    splashState.isLoading -> SplashScreen(modifier = Modifier)
-                    splashState.session != null && splashState.isCatalogReady -> HomeScreen(
-                        username = splashState.session!!.username,
-                        accessToken = splashState.session!!.accessToken,
-                        modifier = Modifier
-                    )
-                    else -> AuthScreen(
-                        modifier = Modifier,
-                        settingsState = settingsState,
-                        onThemePreferenceChange = settingsViewModel::onThemePreferenceChange,
-                        onDynamicColorChange = settingsViewModel::onDynamicColorChange
-                    )
-                }
+                NoveliqApp(
+                    splashState = splashState,
+                    settingsState = settingsState,
+                    onRetryCatalogBootstrap = splashViewModel::retryCatalogBootstrap,
+                    onLogout = splashViewModel::logout,
+                    onThemePreferenceChange = settingsViewModel::onThemePreferenceChange,
+                    onDynamicColorChange = settingsViewModel::onDynamicColorChange
+                )
             }
         }
     }

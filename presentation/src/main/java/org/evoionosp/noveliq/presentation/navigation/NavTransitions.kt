@@ -5,9 +5,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.navigation.NavBackStackEntry
 
 private fun routeBase(route: String?): String? {
@@ -23,14 +21,7 @@ private fun rootIndex(route: String?): Int? {
     }
 }
 
-private fun isAudiobookDetailRoute(route: String?): Boolean {
-    return routeBase(route) == AppRoute.AudiobookDetail.route.substringBefore('/')
-}
-
 internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootEnterTransition(): EnterTransition {
-    if (isAudiobookDetailRoute(initialState.destination.route) || isAudiobookDetailRoute(targetState.destination.route)) {
-        return EnterTransition.None
-    }
     val initialIndex = rootIndex(initialState.destination.route)
     val targetIndex = rootIndex(targetState.destination.route)
     val forward = initialIndex != null && targetIndex != null && targetIndex > initialIndex
@@ -41,9 +32,6 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootEnterTransiti
 }
 
 internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootExitTransition(): ExitTransition {
-    if (isAudiobookDetailRoute(initialState.destination.route) || isAudiobookDetailRoute(targetState.destination.route)) {
-        return ExitTransition.None
-    }
     val initialIndex = rootIndex(initialState.destination.route)
     val targetIndex = rootIndex(targetState.destination.route)
     val forward = initialIndex != null && targetIndex != null && targetIndex > initialIndex
@@ -78,30 +66,5 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.backExitTransitio
     return slideOutHorizontally(
         animationSpec = tween(durationMillis = 300),
         targetOffsetX = { fullWidth -> fullWidth }
-    )
-}
-
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.modalEnterTransition(): EnterTransition {
-    return slideInVertically(
-        animationSpec = tween(durationMillis = 320),
-        initialOffsetY = { fullHeight -> fullHeight }
-    )
-}
-
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.modalExitTransition(): ExitTransition {
-    return slideOutVertically(
-        animationSpec = tween(durationMillis = 320),
-        targetOffsetY = { fullHeight -> fullHeight }
-    )
-}
-
-internal fun modalPopEnterTransition(): EnterTransition {
-    return EnterTransition.None
-}
-
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.modalPopExitTransition(): ExitTransition {
-    return slideOutVertically(
-        animationSpec = tween(durationMillis = 320),
-        targetOffsetY = { fullHeight -> fullHeight }
     )
 }

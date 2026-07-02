@@ -1,19 +1,32 @@
 package org.evoionosp.noveliq.presentation.player
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
@@ -21,7 +34,10 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,22 +65,23 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
+import org.evoionosp.noveliq.presentation.R
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NowPlayingScreen(
-    audiobook: Audiobook,
     accessToken: String,
     onMinimize: () -> Unit,
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
     var dragAmount by remember { mutableFloatStateOf(0f) }
-    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val progress = if (playbackState.durationMs > 0) {
-        playbackState.currentPositionMs.toFloat() / playbackState.durationMs
-    } else 0f
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val audiobook = uiState.viewedAudiobook ?: return
+    val playbackState = uiState.playback
     var showSpeedSheet by remember { mutableStateOf(false) }
+    var showChaptersSheet by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -98,109 +116,97 @@ internal fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onMinimize) {
+                IconButton(
+                    onClick = onMinimize,
+                    modifier = Modifier.size(48.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                IconButton(onClick = { }) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreHoriz,
-                        contentDescription = null
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Cover Image
-            AsyncImage(
-                model = authorizedImageRequest(
-                    url = audiobook.coverUrl,
-                    accessToken = accessToken
-                ),
-                contentDescription = audiobook.title,
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Title and Author
-            Text(
-                text = audiobook.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = audiobook.author,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Progress Slider
-            Slider(
-                value = progress,
-                onValueChange = {
-                    viewModel.seekTo((it * playbackState.durationMs).toLong())
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = playbackState.currentPositionMs.msToDurationLabel(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = playbackState.durationMs.msToDurationLabel(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Playback Controls
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SeekButton(
-                    label = "15",
-                    onClick = viewModel::seekBackward
-                )
                 IconButton(
-                    onClick = viewModel::togglePlayPause,
-                    modifier = Modifier.size(72.dp)
+                    onClick = { },
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        imageVector = Icons.Rounded.MoreHoriz,
                         contentDescription = null,
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                SeekButton(
-                    label = "30",
-                    onClick = viewModel::seekForward
+            }
+
+            // Book info block. Weighted so it fills the space above the controls; its content is
+            // top-aligned, which pushes the flexible gap to sit between the info and the controls
+            // (rather than leaving dead space at the bottom).
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Cover Image
+                AsyncImage(
+                    model = authorizedImageRequest(
+                        url = audiobook.coverUrl,
+                        accessToken = accessToken
+                    ),
+                    contentDescription = audiobook.title,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Title and Author
+                Text(
+                    text = audiobook.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = audiobook.author,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (uiState.isGlance) {
+                GlanceTransport(
+                    text = glanceStatusText(
+                        hasProgress = uiState.viewedHasProgress,
+                        progressSeconds = uiState.viewedProgressSeconds,
+                        totalSeconds = uiState.viewedTotalSeconds,
+                        speed = playbackState.playbackSpeed
+                    ),
+                    onPlay = viewModel::playViewedAudiobook
+                )
+            } else {
+                PlayingTransport(
+                    playbackState = playbackState,
+                    chapterTitle = uiState.chapters
+                        .lastOrNull { it.startInSeconds <= playbackState.currentBookPositionSeconds }
+                        ?.title,
+                    onSeekTo = viewModel::seekTo,
+                    onSeekBackward = viewModel::seekBackward,
+                    onSeekForward = viewModel::seekForward,
+                    onTogglePlayPause = viewModel::togglePlayPause,
+                    onPreviousChapter = viewModel::previousChapter,
+                    onNextChapter = viewModel::nextChapter
                 )
             }
 
@@ -212,13 +218,14 @@ internal fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PlayerAction(title = "Sleep", icon = "Zz")
+                PlayerAction(title = stringResource(R.string.now_playing_sleep), icon = "Zz")
                 PlayerAction(
-                    title = "Speed",
+                    title = stringResource(R.string.now_playing_speed),
                     icon = "${"%.1f".format(playbackState.playbackSpeed)}x",
                     onClick = { showSpeedSheet = true }
                 )
                 Column(
+                    modifier = Modifier.clickable { showChaptersSheet = true },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -228,7 +235,7 @@ internal fun NowPlayingScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        text = "Queue",
+                        text = stringResource(R.string.now_playing_chapters),
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1
                     )
@@ -240,41 +247,370 @@ internal fun NowPlayingScreen(
     }
 
     if (showSpeedSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSpeedSheet = false },
-            sheetState = rememberModalBottomSheetState()
+        SpeedSheet(
+            speed = playbackState.playbackSpeed,
+            onSpeedChange = viewModel::setPlaybackSpeed,
+            onDismiss = { showSpeedSheet = false }
+        )
+    }
+
+    if (showChaptersSheet) {
+        val currentChapterIndex = if (!uiState.isGlance) {
+            uiState.chapters.indexOfLast {
+                it.startInSeconds <= playbackState.currentBookPositionSeconds
+            }
+        } else {
+            -1
+        }
+        ChaptersSheet(
+            chapters = uiState.chapters,
+            currentChapterIndex = currentChapterIndex,
+            isPlaying = playbackState.isPlaying && !uiState.isGlance,
+            onPlayChapter = viewModel::playChapter,
+            onDismiss = { showChaptersSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun PlayingTransport(
+    playbackState: PlaybackState,
+    chapterTitle: String?,
+    onSeekTo: (Long) -> Unit,
+    onSeekBackward: () -> Unit,
+    onSeekForward: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onPreviousChapter: () -> Unit,
+    onNextChapter: () -> Unit
+) {
+    val progress = if (playbackState.durationMs > 0) {
+        playbackState.currentPositionMs.toFloat() / playbackState.durationMs
+    } else 0f
+
+    if (!chapterTitle.isNullOrBlank()) {
+        Text(
+            text = chapterTitle,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.Start,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    Slider(
+        value = progress,
+        onValueChange = { onSeekTo((it * playbackState.durationMs).toLong()) },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = playbackState.currentPositionMs.msToDurationLabel(),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = playbackState.durationMs.msToDurationLabel(),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onPreviousChapter,
+            modifier = Modifier.size(48.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, bottom = 48.dp, top = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+            Icon(
+                imageVector = Icons.Rounded.SkipPrevious,
+                contentDescription = stringResource(R.string.now_playing_previous_chapter),
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        SeekButton(label = "15", onClick = onSeekBackward)
+        IconButton(
+            onClick = onTogglePlayPause,
+            modifier = Modifier.size(72.dp)
+        ) {
+            Icon(
+                imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp)
+            )
+        }
+        SeekButton(label = "30", onClick = onSeekForward)
+        IconButton(
+            onClick = onNextChapter,
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.SkipNext,
+                contentDescription = stringResource(R.string.now_playing_next_chapter),
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GlanceTransport(
+    text: String,
+    onPlay: () -> Unit
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // Larger (~2x) play button; no forward/backward transport in the glance state.
+    FilledIconButton(
+        onClick = onPlay,
+        modifier = Modifier.size(144.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.PlayArrow,
+            contentDescription = stringResource(R.string.now_playing_play),
+            modifier = Modifier.size(96.dp)
+        )
+    }
+}
+
+@Composable
+private fun glanceStatusText(
+    hasProgress: Boolean,
+    progressSeconds: Double,
+    totalSeconds: Double,
+    speed: Float
+): String {
+    val current = if (hasProgress) progressSeconds else 0.0
+    val remainingContent = (totalSeconds - current).coerceAtLeast(0.0)
+    val finishSeconds = if (speed > 0f) remainingContent / speed else remainingContent
+    val timeLabel = finishSeconds.toHoursMinutesLabel()
+    val speedLabel = "%.2fx".format(speed)
+    val isDefaultSpeed = abs(speed - 1.0f) < 0.01f
+
+    return when {
+        hasProgress && isDefaultSpeed ->
+            stringResource(R.string.now_playing_remaining, timeLabel)
+        hasProgress ->
+            stringResource(R.string.now_playing_remaining_at_speed, timeLabel, speedLabel)
+        isDefaultSpeed ->
+            timeLabel
+        else ->
+            stringResource(R.string.now_playing_duration_at_speed, timeLabel, speedLabel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SpeedSheet(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 48.dp, top = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.now_playing_speed_sheet_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Text(
+                text = "${"%.2f".format(speed)}x",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Slider(
+                value = speed,
+                onValueChange = onSpeedChange,
+                valueRange = 0.5f..4f,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Playback Speed", style = MaterialTheme.typography.titleLarge)
+                Text(text = "0.5x", style = MaterialTheme.typography.labelMedium)
+                Text(text = "1.0x", style = MaterialTheme.typography.labelMedium)
+                Text(text = "2.0x", style = MaterialTheme.typography.labelMedium)
+                Text(text = "4.0x", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChaptersSheet(
+    chapters: List<AudiobookChapter>,
+    currentChapterIndex: Int,
+    isPlaying: Boolean,
+    onPlayChapter: (AudiobookChapter) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.now_playing_chapters),
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            if (chapters.isEmpty()) {
                 Text(
-                    text = "${"%.2f".format(playbackState.playbackSpeed)}x",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    text = stringResource(R.string.now_playing_chapters_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                Slider(
-                    value = playbackState.playbackSpeed,
-                    onValueChange = viewModel::setPlaybackSpeed,
-                    valueRange = 0.5f..4f,
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            } else {
+                LazyColumn(
+                    // ~25% larger than the previous 400dp cap, with a taller default.
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 320.dp, max = 500.dp)
                 ) {
-                    Text(text = "0.5x", style = MaterialTheme.typography.labelMedium)
-                    Text(text = "1.0x", style = MaterialTheme.typography.labelMedium)
-                    Text(text = "2.0x", style = MaterialTheme.typography.labelMedium)
-                    Text(text = "4.0x", style = MaterialTheme.typography.labelMedium)
+                    itemsIndexed(chapters) { index, chapter ->
+                        ChapterRow(
+                            chapter = chapter,
+                            isCurrent = index == currentChapterIndex,
+                            isPlaying = isPlaying,
+                            onPlay = { onPlayChapter(chapter) }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ChapterRow(
+    chapter: AudiobookChapter,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    onPlay: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = chapter.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isCurrent) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = chapter.startInSeconds.toDurationLabel(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Trailing control: the live equalizer for the currently-playing chapter (non-clickable),
+        // otherwise a play button. Kept on the same side so titles get the full remaining width.
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isCurrent) {
+                PlayingEqualizer(isAnimating = isPlaying)
+            } else {
+                IconButton(onClick = onPlay) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(R.string.now_playing_play),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A small animated equalizer used to mark the currently-playing chapter. Bars animate while
+ * [isAnimating] is true (playing) and rest at a static height when paused.
+ */
+@Composable
+private fun PlayingEqualizer(
+    isAnimating: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val color = MaterialTheme.colorScheme.primary
+    val transition = rememberInfiniteTransition(label = "equalizer")
+    val barCount = 4
+
+    Row(
+        modifier = modifier.height(20.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        repeat(barCount) { index ->
+            val animated by transition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = 360 + index * 90,
+                        easing = LinearEasing
+                    ),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bar$index"
+            )
+            val fraction = if (isAnimating) animated else 0.45f
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight(fraction)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(color)
+            )
         }
     }
 }

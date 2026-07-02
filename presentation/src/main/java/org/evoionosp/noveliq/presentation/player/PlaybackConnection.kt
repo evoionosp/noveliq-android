@@ -45,8 +45,6 @@ class PlaybackConnection @Inject constructor(
     // Context for the currently-loaded book, used to sync progress to the server.
     private var currentAudiobookId: String? = null
     private var currentTracks: List<AudiobookTrack> = emptyList()
-    private var currentBaseUrl: String = ""
-    private var currentAccessToken: String = ""
     private var currentTotalDurationSeconds: Double = 0.0
     private var secondsSinceServerSave: Int = 0
 
@@ -63,15 +61,27 @@ class PlaybackConnection @Inject constructor(
         startProgressUpdateLoop()
     }
 
-    fun playAudiobook(audiobook: Audiobook) {
+    fun playAudiobook(audiobook: Audiobook, startPositionSeconds: Double? = null) {
         connectionScope.launch {
             // Persist the currently-playing book's progress before switching away from it, so
             // returning to it later resumes from the right spot.
             saveCurrentProgressNow()
 
-            val detail = audiobookRepository.observeAudiobookDetail(audiobook.libraryId, audiobook.id).first()
-                ?: return@launch
             val session = sessionStore.session.first() ?: return@launch
+
+            // Ensure detail/tracks are cached before playing. The detail screen used to prefetch
+            // these; now playback refreshes them itself on a cache miss.
+            var resolvedDetail = audiobookRepository.observeAudiobookDetail(audiobook.libraryId, audiobook.id).first()
+            if (resolvedDetail == null || resolvedDetail.tracks.isEmpty()) {
+                audiobookRepository.refreshAudiobookDetail(
+                    baseUrl = session.baseUrl,
+                    accessToken = session.accessToken,
+                    libraryId = audiobook.libraryId,
+                    audiobookId = audiobook.id
+                )
+                resolvedDetail = audiobookRepository.observeAudiobookDetail(audiobook.libraryId, audiobook.id).first()
+            }
+            val detail = resolvedDetail?.takeIf { it.tracks.isNotEmpty() } ?: return@launch
 
             val artworkUri = audiobook.coverUrl.takeIf { it.isNotBlank() }?.let(Uri::parse)
 
@@ -99,25 +109,34 @@ class PlaybackConnection @Inject constructor(
             // Update the context used for progress syncing.
             currentAudiobookId = audiobook.id
             currentTracks = detail.tracks
-            currentBaseUrl = session.baseUrl
-            currentAccessToken = session.accessToken
             currentTotalDurationSeconds = computeTotalDurationSeconds(audiobook, detail.tracks)
             secondsSinceServerSave = 0
 
-            // Restore server-side progress and start playback at the resume position.
-            val resume = fetchResumeProgress(session.baseUrl, session.accessToken, audiobook.id)
-            val (startIndex, startOffsetMs) =
-                if (resume != null && !resume.isFinished && resume.currentTimeSeconds > 0) {
-                    resolveSeekPosition(resume.currentTimeSeconds, detail.tracks)
-                } else {
-                    0 to 0L
+            // Determine the start position: an explicit one (e.g. a chosen chapter) wins;
+            // otherwise resume from the saved server progress.
+            val (startIndex, startOffsetMs) = when {
+                startPositionSeconds != null ->
+                    resolveSeekPosition(startPositionSeconds, detail.tracks)
+                else -> {
+                    val resume = fetchResumeProgress(session.baseUrl, session.accessToken, audiobook.id)
+                    if (resume != null && !resume.isFinished && resume.currentTimeSeconds > 0) {
+                        resolveSeekPosition(resume.currentTimeSeconds, detail.tracks)
+                    } else {
+                        0 to 0L
+                    }
                 }
+            }
 
             val controller = mediaController ?: return@launch
             controller.setMediaItems(mediaItems, startIndex, startOffsetMs)
             controller.prepare()
             controller.play()
             _playbackState.update { it.copy(audiobook = audiobook) }
+
+            // Persist immediately when starting at an explicit position so the resume point updates.
+            if (startPositionSeconds != null) {
+                saveCurrentProgressNow()
+            }
         }
     }
 
@@ -148,6 +167,13 @@ class PlaybackConnection @Inject constructor(
         return index to offsetMs
     }
 
+    private fun currentAbsoluteSeconds(controller: MediaController): Double {
+        val index = controller.currentMediaItemIndex
+        if (index == C.INDEX_UNSET) return 0.0
+        val trackStart = currentTracks.getOrNull(index)?.startOffsetInSeconds ?: 0L
+        return trackStart + controller.currentPosition.coerceAtLeast(0L) / 1000.0
+    }
+
     private fun computeTotalDurationSeconds(
         audiobook: Audiobook,
         tracks: List<AudiobookTrack>
@@ -169,9 +195,6 @@ class PlaybackConnection @Inject constructor(
         val audiobookId = currentAudiobookId ?: return
         val tracks = currentTracks
         if (tracks.isEmpty()) return
-        val baseUrl = currentBaseUrl
-        val token = currentAccessToken
-        if (baseUrl.isBlank() || token.isBlank()) return
 
         val rawIndex = controller.currentMediaItemIndex
         if (rawIndex == C.INDEX_UNSET) return
@@ -183,9 +206,13 @@ class PlaybackConnection @Inject constructor(
         val total = currentTotalDurationSeconds.takeIf { it > 0 }
         val isFinished = total != null && absoluteSeconds >= total - FINISH_THRESHOLD_SECONDS
 
+        // Read the CURRENT session token; it rotates on refresh, so a cached one may be stale (401).
+        val session = sessionStore.session.first() ?: return
+        if (session.baseUrl.isBlank() || session.accessToken.isBlank()) return
+
         audiobookRepository.saveProgress(
-            baseUrl = baseUrl,
-            accessToken = token,
+            baseUrl = session.baseUrl,
+            accessToken = session.accessToken,
             audiobookId = audiobookId,
             progress = PlaybackProgress(
                 currentTimeSeconds = absoluteSeconds,
@@ -226,6 +253,54 @@ class PlaybackConnection @Inject constructor(
         mediaController?.seekTo(positionMs)
     }
 
+    /** Seeks to an absolute position (seconds across the whole book), e.g. a chapter start. */
+    fun seekToBookSeconds(absoluteSeconds: Double) {
+        val controller = mediaController ?: return
+        if (currentTracks.isEmpty()) {
+            controller.seekTo((absoluteSeconds * 1000).toLong().coerceAtLeast(0L))
+            return
+        }
+        val (index, offsetMs) = resolveSeekPosition(absoluteSeconds, currentTracks)
+        controller.seekTo(index, offsetMs)
+        // Reflect the jump in the server progress.
+        saveCurrentProgressAsync()
+    }
+
+    /** Jumps to the start of the next chapter after the current playback position. */
+    fun skipToNextChapter(chapters: List<AudiobookChapter>) {
+        val controller = mediaController ?: return
+        if (chapters.isEmpty()) return
+        val position = currentAbsoluteSeconds(controller)
+        val next = chapters.firstOrNull { it.startInSeconds > position } ?: return
+        seekToBookSeconds(next.startInSeconds.toDouble())
+    }
+
+    /**
+     * Jumps to the previous chapter, with the usual music-player behaviour: if we're more than
+     * [PREVIOUS_CHAPTER_THRESHOLD_SECONDS] into the current chapter, restart the current chapter;
+     * otherwise go to the start of the previous chapter.
+     */
+    fun skipToPreviousChapter(chapters: List<AudiobookChapter>) {
+        val controller = mediaController ?: return
+        val position = currentAbsoluteSeconds(controller)
+        if (chapters.isEmpty()) {
+            seekToBookSeconds(0.0)
+            return
+        }
+        val currentIndex = chapters.indexOfLast { it.startInSeconds <= position }
+        if (currentIndex < 0) {
+            seekToBookSeconds(0.0)
+            return
+        }
+        val currentStart = chapters[currentIndex].startInSeconds.toDouble()
+        val target = if (position - currentStart > PREVIOUS_CHAPTER_THRESHOLD_SECONDS || currentIndex == 0) {
+            currentStart
+        } else {
+            chapters[currentIndex - 1].startInSeconds.toDouble()
+        }
+        seekToBookSeconds(target)
+    }
+
     fun seekForward(amountMs: Long = 30000) {
         val controller = mediaController ?: return
         controller.seekTo(controller.currentPosition + amountMs)
@@ -247,7 +322,13 @@ class PlaybackConnection @Inject constructor(
 
     private fun updateProgress() {
         val controller = mediaController ?: return
-        _playbackState.update { it.copy(currentPositionMs = controller.currentPosition) }
+        val absoluteSeconds = currentAbsoluteSeconds(controller)
+        _playbackState.update {
+            it.copy(
+                currentPositionMs = controller.currentPosition,
+                currentBookPositionSeconds = absoluteSeconds
+            )
+        }
 
         // Periodically push progress to the server while actively playing.
         if (controller.isPlaying && currentAudiobookId != null) {
@@ -297,5 +378,8 @@ class PlaybackConnection @Inject constructor(
     companion object {
         private const val SERVER_SAVE_INTERVAL_SECONDS = 15
         private const val FINISH_THRESHOLD_SECONDS = 5.0
+        // Within this window into a chapter, the "previous" action restarts the current chapter;
+        // before it, it goes to the previous chapter. (Media3's track-level default is 3s.)
+        private const val PREVIOUS_CHAPTER_THRESHOLD_SECONDS = 20.0
     }
 }

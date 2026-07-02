@@ -5,6 +5,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dagger.Module
@@ -27,11 +28,14 @@ object PlaybackModule {
     fun provideDataSourceFactory(
         sessionStore: SessionStore
     ): DataSource.Factory {
-        val session = runBlocking { sessionStore.session.first() }
-        val token = session?.accessToken.orEmpty()
-        
-        return DefaultHttpDataSource.Factory()
-            .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+        // Resolve the Authorization header per request so streaming (and notification artwork)
+        // always use the CURRENT session token. The token is refreshed/rotated on app start, so a
+        // token captured once at service creation goes stale and causes 401s.
+        val upstreamFactory = DefaultHttpDataSource.Factory()
+        return ResolvingDataSource.Factory(upstreamFactory) { dataSpec ->
+            val token = runBlocking { sessionStore.session.first()?.accessToken.orEmpty() }
+            dataSpec.withRequestHeaders(mapOf("Authorization" to "Bearer $token"))
+        }
     }
 
     @OptIn(UnstableApi::class)

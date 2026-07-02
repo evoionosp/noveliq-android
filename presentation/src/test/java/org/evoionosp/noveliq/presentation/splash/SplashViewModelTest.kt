@@ -14,6 +14,7 @@ import org.evoionosp.noveliq.core.session.LoginSession
 import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
+import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginData
@@ -266,5 +267,18 @@ private class FakeAudiobookRepository(
         baseUrl: String,
         accessToken: String,
         libraryId: String
+    ): DomainResult<Unit> = DomainResult.Success(Unit)
+
+    override suspend fun fetchProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String
+    ): DomainResult<PlaybackProgress?> = DomainResult.Success(null)
+
+    override suspend fun saveProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String,
+        progress: PlaybackProgress
     ): DomainResult<Unit> = DomainResult.Success(Unit)
 }

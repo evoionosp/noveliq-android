@@ -44,12 +44,12 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - Route arguments use IDs rather than passing large models.
 - The detail screen shows cached summary metadata from the local catalog model.
 - Chapters are fetched from the Audiobookshelf item-detail API and shown at the bottom of the detail screen.
-- The detail screen now exposes the `Play` action as the next natural entry point for playback work.
+- The detail screen exposes a `Play` action that is now wired to the Media3 playback core (see Milestone 3).
 - The Home dashboard now reads Continue Listening from a Room-backed cache populated from Audiobookshelf personalized shelves.
 - Expanded item detail is now persisted in Room, including detail metadata, chapters, and ordered remote audio tracks from Audiobookshelf item detail responses.
 - The detail screen observes the cached expanded detail model and refreshes it through the repository, rather than treating chapters as network-only UI state.
 - Home/catalog UI has been decomposed from one large `HomeScreen.kt` file into dedicated screen and component files.
-- Audiobook detail and now-playing placeholder UI have also been split into focused screen/component/helper files.
+- Audiobook detail and now-playing UI have also been split into focused screen/component/helper files.
 - Root app navigation has been extracted from `MainActivity` into `presentation.navigation`, including route constants, transition helpers, root bottom navigation, scaffold state, and the NavHost.
 
 ## Next Work Inside This Milestone
@@ -57,8 +57,7 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - Polish the main browsing shell across the `Home`, `Library`, and `Authors` root destinations.
 - Make the `Home` dashboard sections feel production-ready before adding more server-driven shelf types.
 - Add search/filter affordances for the library surface.
-- Decide whether author/series detail should become first-class routes before playback.
-- Keep the detail screen as the playback entry surface and wire `Play` into the upcoming playback core.
+- Decide whether author/series detail should become first-class routes.
 
 ## Milestone 2.5: Playback-Ready Detail Cache
 
@@ -72,8 +71,12 @@ Completed:
 - Expanded Audiobookshelf item-detail DTO mapping for `metadata.description` and `media.tracks`.
 - Replaced network-only chapter loading with repository-owned detail refresh into Room.
 
-Remaining before Milestone 3:
+Outcome:
+
+- The cached detail/track model became the source that the Milestone 3 player resolves playable media from.
+
+Remaining playback concerns (now tracked in Milestone 3):
 
 - Define playback queue/session models using cached tracks.
 - Decide how to represent playback progress and resume position.
-- Decide whether the first player uses Audiobookshelf remote track URLs directly or starts a server playback session first.
+- Decide whether the player continues to use Audiobookshelf remote track URLs directly or starts a server playback session first.

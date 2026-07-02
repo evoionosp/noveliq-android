@@ -6,8 +6,9 @@ Current implementation snapshot:
 
 - Foundation hardening is largely complete.
 - Catalog expansion is in progress.
-- The app now supports audiobook detail navigation and chapter loading from the server.
-- Playback and downloads are still not implemented.
+- The app supports audiobook detail navigation and chapter loading from the server.
+- Real audio playback is implemented with Media3 (ExoPlayer + MediaSession), including background playback and a media notification.
+- Downloads, offline storage, and playback progress sync are still not implemented.
 
 Files in this directory:
 

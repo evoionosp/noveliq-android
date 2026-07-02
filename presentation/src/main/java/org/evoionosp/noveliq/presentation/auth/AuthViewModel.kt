@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.Protocol
 import org.evoionosp.noveliq.core.session.LoginSession
 import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.auth.model.AuthError
@@ -99,10 +98,12 @@ class AuthViewModel @Inject constructor(
             return
         }
 
+        val baseUrl = (currentState.protocol + currentState.baseUrl).trim()
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoggingIn = true) }
             when (val result = loginUseCase(
-                baseUrl = currentState.baseUrl.trim(),
+                baseUrl = baseUrl,
                 username = currentState.username.trim(),
                 password = currentState.password
             )) {
@@ -119,7 +120,7 @@ class AuthViewModel @Inject constructor(
                             refreshToken = result.data.refreshToken?.trim(),
                             userId = result.data.userId?.trim(),
                             username = currentState.username.trim(),
-                            baseUrl = currentState.baseUrl.trim()
+                            baseUrl = baseUrl
                         )
                     )
 

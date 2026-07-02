@@ -2,7 +2,10 @@ package org.evoionosp.noveliq.presentation.player
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
@@ -15,13 +18,25 @@ class PlaybackService : MediaLibraryService() {
     @Inject
     lateinit var player: ExoPlayer
 
+    // Authorized HTTP factory (same Bearer token as playback) so the notification can fetch
+    // the token-protected cover artwork.
+    @Inject
+    lateinit var dataSourceFactory: DataSource.Factory
+
     private var mediaLibrarySession: MediaLibrarySession? = null
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
-        
+
+        val bitmapLoader = CacheBitmapLoader(
+            DataSourceBitmapLoader.Builder(this)
+                .setDataSourceFactory(dataSourceFactory)
+                .build()
+        )
+
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
+            .setBitmapLoader(bitmapLoader)
             .build()
     }
 

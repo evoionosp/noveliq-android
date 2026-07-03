@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
+import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
@@ -214,4 +215,17 @@ private class FakeAudiobookRepository(
         refreshedContinueListeningLibraries += libraryId
         return DomainResult.Success(Unit)
     }
+
+    override suspend fun fetchProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String
+    ): DomainResult<PlaybackProgress?> = DomainResult.Success(null)
+
+    override suspend fun saveProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String,
+        progress: PlaybackProgress
+    ): DomainResult<Unit> = DomainResult.Success(Unit)
 }

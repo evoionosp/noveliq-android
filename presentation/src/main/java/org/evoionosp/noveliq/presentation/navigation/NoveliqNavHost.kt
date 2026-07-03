@@ -3,13 +3,11 @@ package org.evoionosp.noveliq.presentation.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
-import org.evoionosp.noveliq.presentation.detail.AudiobookDetailScreen
 import org.evoionosp.noveliq.presentation.home.AuthorsScreen
 import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.home.LibraryScreen
@@ -32,7 +30,7 @@ internal fun NoveliqNavHost(
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    onStartPlayback: (Audiobook) -> Unit
+    onOpenAudiobook: (Audiobook) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -64,14 +62,7 @@ internal fun NoveliqNavHost(
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = bottomBarPadding,
-                onOpenAudiobook = { audiobook ->
-                    navController.navigate(
-                        audiobookDetailRoute(
-                            libraryId = audiobook.libraryId,
-                            audiobookId = audiobook.id
-                        )
-                    )
-                },
+                onOpenAudiobook = onOpenAudiobook,
                 modifier = Modifier
             )
         }
@@ -89,14 +80,7 @@ internal fun NoveliqNavHost(
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = bottomBarPadding,
-                onOpenAudiobook = { audiobook ->
-                    navController.navigate(
-                        audiobookDetailRoute(
-                            libraryId = audiobook.libraryId,
-                            audiobookId = audiobook.id
-                        )
-                    )
-                },
+                onOpenAudiobook = onOpenAudiobook,
                 modifier = Modifier
             )
         }
@@ -114,30 +98,6 @@ internal fun NoveliqNavHost(
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = bottomBarPadding,
-                modifier = Modifier
-            )
-        }
-        composable(
-            route = AppRoute.AudiobookDetail.route,
-            enterTransition = { modalEnterTransition() },
-            exitTransition = { modalExitTransition() },
-            popEnterTransition = { modalPopEnterTransition() },
-            popExitTransition = { modalPopExitTransition() }
-        ) { backStackEntry ->
-            val startupDestination = splashState.startupDestination as? StartupDestination.Home
-                ?: return@composable
-            if (backStackEntry.requireArg("libraryId") == null) {
-                navController.popBackStack()
-                return@composable
-            }
-            if (backStackEntry.requireArg("audiobookId") == null) {
-                navController.popBackStack()
-                return@composable
-            }
-            AudiobookDetailScreen(
-                accessToken = startupDestination.session.accessToken,
-                onBackClick = { navController.popBackStack() },
-                onPlayClick = onStartPlayback,
                 modifier = Modifier
             )
         }
@@ -188,10 +148,6 @@ internal fun NoveliqNavHost(
             )
         }
     }
-}
-
-private fun NavBackStackEntry.requireArg(name: String): String? {
-    return arguments?.getString(name)?.takeIf { it.isNotBlank() }
 }
 
 private fun NavHostController.navigateToAuthRoot() {

@@ -15,7 +15,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.presentation.MainActivity
 import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
 import org.evoionosp.noveliq.presentation.player.NowPlayingViewModel
@@ -42,8 +41,9 @@ fun NoveliqApp(
 
     key(baseRoute, splashState.startupDestination) {
         val navController = rememberNavController()
-        val playbackState by nowPlayingViewModel.playbackState.collectAsStateWithLifecycle()
-        val nowPlayingAudiobook = playbackState.audiobook
+        val nowPlayingUiState by nowPlayingViewModel.uiState.collectAsStateWithLifecycle()
+        val playingAudiobook = nowPlayingUiState.playback.audiobook
+        val viewedAudiobook = nowPlayingUiState.viewedAudiobook
         var isNowPlayingExpanded by remember { mutableStateOf(false) }
         val currentBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStackEntry?.destination?.route
@@ -57,10 +57,13 @@ fun NoveliqApp(
                     RootNavigationBottomBar(
                         navController = navController,
                         currentRoute = currentRoute,
-                        nowPlayingAudiobook = nowPlayingAudiobook,
+                        nowPlayingAudiobook = playingAudiobook,
                         nowPlayingAccessToken = accessToken,
                         isNowPlayingExpanded = isNowPlayingExpanded,
-                        onExpandNowPlaying = { isNowPlayingExpanded = true }
+                        onExpandNowPlaying = {
+                            nowPlayingViewModel.viewCurrentlyPlaying()
+                            isNowPlayingExpanded = true
+                        }
                     )
                 }
             ) { innerPadding ->
@@ -74,16 +77,16 @@ fun NoveliqApp(
                     onLogout = onLogout,
                     onThemePreferenceChange = onThemePreferenceChange,
                     onDynamicColorChange = onDynamicColorChange,
-                    onStartPlayback = {
+                    onOpenAudiobook = { audiobook ->
+                        nowPlayingViewModel.openAudiobook(audiobook)
                         isNowPlayingExpanded = true
-                        navController.popBackStack()
                     }
                 )
             }
 
             NowPlayingOverlay(
                 visible = isNowPlayingExpanded,
-                audiobook = nowPlayingAudiobook,
+                audiobook = viewedAudiobook,
                 accessToken = accessToken,
                 onMinimize = { isNowPlayingExpanded = false }
             )

@@ -1,6 +1,5 @@
 package org.evoionosp.noveliq.presentation.auth
 
-import okhttp3.Protocol
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
 
 data class AuthUiState(

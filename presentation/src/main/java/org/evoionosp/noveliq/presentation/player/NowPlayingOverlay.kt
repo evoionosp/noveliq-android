@@ -37,7 +37,6 @@ fun NowPlayingOverlay(
     ) {
         if (audiobook != null) {
             NowPlayingScreen(
-                audiobook = audiobook,
                 accessToken = accessToken,
                 onMinimize = onMinimize
             )

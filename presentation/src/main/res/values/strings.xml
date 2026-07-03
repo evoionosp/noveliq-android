@@ -101,6 +101,18 @@
     <string name="audiobook_detail_missing_body">Refresh your library or go back to the catalog and select another book.</string>
     <string name="play">Play</string>
     <string name="playback_not_ready">Playback is not implemented yet.</string>
+    <string name="now_playing_sleep">Sleep</string>
+    <string name="now_playing_speed">Speed</string>
+    <string name="now_playing_speed_sheet_title">Playback Speed</string>
+    <string name="now_playing_chapters">Chapters</string>
+    <string name="now_playing_chapters_empty">No chapters available for this audiobook.</string>
+    <string name="now_playing_play">Play</string>
+    <string name="now_playing_previous_chapter">Previous chapter</string>
+    <string name="now_playing_next_chapter">Next chapter</string>
+    <!-- %1$s = HH:MM time to finish, %2$s = speed like "1.50x" -->
+    <string name="now_playing_remaining">%1$s left</string>
+    <string name="now_playing_remaining_at_speed">%1$s left at speed %2$s</string>
+    <string name="now_playing_duration_at_speed">%1$s at speed %2$s</string>
     <string name="search_no_results">No matching books.</string>
     <string name="search_no_results_hint">Try a different title, author, or series name.</string>
     <string name="error_home_library_select">Could not switch libraries.</string>

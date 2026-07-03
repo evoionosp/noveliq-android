@@ -31,3 +31,11 @@ internal fun Long.toDurationLabel(): String {
 }
 
 internal fun Long.msToDurationLabel(): String = (this / 1000).toDurationLabel()
+
+/** Formats a number of seconds as an `H:MM` label (rounded to the nearest minute). */
+internal fun Double.toHoursMinutesLabel(): String {
+    val totalMinutes = Math.round(this / 60.0).coerceAtLeast(0L)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return "%d:%02d".format(hours, minutes)
+}

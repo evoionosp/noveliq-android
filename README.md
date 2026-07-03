@@ -2,25 +2,35 @@
 
 Noveliq is an Android client for [Audiobookshelf](https://www.audiobookshelf.org/), an open-source self-hosted audiobook and podcast server.
 
-## Features (Planned)
+## Features
 
-- [ ] Connect to your Audiobookshelf server.
-- [ ] Browse and search your library.
-- [ ] Stream audiobooks and podcasts.
+Implemented:
+
+- [x] Connect to your Audiobookshelf server (URL validation and health check).
+- [x] Log in and persist your session across app launches.
+- [x] Browse libraries and audiobooks, cached locally for offline-first reads.
+- [x] Continue Listening shelf on the home dashboard.
+- [x] Audiobook detail screen with chapters and cached track metadata.
+- [x] Stream and play audiobooks with background playback, a media notification, and media session controls.
+
+Planned:
+
+- [ ] Search and filter your library.
 - [ ] Download content for offline listening.
-- [ ] Track progress and sync with the server.
-- [ ] Support for multiple libraries.
+- [ ] Track playback progress and sync it with the server.
+- [ ] Support for multiple libraries (single-library selection today).
 - [ ] Sleep timer and playback speed control.
+- [ ] Android Auto and Wear OS support.
 
 ## Tech Stack
 
 - **Language:** [Kotlin](https://kotlinlang.org/)
-- **UI Framework:** [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- **Architecture:** MVVM (Model-View-ViewModel)
-- **Dependency Injection:** Hilt (Planned)
-- **Networking:** Retrofit / Ktor (Planned)
-- **Local Database:** Room (Planned)
-- **Media Playback:** Media3 / ExoPlayer (Planned)
+- **UI Framework:** [Jetpack Compose](https://developer.android.com/jetpack/compose) + Material 3
+- **Architecture:** layered MVVM (Model-View-ViewModel)
+- **Dependency Injection:** Hilt
+- **Networking:** Retrofit + OkHttp
+- **Local Database:** Room
+- **Media Playback:** Media3 / ExoPlayer (`MediaLibraryService` + `MediaSession`)
 
 ## Getting Started
 

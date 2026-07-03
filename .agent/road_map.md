@@ -2,7 +2,7 @@
 
 ## Intent
 
-This roadmap is designed for the current actual state of the project: login and catalog fetch are in place, while playback, downloads, Android Auto, and Wear OS are future work.
+This roadmap is designed for the current actual state of the project: login, catalog fetch, and a first real Media3 playback slice are in place, while playback progress persistence, downloads, Android Auto, and Wear OS are future work.
 
 The goal is not to add features as quickly as possible. The goal is to add them in an order that avoids architectural rework.
 
@@ -10,9 +10,11 @@ The goal is not to add features as quickly as possible. The goal is to add them 
 
 - Milestone 1 is largely complete.
 - Milestone 2 has started.
-- The app now has a real detail route with Room-backed expanded detail, chapters, and ordered remote track caching, but playback and downloads have not started.
-- The app now syncs server-backed Continue Listening into Room for the home dashboard.
-- Milestone 2.5 has established a playback-ready detail cache as the bridge from catalog browsing to playback.
+- The app has a real detail route with Room-backed expanded detail, chapters, and ordered remote track caching.
+- The app syncs server-backed Continue Listening into Room for the home dashboard.
+- Milestone 2.5 established a playback-ready detail cache as the bridge from catalog browsing to playback.
+- Milestone 3 has started: real Media3 playback (ExoPlayer + MediaSession), a background media session service, and now-playing surfaces are implemented. Progress persistence and a queue model are still outstanding.
+- Downloads have not started.
 
 ## Cross-Cutting Standards
 
@@ -48,6 +50,8 @@ Details: `milestones/02-catalog-expansion.md`
 ### Milestone 3: Playback Core
 
 Introduce Media3-based playback, shared playback state, and the service/session architecture needed by all future surfaces.
+
+Status: in progress — player, media session service, background playback, and now-playing surfaces are implemented; playback queue model and progress persistence are still outstanding.
 
 Details: `milestones/03-playback-core.md`
 
@@ -95,7 +99,7 @@ Details: `milestones/07-quality-and-release.md`
 
 ## Immediate Next Focus
 
-1. Finish polishing the main browsing surfaces: `Home`, `Library`, and `Authors`, including stronger navigation structure and production-ready section design.
-2. Use the cached expanded detail/track model as the starting point for playback.
-3. Keep the chapter-capable detail screen as the playback entry and later download action surface.
-4. Start the first real playback architecture slice once the immediate browsing shell polish is acceptable.
+1. Finish Milestone 3: persist playback position, add resume behavior, sync progress with the server, and introduce a playback queue/queue-source model on top of the cached tracks.
+2. Extract playback into a surface-agnostic module so Android Auto and Wear OS can reuse it.
+3. Polish the main browsing surfaces: `Home`, `Library`, and `Authors`, including search/filter affordances and production-ready section design.
+4. Keep the chapter-capable detail screen as the playback entry and later download action surface.

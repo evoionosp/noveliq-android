@@ -26,8 +26,10 @@ import org.evoionosp.noveliq.data.library.remote.mapper.toDetailEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toContinueListeningEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toTrackEntities
+import org.evoionosp.noveliq.data.library.remote.dto.UpdateProgressRequestDto
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
+import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
 import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
 import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.library.model.CatalogError
@@ -318,6 +320,105 @@ class AudiobookRepositoryImpl @Inject constructor(
                     CatalogError.NOT_FOUND
                 } else {
                     CatalogError.UNKNOWN
+                }
+                DomainResult.Failure(error)
+            } catch (exception: IllegalArgumentException) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            } catch (exception: IOException) {
+                DomainResult.Failure(CatalogError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            }
+        }
+    }
+
+    override suspend fun fetchProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String
+    ): DomainResult<PlaybackProgress?> {
+        return withContext(ioDispatcher) {
+            if (!connectivityObserver.isConnected()) {
+                return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
+            }
+
+            try {
+                val dto = serviceFactory.create(baseUrl).mediaProgress(
+                    authorization = "Bearer $accessToken",
+                    itemId = audiobookId
+                )
+                DomainResult.Success(
+                    PlaybackProgress(
+                        currentTimeSeconds = dto.currentTime ?: 0.0,
+                        durationSeconds = dto.duration,
+                        isFinished = dto.isFinished ?: false
+                    )
+                )
+            } catch (exception: HttpException) {
+                when (exception.code()) {
+                    // No progress recorded for this item yet.
+                    404 -> DomainResult.Success(null)
+                    401, 403 -> DomainResult.Failure(CatalogError.AUTH)
+                    else -> DomainResult.Failure(CatalogError.UNKNOWN)
+                }
+            } catch (exception: IllegalArgumentException) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            } catch (exception: IOException) {
+                DomainResult.Failure(CatalogError.NETWORK)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                DomainResult.Failure(CatalogError.UNKNOWN)
+            }
+        }
+    }
+
+    override suspend fun saveProgress(
+        baseUrl: String,
+        accessToken: String,
+        audiobookId: String,
+        progress: PlaybackProgress
+    ): DomainResult<Unit> {
+        return withContext(ioDispatcher) {
+            if (!connectivityObserver.isConnected()) {
+                return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
+            }
+
+            val duration = progress.durationSeconds?.takeIf { it > 0 }
+            val ratio = if (duration != null) {
+                (progress.currentTimeSeconds / duration).coerceIn(0.0, 1.0)
+            } else {
+                0.0
+            }
+
+            try {
+                val response = serviceFactory.create(baseUrl).updateMediaProgress(
+                    authorization = "Bearer $accessToken",
+                    itemId = audiobookId,
+                    body = UpdateProgressRequestDto(
+                        currentTime = progress.currentTimeSeconds,
+                        duration = duration,
+                        progress = ratio,
+                        isFinished = progress.isFinished
+                    )
+                )
+                if (response.isSuccessful) {
+                    DomainResult.Success(Unit)
+                } else {
+                    val error = when (response.code()) {
+                        401, 403 -> CatalogError.AUTH
+                        404 -> CatalogError.NOT_FOUND
+                        else -> CatalogError.UNKNOWN
+                    }
+                    DomainResult.Failure(error)
+                }
+            } catch (exception: HttpException) {
+                val error = when (exception.code()) {
+                    401, 403 -> CatalogError.AUTH
+                    404 -> CatalogError.NOT_FOUND
+                    else -> CatalogError.UNKNOWN
                 }
                 DomainResult.Failure(error)
             } catch (exception: IllegalArgumentException) {

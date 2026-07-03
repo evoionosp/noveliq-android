@@ -2,9 +2,9 @@
 
 ## Summary
 
-Noveliq is still early-stage, but it now has a materially better foundation than the initial prototype. The app supports login, server checks, library discovery, local caching, selected-library persistence through local DB state, listing audiobook items for the selected library, and a first-pass audiobook detail flow with server-backed detail/chapter/track loading cached locally.
+Noveliq now has a materially better foundation than the initial prototype, and it has crossed from a catalog-only app into one with real audio playback. It supports login, server checks, library discovery, local caching, selected-library persistence through local DB state, listing audiobook items for the selected library, a detail flow with server-backed detail/chapter/track loading cached locally, and Media3-based playback of selected audiobooks.
 
-The project is not yet a playback app. It is currently a catalog and authentication app with a cleaner foundation and the first detail-oriented catalog flow in place.
+The remaining gap to a full playback product is not the player itself but the durable pieces around it: playback progress persistence, progress sync with the server, a queue model, and offline downloads.
 
 ## Implemented Features
 
@@ -39,17 +39,23 @@ The project is not yet a playback app. It is currently a catalog and authenticat
 - Session storage is encrypted.
 - Hardcoded dispatcher usage has been replaced in the main repository and coordinator paths.
 - Snackbar-style transient messages have been moved to `SharedFlow` events in key screens.
+- Playback is service-backed via a Media3 `MediaLibraryService`, not embedded in a screen ViewModel.
 
 ### Important Weaknesses
 
-#### 1. Playback is still not implemented
+#### 1. Playback exists but is not yet durable or complete
 
-The detail screen now has a `Play` action, but it is still only a placeholder. There is no playback service, no Media3 integration, no media session, and no progress persistence.
+Playback is implemented with Media3 (ExoPlayer + `MediaLibrarySession`), exposed to the UI through `PlaybackConnection`/`PlaybackState` and the now-playing surfaces, and backed by a foreground `mediaPlayback` service. However, several production-critical pieces are missing:
+
+- No playback progress persistence: position is held in memory only and is lost on process death.
+- No progress sync with the Audiobookshelf server.
+- No playback queue/queue-source model.
+- Streaming from remote track URLs only; no local-file source resolution.
 
 Impact:
 
-- Android Auto and Wear OS work cannot start properly until playback architecture exists.
-- The current `Play` action is only a UI contract, not a feature.
+- Resume-across-sessions and cross-device progress are not yet possible.
+- The player is usable but not yet a complete listening experience.
 
 #### 2. Downloads are still not implemented
 
@@ -58,15 +64,15 @@ There is still no offline download pipeline, file storage strategy, download sta
 Impact:
 
 - Offline listening is not yet possible.
-- Playback architecture should be designed with downloads in mind before the implementation gets too far.
+- Download support should be designed to plug into the existing playback source resolution.
 
-#### 3. Catalog detail data is now cached, but still needs richer playback semantics
+#### 3. Catalog detail data is cached, but still needs richer playback semantics
 
-The audiobook detail screen now observes a Room-backed expanded detail model and refreshes item detail from the server. Chapters and ordered remote tracks are cached locally, which gives playback a stable catalog source.
+The audiobook detail screen observes a Room-backed expanded detail model and refreshes item detail from the server. Chapters and ordered remote tracks are cached locally, which gives playback a stable catalog source.
 
 Impact:
 
-- Playback can now resolve cached detail and remote track URLs from the repository layer.
+- Playback resolves cached detail and remote track URLs from the repository layer.
 - The model still needs progress, bookmarks, local-file resolution, and eventual download state before offline playback.
 
 #### 4. Sync orchestration is still app-process scoped
@@ -75,17 +81,17 @@ Catalog refresh is still coordinated from `Application` with an application-scop
 
 Impact:
 
-- Still not a good base for downloads.
+- Still not a good base for downloads or durable progress sync.
 - Still not the right mechanism for durable retries or process-death-safe work.
 
 #### 5. The module layout is cleaner, but still transitional
 
-The rename from `common` to `core` is an improvement, but the app is still using broad modules like `presentation` and `data` rather than feature-oriented or capability-oriented splits.
+The rename from `common` to `core` is an improvement, and playback lives in its own `presentation.player` package, but the app still uses broad modules like `presentation` and `data` rather than feature-oriented or capability-oriented splits. Playback is not yet a standalone surface-agnostic module.
 
 Impact:
 
 - Acceptable for the current project size.
-- Will need further modularization before playback, downloads, Auto, and Wear expand the codebase significantly.
+- Playback should be extracted into a dedicated module before Auto and Wear expand the codebase significantly.
 
 ## What Was Improved Recently
 
@@ -104,6 +110,7 @@ Impact:
 - Server-backed Continue Listening shelf sync cached locally for Room-first home reads.
 - Presentation UI files have been split into screen-specific and component-specific Kotlin files for home/catalog, detail, and now-playing surfaces.
 - App navigation, route definitions, transition helpers, root bottom navigation, and now-playing scaffold state have been extracted from `MainActivity` into a dedicated `presentation.navigation` package.
+- Real Media3 playback wired behind the detail `Play` action, with a background media session service and now-playing surfaces synchronized through shared playback state.
 
 ## Current Product Fit
 
@@ -113,20 +120,21 @@ Impact:
 - Initial catalog browsing.
 - Basic cached library experience.
 - Detail-oriented catalog browsing.
+- Streaming playback of selected audiobooks with background controls.
 
 ### Not ready yet for future scope
 
-- Playback.
-- Media session architecture.
+- Playback progress persistence and resume.
+- Progress sync with the server.
+- Playback queue management.
 - Offline downloads.
-- Syncing listening progress.
 - Android Auto.
 - Wear OS.
 
 ## Recommended Immediate Priorities
 
-1. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`.
-2. Polish library browsing with search, filtering, and sort affordances.
-3. Build the first real playback slice behind the current `Play` action using the cached detail/track model.
-4. Define playback/session architecture that can later power Android Auto and Wear OS.
-5. Introduce progress persistence and playback source resolution.
+1. Persist playback position and add resume-from-last-position behavior.
+2. Sync playback progress with the Audiobookshelf server.
+3. Introduce a playback queue/queue-source model on top of the cached tracks.
+4. Finish polishing the main authenticated browsing shell across `Home`, `Library`, and `Authors`, including search, filtering, and sort affordances.
+5. Extract playback into a surface-agnostic module in preparation for Android Auto and Wear OS.

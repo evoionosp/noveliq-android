@@ -3,6 +3,7 @@ package org.evoionosp.noveliq.data.library.remote.api
 import javax.inject.Inject
 import javax.inject.Singleton
 import okhttp3.OkHttpClient
+import org.evoionosp.noveliq.data.network.UrlUtils
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -14,7 +15,7 @@ class AudiobookshelfLibraryServiceFactory @Inject constructor(
 
     @Synchronized
     fun create(baseUrl: String): AudiobookshelfLibraryApiService {
-        val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+        val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
         return serviceCache.getOrPut(normalizedBaseUrl) {
             Retrofit.Builder()
                 .baseUrl(normalizedBaseUrl)
@@ -25,9 +26,4 @@ class AudiobookshelfLibraryServiceFactory @Inject constructor(
         }
     }
 
-    fun normalizeBaseUrl(baseUrl: String): String {
-        val trimmed = baseUrl.trim()
-        require(trimmed.isNotEmpty()) { "Base URL must not be blank." }
-        return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
-    }
 }

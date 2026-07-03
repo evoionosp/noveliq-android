@@ -19,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.presentation.R
 
@@ -75,7 +77,7 @@ fun ServerStatusCard(
                     )
                     if (status.authLoginCustomMessage.isNotBlank()) {
                         Text(
-                            text = status.authLoginCustomMessage,
+                            text = AnnotatedString.fromHtml(status.authLoginCustomMessage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

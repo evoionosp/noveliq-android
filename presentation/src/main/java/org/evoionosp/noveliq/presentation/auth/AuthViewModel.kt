@@ -40,7 +40,25 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(protocol = value) }
     }
     fun onBaseUrlChange(value: String) {
-        _uiState.update { it.copy(baseUrl = value) }
+        val trimmedValue = value.trim()
+        val (newProtocol, newBaseUrl) = when {
+            trimmedValue.startsWith("https://", ignoreCase = true) -> {
+                "https://" to trimmedValue.removePrefix("https://")
+            }
+            trimmedValue.startsWith("http://", ignoreCase = true) -> {
+                "http://" to trimmedValue.removePrefix("http://")
+            }
+            else -> {
+                _uiState.value.protocol to value
+            }
+        }
+
+        _uiState.update { 
+            it.copy(
+                protocol = newProtocol,
+                baseUrl = newBaseUrl
+            ) 
+        }
     }
 
     fun onUsernameChange(value: String) {
@@ -51,8 +69,12 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(password = value) }
     }
 
+    private fun getBaseUrl(): String {
+        return (_uiState.value.protocol+_uiState.value.baseUrl).trim()
+    }
+
     fun checkLoginSetup() {
-        val baseUrl = (_uiState.value.protocol+_uiState.value.baseUrl).trim()
+        val baseUrl = getBaseUrl()
         if (baseUrl.isBlank()) {
             setLoginSetupError(R.string.error_server_url_required)
             return

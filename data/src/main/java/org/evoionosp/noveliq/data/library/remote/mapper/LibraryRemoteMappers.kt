@@ -2,12 +2,12 @@ package org.evoionosp.noveliq.data.library.remote.mapper
 
 import java.util.Locale
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookChapterEntity
+import org.evoionosp.noveliq.data.network.UrlUtils
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookDetailEntity
 import org.evoionosp.noveliq.data.audiobook.local.entity.ContinueListeningEntity
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookEntity
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookTrackEntity
 import org.evoionosp.noveliq.data.library.local.entity.LibraryEntity
-import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryDto
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryItemDto
 
@@ -27,7 +27,6 @@ internal fun LibraryDto.isAudiobookLibrary(): Boolean {
 }
 
 internal fun LibraryItemDto.toEntity(
-    serviceFactory: AudiobookshelfLibraryServiceFactory,
     baseUrl: String,
     fallbackLibraryId: String
 ): AudiobookEntity? {
@@ -44,7 +43,7 @@ internal fun LibraryItemDto.toEntity(
         .orEmpty()
         .toDisplayAuthorName()
         .ifBlank { "Unknown Author" }
-    val normalizedBaseUrl = serviceFactory.normalizeBaseUrl(baseUrl)
+    val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
     val coverUrl = "${normalizedBaseUrl}api/items/$idValue/cover?width=400&format=webp"
 
     return AudiobookEntity(
@@ -59,13 +58,11 @@ internal fun LibraryItemDto.toEntity(
 }
 
 internal fun LibraryItemDto.toDetailEntity(
-    serviceFactory: AudiobookshelfLibraryServiceFactory,
     baseUrl: String,
     fallbackLibraryId: String,
     refreshedAtMillis: Long
 ): AudiobookDetailEntity? {
     val summary = toEntity(
-        serviceFactory = serviceFactory,
         baseUrl = baseUrl,
         fallbackLibraryId = fallbackLibraryId
     ) ?: return null
@@ -97,11 +94,10 @@ internal fun LibraryItemDto.toChapterEntities(audiobookId: String): List<Audiobo
 }
 
 internal fun LibraryItemDto.toTrackEntities(
-    serviceFactory: AudiobookshelfLibraryServiceFactory,
     baseUrl: String,
     audiobookId: String
 ): List<AudiobookTrackEntity> {
-    val normalizedBaseUrl = serviceFactory.normalizeBaseUrl(baseUrl)
+    val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
     return media?.tracks.orEmpty()
         .filter { !it.contentUrl.isNullOrBlank() }
         .mapIndexed { fallbackIndex, track ->

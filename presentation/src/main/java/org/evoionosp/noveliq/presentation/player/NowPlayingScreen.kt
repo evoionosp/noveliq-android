@@ -40,6 +40,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
@@ -49,6 +50,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +86,18 @@ internal fun NowPlayingScreen(
     val playbackState = uiState.playback
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showChaptersSheet by remember { mutableStateOf(false) }
+    var coverWidthPx by remember { mutableIntStateOf(0) }
+
+    // Overall book progress (0..1): live position while playing, saved position while previewing.
+    val bookProgress = run {
+        val total = uiState.viewedTotalSeconds
+        val position = if (uiState.isGlance) {
+            uiState.viewedProgressSeconds
+        } else {
+            playbackState.currentBookPositionSeconds
+        }
+        if (total > 0) (position / total).toFloat().coerceIn(0f, 1f) else 0f
+    }
 
     Surface(
         modifier = Modifier
@@ -159,8 +175,23 @@ internal fun NowPlayingScreen(
                     modifier = Modifier
                         .weight(1f, fill = false)
                         .aspectRatio(1f)
+                        .onSizeChanged { coverWidthPx = it.width }
                         .clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Thin, read-only overall-book progress bar, matched to the cover width.
+                LinearProgressIndicator(
+                    progress = { bookProgress },
+                    modifier = Modifier
+                        .width(with(LocalDensity.current) { coverWidthPx.toDp() })
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50)),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    gapSize = 0.dp,
+                    drawStopIndicator = {}
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -325,7 +356,7 @@ private fun PlayingTransport(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
@@ -339,9 +370,9 @@ private fun PlayingTransport(
             )
         }
         SeekButton(label = "15", onClick = onSeekBackward)
-        IconButton(
+        FilledIconButton(
             onClick = onTogglePlayPause,
-            modifier = Modifier.size(72.dp)
+            modifier = Modifier.size(96.dp)
         ) {
             Icon(
                 imageVector = if (playbackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,

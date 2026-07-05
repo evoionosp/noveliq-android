@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import org.evoionosp.noveliq.presentation.MainActivity
+import org.evoionosp.noveliq.presentation.permissions.RequestNotificationPermissionEffect
 import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
 import org.evoionosp.noveliq.presentation.player.NowPlayingViewModel
 import org.evoionosp.noveliq.presentation.settings.SettingsUiState
@@ -49,6 +50,12 @@ fun NoveliqApp(
         val currentRoute = currentBackStackEntry?.destination?.route
         val homeDestination = splashState.startupDestination as? StartupDestination.Home
         val accessToken = homeDestination?.session?.accessToken.orEmpty()
+
+        // Once the user is logged in and on the main screen, ask for notification permission so the
+        // playback notification can be shown (Android 13+).
+        if (homeDestination != null) {
+            RequestNotificationPermissionEffect()
+        }
 
         Box {
             Scaffold(

@@ -8,6 +8,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Signing secrets — never commit these
+keystore.properties
+*.jks
+*.keystore
+
 /.vscode/settings.json
 /.idea/codeStyles/codeStyleConfig.xml
 /.idea/appInsightsSettings.xml

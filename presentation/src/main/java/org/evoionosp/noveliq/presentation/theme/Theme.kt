@@ -1,6 +1,9 @@
-package org.evoionosp.noveliq.presentation.ui.theme
+package org.evoionosp.noveliq.presentation.theme
 import android.app.Activity
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
@@ -10,15 +13,12 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-
-@Immutable
-data class ExtendedColorScheme(
-    val customColor1: ColorFamily,
-    val customColor2: ColorFamily,
-)
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -248,96 +248,6 @@ private val highContrastDarkColorScheme = darkColorScheme(
     surfaceContainerHighest = surfaceContainerHighestDarkHighContrast,
 )
 
-val extendedLight = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1Light,
-  onCustomColor1Light,
-  customColor1ContainerLight,
-  onCustomColor1ContainerLight,
-  ),
-  customColor2 = ColorFamily(
-  customColor2Light,
-  onCustomColor2Light,
-  customColor2ContainerLight,
-  onCustomColor2ContainerLight,
-  ),
-)
-
-val extendedDark = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1Dark,
-  onCustomColor1Dark,
-  customColor1ContainerDark,
-  onCustomColor1ContainerDark,
-  ),
-  customColor2 = ColorFamily(
-  customColor2Dark,
-  onCustomColor2Dark,
-  customColor2ContainerDark,
-  onCustomColor2ContainerDark,
-  ),
-)
-
-val extendedLightMediumContrast = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1LightMediumContrast,
-  onCustomColor1LightMediumContrast,
-  customColor1ContainerLightMediumContrast,
-  onCustomColor1ContainerLightMediumContrast,
-  ),
-  customColor2 = ColorFamily(
-  customColor2LightMediumContrast,
-  onCustomColor2LightMediumContrast,
-  customColor2ContainerLightMediumContrast,
-  onCustomColor2ContainerLightMediumContrast,
-  ),
-)
-
-val extendedLightHighContrast = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1LightHighContrast,
-  onCustomColor1LightHighContrast,
-  customColor1ContainerLightHighContrast,
-  onCustomColor1ContainerLightHighContrast,
-  ),
-  customColor2 = ColorFamily(
-  customColor2LightHighContrast,
-  onCustomColor2LightHighContrast,
-  customColor2ContainerLightHighContrast,
-  onCustomColor2ContainerLightHighContrast,
-  ),
-)
-
-val extendedDarkMediumContrast = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1DarkMediumContrast,
-  onCustomColor1DarkMediumContrast,
-  customColor1ContainerDarkMediumContrast,
-  onCustomColor1ContainerDarkMediumContrast,
-  ),
-  customColor2 = ColorFamily(
-  customColor2DarkMediumContrast,
-  onCustomColor2DarkMediumContrast,
-  customColor2ContainerDarkMediumContrast,
-  onCustomColor2ContainerDarkMediumContrast,
-  ),
-)
-
-val extendedDarkHighContrast = ExtendedColorScheme(
-  customColor1 = ColorFamily(
-  customColor1DarkHighContrast,
-  onCustomColor1DarkHighContrast,
-  customColor1ContainerDarkHighContrast,
-  onCustomColor1ContainerDarkHighContrast,
-  ),
-  customColor2 = ColorFamily(
-  customColor2DarkHighContrast,
-  onCustomColor2DarkHighContrast,
-  customColor2ContainerDarkHighContrast,
-  onCustomColor2ContainerDarkHighContrast,
-  ),
-)
-
 @Immutable
 data class ColorFamily(
     val color: Color,
@@ -371,6 +281,23 @@ fun AppTheme(
 
       darkTheme -> darkScheme
       else -> lightScheme
+  }
+
+  val context = LocalContext.current
+  SideEffect {
+      val activity = context as? ComponentActivity ?: return@SideEffect
+      activity.enableEdgeToEdge(
+          statusBarStyle = if (darkTheme) {
+              SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+          } else {
+              SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+          },
+          navigationBarStyle = if (darkTheme) {
+              SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+          } else {
+              SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+          }
+      )
   }
 
   MaterialTheme(

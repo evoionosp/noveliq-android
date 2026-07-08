@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)

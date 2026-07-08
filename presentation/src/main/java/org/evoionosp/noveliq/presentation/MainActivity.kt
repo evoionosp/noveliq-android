@@ -13,7 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.evoionosp.noveliq.presentation.navigation.NoveliqApp
 import org.evoionosp.noveliq.presentation.settings.SettingsViewModel
 import org.evoionosp.noveliq.presentation.splash.SplashViewModel
-import org.evoionosp.noveliq.presentation.ui.theme.AppTheme
+import org.evoionosp.noveliq.presentation.theme.AppTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         splashScreen.setKeepOnScreenCondition {
             splashViewModel.uiState.value.isLoading

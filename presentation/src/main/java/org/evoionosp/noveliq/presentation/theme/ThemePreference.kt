@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.ui.theme
+package org.evoionosp.noveliq.presentation.theme
 
 enum class ThemePreference {
     SYSTEM,

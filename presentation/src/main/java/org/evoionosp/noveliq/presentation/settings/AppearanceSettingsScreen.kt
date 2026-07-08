@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import org.evoionosp.noveliq.presentation.R
-import org.evoionosp.noveliq.presentation.ui.theme.ThemePreference
+import org.evoionosp.noveliq.presentation.theme.ThemePreference
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

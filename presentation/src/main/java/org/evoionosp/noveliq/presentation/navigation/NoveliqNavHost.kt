@@ -1,8 +1,8 @@
 package org.evoionosp.noveliq.presentation.navigation
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,7 +17,7 @@ import org.evoionosp.noveliq.presentation.settings.SettingsUiState
 import org.evoionosp.noveliq.presentation.splash.CatalogBootstrapErrorScreen
 import org.evoionosp.noveliq.presentation.splash.SplashUiState
 import org.evoionosp.noveliq.presentation.splash.StartupDestination
-import org.evoionosp.noveliq.presentation.ui.theme.ThemePreference
+import org.evoionosp.noveliq.presentation.theme.ThemePreference
 
 @Composable
 internal fun NoveliqNavHost(
@@ -25,7 +25,7 @@ internal fun NoveliqNavHost(
     startDestination: String,
     splashState: SplashUiState,
     settingsState: SettingsUiState,
-    bottomBarPadding: Dp,
+    contentPadding: PaddingValues,
     onRetryCatalogBootstrap: () -> Unit,
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
@@ -61,7 +61,7 @@ internal fun NoveliqNavHost(
                 accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
+                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
                 modifier = Modifier
             )
@@ -79,7 +79,7 @@ internal fun NoveliqNavHost(
                 accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
+                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
                 modifier = Modifier
             )
@@ -97,7 +97,7 @@ internal fun NoveliqNavHost(
                 accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
+                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 modifier = Modifier
             )
         }

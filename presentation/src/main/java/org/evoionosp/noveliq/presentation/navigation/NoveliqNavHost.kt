@@ -8,7 +8,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
-import org.evoionosp.noveliq.presentation.home.AuthorsScreen
 import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.home.LibraryScreen
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
@@ -81,23 +80,6 @@ internal fun NoveliqNavHost(
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
-                modifier = Modifier
-            )
-        }
-        composable(
-            route = AppRoute.Authors.route,
-            enterTransition = { rootEnterTransition() },
-            exitTransition = { rootExitTransition() },
-            popEnterTransition = { rootEnterTransition() },
-            popExitTransition = { rootExitTransition() }
-        ) {
-            val startupDestination = splashState.startupDestination as? StartupDestination.Home
-                ?: return@composable
-            AuthorsScreen(
-                accessToken = startupDestination.session.accessToken,
-                onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
-                onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 modifier = Modifier
             )
         }

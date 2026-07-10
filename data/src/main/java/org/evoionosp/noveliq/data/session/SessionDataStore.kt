@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.session
+package org.evoionosp.noveliq.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -8,6 +8,8 @@ import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.SessionStore
 
 class SessionDataStore(
     private val context: Context

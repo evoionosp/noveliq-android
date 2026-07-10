@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.settings
+package org.evoionosp.noveliq.domain.settings
 
 data class AppSettings(
     val themePreference: String = DEFAULT_THEME_PREFERENCE,

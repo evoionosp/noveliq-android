@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.settings
+package org.evoionosp.noveliq.data.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
@@ -11,6 +11,8 @@ import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import org.evoionosp.noveliq.domain.settings.AppSettings
+import org.evoionosp.noveliq.domain.settings.AppSettingsStore
 
 private val Context.appSettingsDataStore by preferencesDataStore(name = "app_settings")
 

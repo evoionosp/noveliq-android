@@ -14,10 +14,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.LoginSession
-import org.evoionosp.noveliq.core.session.SessionStore
-import org.evoionosp.noveliq.domain.auth.model.LoginResult
-import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.SessionStore
+import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
@@ -25,7 +24,7 @@ import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val sessionStore: SessionStore,
-    private val authRepository: AuthRepository,
+    private val refreshSessionUseCase: RefreshSessionUseCase,
     private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SplashUiState())
@@ -101,7 +100,7 @@ class SplashViewModel @Inject constructor(
         )
 
         if (bootstrapResult is BootstrapHomeCatalogResult.Failure && bootstrapResult.error == CatalogError.AUTH) {
-            activeSession = refreshSession(session) ?: session
+            activeSession = refreshSessionUseCase() ?: session
             if (activeSession.accessToken != session.accessToken) {
                 bootstrapResult = bootstrapHomeCatalogUseCase(
                     baseUrl = activeSession.baseUrl,
@@ -123,30 +122,6 @@ class SplashViewModel @Inject constructor(
                 )
             }
         )
-    }
-
-    private suspend fun refreshSession(session: LoginSession): LoginSession? {
-        val refreshToken = session.refreshToken?.takeIf { it.isNotBlank() } ?: return null
-        return when (
-            val result = authRepository.refreshSession(
-                baseUrl = session.baseUrl,
-                refreshToken = refreshToken
-            )
-        ) {
-            is LoginResult.Success -> {
-                val accessToken = result.data.accessToken?.trim().orEmpty()
-                if (accessToken.isBlank()) return null
-                val updatedSession = session.copy(
-                    accessToken = accessToken,
-                    refreshToken = result.data.refreshToken?.trim()?.takeIf { it.isNotBlank() }
-                        ?: session.refreshToken,
-                    userId = result.data.userId?.trim() ?: session.userId
-                )
-                sessionStore.saveSession(updatedSession)
-                updatedSession
-            }
-            is LoginResult.Failure -> null
-        }
     }
 
     /**

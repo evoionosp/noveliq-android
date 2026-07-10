@@ -70,6 +70,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
+import org.evoionosp.noveliq.playback.PlaybackState
 import org.evoionosp.noveliq.presentation.R
 import kotlin.math.abs
 

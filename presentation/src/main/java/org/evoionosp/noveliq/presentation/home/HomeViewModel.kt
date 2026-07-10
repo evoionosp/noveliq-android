@@ -19,15 +19,14 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.LoginSession
+import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveContinueListeningUseCase
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveHomeAudiobooksUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveLibrarySyncStatusUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshContinueListeningUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
-import org.evoionosp.noveliq.domain.auth.model.LoginResult
-import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.model.SyncStatus
@@ -41,7 +40,7 @@ import org.evoionosp.noveliq.presentation.R
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sessionStore: SessionStore,
-    private val authRepository: AuthRepository,
+    private val refreshSessionUseCase: RefreshSessionUseCase,
     private val observeLibrariesUseCase: ObserveLibrariesUseCase,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val observeHomeAudiobooksUseCase: ObserveHomeAudiobooksUseCase,
@@ -162,7 +161,7 @@ class HomeViewModel @Inject constructor(
             var activeSession = session
             var libraryRefreshResult = refreshLibraries(activeSession)
             if (libraryRefreshResult.isAuthFailure()) {
-                activeSession = refreshSessionOrExpire() ?: run {
+                activeSession = refreshSessionUseCase() ?: run {
                     stopRefreshing(silent)
                     expireSession()
                     return@launch
@@ -176,7 +175,7 @@ class HomeViewModel @Inject constructor(
             val audiobookRefreshResult = if (selectedLibraryId != null) {
                 var result = refreshSelectedLibraryAudiobooks(activeSession, selectedLibraryId)
                 if (result.isAuthFailure()) {
-                    activeSession = refreshSessionOrExpire() ?: run {
+                    activeSession = refreshSessionUseCase() ?: run {
                         stopRefreshing(silent)
                         expireSession()
                         return@launch
@@ -185,7 +184,7 @@ class HomeViewModel @Inject constructor(
                 }
                 val continueResult = refreshContinueListening(activeSession, selectedLibraryId)
                 if (continueResult.isAuthFailure()) {
-                    activeSession = refreshSessionOrExpire() ?: run {
+                    activeSession = refreshSessionUseCase() ?: run {
                         stopRefreshing(silent)
                         expireSession()
                         return@launch
@@ -225,7 +224,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun handleAuthFailure() {
-        if (refreshSessionOrExpire() == null) {
+        if (refreshSessionUseCase() == null) {
             expireSession()
         }
     }
@@ -234,31 +233,6 @@ class HomeViewModel @Inject constructor(
         _events.tryEmit(HomeUiEvent.SessionExpired)
         viewModelScope.launch {
             sessionStore.clearSession()
-        }
-    }
-
-    private suspend fun refreshSessionOrExpire(): LoginSession? {
-        val currentSession = sessionStore.session.first() ?: return null
-        val refreshToken = currentSession.refreshToken?.takeIf { it.isNotBlank() } ?: return null
-        return when (
-            val result = authRepository.refreshSession(
-                baseUrl = currentSession.baseUrl,
-                refreshToken = refreshToken
-            )
-        ) {
-            is LoginResult.Success -> {
-                val accessToken = result.data.accessToken?.trim().orEmpty()
-                if (accessToken.isBlank()) return null
-                val updatedSession = currentSession.copy(
-                    accessToken = accessToken,
-                    refreshToken = result.data.refreshToken?.trim()?.takeIf { it.isNotBlank() }
-                        ?: currentSession.refreshToken,
-                    userId = result.data.userId?.trim() ?: currentSession.userId
-                )
-                sessionStore.saveSession(updatedSession)
-                updatedSession
-            }
-            is LoginResult.Failure -> null
         }
     }
 

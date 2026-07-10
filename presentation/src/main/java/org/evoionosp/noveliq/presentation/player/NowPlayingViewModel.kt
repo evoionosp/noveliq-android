@@ -12,12 +12,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveAudiobookDetailUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshAudiobookDetailUseCase
+import org.evoionosp.noveliq.playback.PlaybackConnection
+import org.evoionosp.noveliq.playback.PlaybackState
 import javax.inject.Inject
 
 /**

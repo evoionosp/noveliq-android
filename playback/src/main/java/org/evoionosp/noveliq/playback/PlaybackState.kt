@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.player
+package org.evoionosp.noveliq.playback
 
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 

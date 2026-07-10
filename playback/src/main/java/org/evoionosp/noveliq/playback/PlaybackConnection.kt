@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.player
+package org.evoionosp.noveliq.playback
 
 import android.content.ComponentName
 import android.content.Context
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookTrack

@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.session
+package org.evoionosp.noveliq.domain.session
 
 data class LoginSession(
     val accessToken: String,

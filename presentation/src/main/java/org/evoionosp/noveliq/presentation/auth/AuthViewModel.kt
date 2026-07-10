@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.LoginSession
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.usecase.LoginUseCase

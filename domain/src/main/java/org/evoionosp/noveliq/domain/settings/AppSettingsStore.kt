@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.settings
+package org.evoionosp.noveliq.domain.settings
 
 import kotlinx.coroutines.flow.Flow
 

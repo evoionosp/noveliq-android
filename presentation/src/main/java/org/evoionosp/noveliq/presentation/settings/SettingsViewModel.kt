@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.settings.AppSettingsStore
+import org.evoionosp.noveliq.domain.settings.AppSettingsStore
 import org.evoionosp.noveliq.presentation.theme.ThemePreference
 
 @HiltViewModel

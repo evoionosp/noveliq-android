@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.player
+package org.evoionosp.noveliq.playback
 
 import android.content.Context
 import androidx.annotation.OptIn
@@ -16,7 +16,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.SessionStore
 
 @Module
 @InstallIn(ServiceComponent::class)

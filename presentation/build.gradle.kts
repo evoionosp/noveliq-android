@@ -41,10 +41,11 @@ android {
 
 dependencies {
     implementation(project(":domain"))
-    implementation(project(":core"))
-    implementation(project(":data"))
+    implementation(project(":playback"))
 
     implementation(libs.androidx.core.ktx)
+    // Material Components: required by the app themes (Theme.Material3.*) defined in this module's res/.
+    implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -61,11 +62,6 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
     implementation(libs.coil.compose)
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.media3.ui)
-    implementation(libs.androidx.media3.common)
-    implementation(libs.androidx.media3.datasource)
     implementation(libs.androidx.compose.ui.text.google.fonts)
     ksp(libs.hilt.compiler)
 

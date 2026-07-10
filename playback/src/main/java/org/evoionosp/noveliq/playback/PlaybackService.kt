@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.player
+package org.evoionosp.noveliq.playback
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi

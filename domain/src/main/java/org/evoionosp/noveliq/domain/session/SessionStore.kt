@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.core.session
+package org.evoionosp.noveliq.domain.session
 
 import kotlinx.coroutines.flow.Flow
 

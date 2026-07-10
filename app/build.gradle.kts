@@ -9,6 +9,10 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
 // Release signing is configured via a (gitignored) keystore.properties file at the repo root.
 // See keystore.properties.example. When it is absent, the release build falls back to the debug
 // signing key so it still produces an installable APK for local testing.
@@ -72,9 +76,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
     }

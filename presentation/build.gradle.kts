@@ -6,6 +6,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+kotlin {
+    jvmToolchain(11)
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
+    }
+}
+
 android {
     namespace = "org.evoionosp.noveliq.presentation"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -28,12 +35,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
-        )
-    }
+
     buildFeatures {
         compose = true
     }

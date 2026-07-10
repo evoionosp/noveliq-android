@@ -143,7 +143,7 @@ fun LibraryScreen(
                             )
                             FilledTonalIconButton(
                                 onClick = { isGridView = !isGridView },
-                                modifier = Modifier.size(56.dp),
+                                modifier = Modifier.size(48.dp),
                                 shape = CircleShape,
                                 colors = IconButtonDefaults.filledTonalIconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh

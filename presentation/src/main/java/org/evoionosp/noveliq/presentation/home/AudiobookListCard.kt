@@ -1,14 +1,15 @@
 package org.evoionosp.noveliq.presentation.home
 
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -24,13 +25,13 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.player.toDurationLabel
 
 @Composable
-internal fun AudiobookGridCard(
+internal fun AudiobookListCard(
     audiobook: Audiobook,
     accessToken: String,
     onClick: () -> Unit,
-    coverAspectRatio: Float = 0.72f,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -40,14 +41,16 @@ internal fun AudiobookGridCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         )
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(84.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(coverAspectRatio),
+                    .fillMaxHeight()
+                    .aspectRatio(0.72f),
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -65,23 +68,30 @@ internal fun AudiobookGridCard(
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(vertical = 8.dp, horizontal = 0.dp),
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = audiobook.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    modifier= Modifier.basicMarquee()
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = audiobook.author,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    modifier= Modifier.basicMarquee()
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = audiobook.durationInSeconds?.toDurationLabel() ?: "Unknown duration",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
             }
         }

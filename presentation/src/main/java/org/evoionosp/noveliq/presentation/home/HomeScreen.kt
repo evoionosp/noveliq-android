@@ -40,6 +40,8 @@ fun HomeScreen(
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
 
+    ForegroundRefreshEffect(onForeground = viewModel::refreshSilently)
+
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             is HomeUiEvent.ShowMessage -> {

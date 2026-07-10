@@ -8,4 +8,11 @@ data class PlaybackProgress(
     val currentTimeSeconds: Double,
     val durationSeconds: Double?,
     val isFinished: Boolean
-)
+) {
+    /**
+     * The absolute second to resume from, or null when there is nothing useful to resume to
+     * (the book is finished or progress is at the very start).
+     */
+    val resumeSeconds: Double?
+        get() = currentTimeSeconds.takeIf { !isFinished && it > 0 }
+}

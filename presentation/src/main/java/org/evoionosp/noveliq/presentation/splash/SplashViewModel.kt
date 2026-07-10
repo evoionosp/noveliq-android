@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.core.session.LoginSession
@@ -31,17 +34,43 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            sessionStore.session.collectLatest { session ->
-                currentSession = session
-                if (session == null) {
-                    _uiState.value = SplashUiState(
-                        isLoading = false,
-                        startupDestination = StartupDestination.Auth
-                    )
-                    return@collectLatest
-                }
+            sessionStore.session
+                // Always keep the latest session (including rotated tokens) for retries.
+                .onEach { currentSession = it }
+                // Only react to routing-relevant changes (login/logout/user switch).
+                // A silent access-token rotation must NOT re-trigger the bootstrap, or the
+                // NavHost briefly rebuilds at the Auth route and flashes the login screen.
+                .distinctUntilChanged { old, new -> old.isSameRouting(new) }
+                .collectLatest { session ->
+                    if (session == null) {
+                        _uiState.value = SplashUiState(
+                            isLoading = false,
+                            startupDestination = StartupDestination.Auth
+                        )
+                        return@collectLatest
+                    }
 
-                bootstrapCatalog(session)
+                    bootstrapCatalog(session)
+                }
+        }
+
+        // Keep the token embedded in the current destination fresh when it rotates, without
+        // re-running the bootstrap. This propagates the new access token to authenticated
+        // image/media loading while the NavHost stays put (it keys on the route only).
+        viewModelScope.launch {
+            sessionStore.session.collect { session ->
+                if (session == null) return@collect
+                _uiState.update { state ->
+                    when (val destination = state.startupDestination) {
+                        is StartupDestination.Home ->
+                            if (destination.session == session) state
+                            else state.copy(startupDestination = StartupDestination.Home(session))
+                        is StartupDestination.CatalogLoadError ->
+                            if (destination.session == session) state
+                            else state.copy(startupDestination = destination.copy(session = session))
+                        StartupDestination.Auth -> state
+                    }
+                }
             }
         }
     }
@@ -60,7 +89,10 @@ class SplashViewModel @Inject constructor(
     }
 
     private suspend fun bootstrapCatalog(session: LoginSession) {
-        _uiState.value = SplashUiState(isLoading = true)
+        // Preserve the current destination while loading. Constructing a fresh
+        // SplashUiState() would reset startupDestination to its default (Auth) and
+        // flash the login screen during any re-bootstrap.
+        _uiState.update { it.copy(isLoading = true) }
 
         var activeSession = session
         var bootstrapResult = bootstrapHomeCatalogUseCase(
@@ -115,5 +147,15 @@ class SplashViewModel @Inject constructor(
             }
             is LoginResult.Failure -> null
         }
+    }
+
+    /**
+     * Two sessions route to the same startup destination when they refer to the same
+     * logged-in user on the same server. Deliberately ignores access/refresh tokens so a
+     * silent token rotation does not look like a new session.
+     */
+    private fun LoginSession?.isSameRouting(other: LoginSession?): Boolean {
+        if (this == null || other == null) return this == null && other == null
+        return baseUrl == other.baseUrl && username == other.username && userId == other.userId
     }
 }

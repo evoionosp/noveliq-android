@@ -70,7 +70,10 @@
     <string name="authors_eyebrow">Browse authors</string>
     <string name="authors_empty_title">No authors yet</string>
     <string name="authors_empty_hint">Authors will appear once your selected library has audiobooks with author metadata.</string>
-    <string name="authors_book_count">%1$d books</string>
+    <plurals name="authors_book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
     <string name="refresh_library">Refresh library</string>
     <string name="search_library">Search</string>
     <string name="search_library_placeholder">Search books, authors, or series</string>

@@ -58,7 +58,10 @@ fun NoveliqApp(
         is StartupDestination.CatalogLoadError -> AppRoute.CatalogError
     }
 
-    key(baseRoute, splashState.startupDestination) {
+    // Key on the route only. Keying on the full startupDestination would rebuild the whole
+    // NavHost (resetting navigation state) whenever the session token rotates; the route is
+    // what actually determines the graph, and token changes flow through via recomposition.
+    key(baseRoute) {
         val navController = rememberNavController()
         val nowPlayingUiState by nowPlayingViewModel.uiState.collectAsStateWithLifecycle()
         val playingAudiobook = nowPlayingUiState.playback.audiobook

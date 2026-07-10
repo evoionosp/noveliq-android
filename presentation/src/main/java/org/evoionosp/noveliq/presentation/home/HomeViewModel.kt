@@ -138,16 +138,32 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Manual pull-to-refresh: shows the refresh indicator and reports the outcome. */
     fun refresh() {
+        performRefresh(silent = false)
+    }
+
+    /**
+     * Refresh triggered when the app returns to the foreground. Fetches the latest content
+     * without showing the pull-to-refresh indicator and without surfacing success/network
+     * toasts. A genuinely expired session still routes the user to login.
+     */
+    fun refreshSilently() {
+        performRefresh(silent = true)
+    }
+
+    private fun performRefresh(silent: Boolean) {
         viewModelScope.launch {
             val session = sessionStore.session.first() ?: return@launch
-            _uiState.update { it.copy(isRefreshing = true) }
+            if (!silent) {
+                _uiState.update { it.copy(isRefreshing = true) }
+            }
 
             var activeSession = session
             var libraryRefreshResult = refreshLibraries(activeSession)
             if (libraryRefreshResult.isAuthFailure()) {
                 activeSession = refreshSessionOrExpire() ?: run {
-                    _uiState.update { it.copy(isRefreshing = false) }
+                    stopRefreshing(silent)
                     expireSession()
                     return@launch
                 }
@@ -161,7 +177,7 @@ class HomeViewModel @Inject constructor(
                 var result = refreshSelectedLibraryAudiobooks(activeSession, selectedLibraryId)
                 if (result.isAuthFailure()) {
                     activeSession = refreshSessionOrExpire() ?: run {
-                        _uiState.update { it.copy(isRefreshing = false) }
+                        stopRefreshing(silent)
                         expireSession()
                         return@launch
                     }
@@ -170,7 +186,7 @@ class HomeViewModel @Inject constructor(
                 val continueResult = refreshContinueListening(activeSession, selectedLibraryId)
                 if (continueResult.isAuthFailure()) {
                     activeSession = refreshSessionOrExpire() ?: run {
-                        _uiState.update { it.copy(isRefreshing = false) }
+                        stopRefreshing(silent)
                         expireSession()
                         return@launch
                     }
@@ -181,13 +197,20 @@ class HomeViewModel @Inject constructor(
                 DomainResult.Failure(CatalogError.NO_AUDIOBOOK_LIBRARIES)
             }
 
-            _uiState.update { it.copy(isRefreshing = false) }
+            stopRefreshing(silent)
             when {
                 libraryRefreshResult.isAuthFailure() || audiobookRefreshResult.isAuthFailure() -> handleAuthFailure()
+                silent -> Unit // Stay quiet on background refresh; cached content remains shown.
                 libraryRefreshResult is DomainResult.Failure -> emitMessage(toMessageRes(libraryRefreshResult.error))
                 audiobookRefreshResult is DomainResult.Failure -> emitMessage(toMessageRes(audiobookRefreshResult.error))
                 else -> emitMessage(R.string.home_refresh_complete)
             }
+        }
+    }
+
+    private fun stopRefreshing(silent: Boolean) {
+        if (!silent) {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

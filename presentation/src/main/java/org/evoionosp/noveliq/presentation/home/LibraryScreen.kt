@@ -11,14 +11,22 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +54,9 @@ fun LibraryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = LocalSnackbarHostState.current
+    var isGridView by rememberSaveable { mutableStateOf(true) }
+
+    ForegroundRefreshEffect(onForeground = viewModel::refreshSilently)
 
     val authors = remember(state.audiobooks) {
         state.audiobooks
@@ -81,7 +92,15 @@ fun LibraryScreen(
         topBar = {
             RootScreenHeader(
                 title = stringResource(R.string.root_library),
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                actions = {
+                    IconButton(onClick = { isGridView = !isGridView }) {
+                        Icon(
+                            imageVector = if (isGridView) Icons.AutoMirrored.Rounded.FormatListBulleted else Icons.Rounded.GridView,
+                            contentDescription = null
+                        )
+                    }
+                }
             )
         },
         containerColor = Color.Transparent
@@ -111,7 +130,7 @@ fun LibraryScreen(
                         bottom = bottomBarPadding + 16.dp
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                    verticalArrangement = Arrangement.spacedBy(if (isGridView) 24.dp else 12.dp)
                 ) {
                     item(span = { GridItemSpan(12) }) {
                         CatalogTopControls(
@@ -137,13 +156,21 @@ fun LibraryScreen(
                     items(
                         items = state.audiobooks,
                         key = { it.id },
-                        span = { GridItemSpan(4) } // 3 columns
+                        span = { GridItemSpan(if (isGridView) 4 else 12) }
                     ) { audiobook ->
-                        AudiobookGridCard(
-                            audiobook = audiobook,
-                            accessToken = accessToken,
-                            onClick = { onOpenAudiobook(audiobook) }
-                        )
+                        if (isGridView) {
+                            AudiobookGridCard(
+                                audiobook = audiobook,
+                                accessToken = accessToken,
+                                onClick = { onOpenAudiobook(audiobook) }
+                            )
+                        } else {
+                            AudiobookListCard(
+                                audiobook = audiobook,
+                                accessToken = accessToken,
+                                onClick = { onOpenAudiobook(audiobook) }
+                            )
+                        }
                     }
 
                     // Authors Section
@@ -166,7 +193,7 @@ fun LibraryScreen(
                         items(
                             items = authors,
                             key = { it.name },
-                            span = { GridItemSpan(3) } // 4 columns
+                            span = { GridItemSpan(3) }
                         ) { author ->
                             AuthorCard(author = author, accessToken = accessToken)
                         }

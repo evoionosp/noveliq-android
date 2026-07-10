@@ -15,8 +15,9 @@ import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.core.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
-import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
-import org.evoionosp.noveliq.domain.library.model.DomainResult
+import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCase
+import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveAudiobookDetailUseCase
+import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshAudiobookDetailUseCase
 import javax.inject.Inject
 
 /**
@@ -40,7 +41,9 @@ data class NowPlayingUiState(
 @HiltViewModel
 class NowPlayingViewModel @Inject constructor(
     private val playbackConnection: PlaybackConnection,
-    private val audiobookRepository: AudiobookRepository,
+    private val observeAudiobookDetail: ObserveAudiobookDetailUseCase,
+    private val refreshAudiobookDetail: RefreshAudiobookDetailUseCase,
+    private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
     private val sessionStore: SessionStore
 ) : ViewModel() {
 
@@ -143,7 +146,7 @@ class NowPlayingViewModel @Inject constructor(
 
             // Refresh detail so chapters (and tracks for playback) are current.
             if (session != null) {
-                audiobookRepository.refreshAudiobookDetail(
+                refreshAudiobookDetail(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken,
                     libraryId = audiobook.libraryId,
@@ -153,7 +156,7 @@ class NowPlayingViewModel @Inject constructor(
 
             // Keep chapters + total duration in sync with the cached detail.
             launch {
-                audiobookRepository.observeAudiobookDetail(audiobook.libraryId, audiobook.id)
+                observeAudiobookDetail(audiobook.libraryId, audiobook.id)
                     .collect { detail ->
                         if (detail != null) {
                             chapters.value = detail.chapters
@@ -169,25 +172,23 @@ class NowPlayingViewModel @Inject constructor(
 
             // Fetch saved progress for the remaining-time line.
             if (session != null) {
-                val result = audiobookRepository.fetchProgress(
+                val progress = fetchPlaybackProgress(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken,
                     audiobookId = audiobook.id
                 )
-                if (result is DomainResult.Success) {
-                    val progress = result.data
-                    if (progress != null && !progress.isFinished && progress.currentTimeSeconds > 0) {
-                        glance.update {
-                            it.copy(
-                                progressSeconds = progress.currentTimeSeconds,
-                                hasProgress = true,
-                                totalSeconds = if (it.totalSeconds > 0) {
-                                    it.totalSeconds
-                                } else {
-                                    progress.durationSeconds ?: 0.0
-                                }
-                            )
-                        }
+                val resume = progress?.resumeSeconds
+                if (progress != null && resume != null) {
+                    glance.update {
+                        it.copy(
+                            progressSeconds = resume,
+                            hasProgress = true,
+                            totalSeconds = if (it.totalSeconds > 0) {
+                                it.totalSeconds
+                            } else {
+                                progress.durationSeconds ?: 0.0
+                            }
+                        )
                     }
                 }
             }

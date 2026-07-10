@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.home
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,7 +18,8 @@ import org.evoionosp.noveliq.presentation.R
 @Composable
 internal fun RootScreenHeader(
     title: String,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
         title = {
@@ -28,6 +30,7 @@ internal fun RootScreenHeader(
             )
         },
         actions = {
+            actions()
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     imageVector = Icons.Rounded.Settings,

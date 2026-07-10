@@ -15,7 +15,6 @@ import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 fun NowPlayingOverlay(
     visible: Boolean,
     audiobook: Audiobook?,
-    accessToken: String,
     onMinimize: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -37,7 +36,6 @@ fun NowPlayingOverlay(
     ) {
         if (audiobook != null) {
             NowPlayingScreen(
-                accessToken = accessToken,
                 onMinimize = onMinimize
             )
         }

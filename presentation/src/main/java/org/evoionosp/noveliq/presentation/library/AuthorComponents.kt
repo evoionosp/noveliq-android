@@ -1,4 +1,4 @@
-package org.evoionosp.noveliq.presentation.home
+package org.evoionosp.noveliq.presentation.library
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -20,33 +20,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import coil.request.CachePolicy
-import coil.request.ImageRequest
 import org.evoionosp.noveliq.presentation.R
-
-internal data class AuthorGridItem(
-    val name: String,
-    val bookCount: Int,
-    val photoUrl: String?
-)
-
-internal fun String.toAuthorNames(): List<String> {
-    return split(',')
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
-        .ifEmpty { listOf("Unknown Author") }
-}
+import org.evoionosp.noveliq.presentation.common.model.AuthorUiModel
+import org.evoionosp.noveliq.presentation.player.authorizedImageRequest
 
 @Composable
 internal fun AuthorCard(
-    author: AuthorGridItem,
-    accessToken: String
+    author: AuthorUiModel
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -72,13 +56,7 @@ internal fun AuthorCard(
             } else {
                 Image(
                     painter = rememberAsyncImagePainter(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(author.photoUrl)
-                            .addHeader("Authorization", "Bearer $accessToken")
-                            .crossfade(true)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .build()
+                        model = authorizedImageRequest(author.photoUrl)
                     ),
                     contentDescription = author.name,
                     modifier = Modifier.fillMaxSize(),

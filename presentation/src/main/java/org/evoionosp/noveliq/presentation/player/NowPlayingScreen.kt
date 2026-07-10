@@ -77,7 +77,6 @@ import kotlin.math.abs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NowPlayingScreen(
-    accessToken: String,
     onMinimize: () -> Unit,
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
@@ -168,10 +167,7 @@ internal fun NowPlayingScreen(
 
                 // Cover Image
                 AsyncImage(
-                    model = authorizedImageRequest(
-                        url = audiobook.coverUrl,
-                        accessToken = accessToken
-                    ),
+                    model = authorizedImageRequest(audiobook.coverUrl),
                     contentDescription = audiobook.title,
                     modifier = Modifier
                         .weight(1f, fill = false)

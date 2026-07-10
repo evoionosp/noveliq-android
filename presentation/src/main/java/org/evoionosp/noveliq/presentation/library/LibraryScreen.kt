@@ -1,22 +1,29 @@
-package org.evoionosp.noveliq.presentation.home
+package org.evoionosp.noveliq.presentation.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -24,9 +31,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -35,19 +42,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.domain.library.model.SyncStatus
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.presentation.common.components.EmptyState
+import org.evoionosp.noveliq.presentation.common.model.LibraryUiModel
+import org.evoionosp.noveliq.presentation.home.ForegroundRefreshEffect
+import org.evoionosp.noveliq.presentation.home.HomeUiEvent
+import org.evoionosp.noveliq.presentation.home.HomeViewModel
+import org.evoionosp.noveliq.presentation.home.AudiobookGridCard
+import org.evoionosp.noveliq.presentation.home.AudiobookListCard
+import org.evoionosp.noveliq.presentation.home.homeBackgroundBrush
 import org.evoionosp.noveliq.presentation.navigation.LocalSnackbarHostState
 import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
-    accessToken: String,
     onOpenSettings: () -> Unit,
     onSessionExpired: () -> Unit,
     bottomBarPadding: androidx.compose.ui.unit.Dp,
-    onOpenAudiobook: (Audiobook) -> Unit,
+    onOpenAudiobook: (AudiobookUiModel) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -57,22 +72,6 @@ fun LibraryScreen(
     var isGridView by rememberSaveable { mutableStateOf(true) }
 
     ForegroundRefreshEffect(onForeground = viewModel::refreshSilently)
-
-    val authors = remember(state.audiobooks) {
-        state.audiobooks
-            .flatMap { audiobook ->
-                audiobook.author.toAuthorNames().map { authorName -> authorName to audiobook }
-            }
-            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
-            .map { (author, books) ->
-                AuthorGridItem(
-                    name = author,
-                    bookCount = books.size,
-                    photoUrl = books.firstOrNull()?.coverUrl
-                )
-            }
-            .sortedBy { it.name.lowercase() }
-    }
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
@@ -89,20 +88,6 @@ fun LibraryScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            RootScreenHeader(
-                title = stringResource(R.string.root_library),
-                onOpenSettings = onOpenSettings,
-                actions = {
-                    IconButton(onClick = { isGridView = !isGridView }) {
-                        Icon(
-                            imageVector = if (isGridView) Icons.AutoMirrored.Rounded.FormatListBulleted else Icons.Rounded.GridView,
-                            contentDescription = null
-                        )
-                    }
-                }
-            )
-        },
         containerColor = Color.Transparent
     ) { innerPadding ->
         PullToRefreshBox(
@@ -126,31 +111,51 @@ fun LibraryScreen(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = 8.dp,
+                        top = 16.dp,
                         bottom = bottomBarPadding + 16.dp
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(if (isGridView) 24.dp else 12.dp)
                 ) {
+                    // Custom header with library dropdown and settings button
                     item(span = { GridItemSpan(12) }) {
-                        CatalogTopControls(
+                        LibraryHeader(
                             libraries = state.libraries,
                             selectedLibraryId = state.selectedLibraryId,
                             selectedLibraryName = state.selectedLibraryName,
                             syncStatus = state.syncStatus,
                             onLibrarySelected = viewModel::onLibrarySelected,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
+                            onOpenSettings = onOpenSettings,
                         )
                     }
 
                     // Books Section
                     item(span = { GridItemSpan(12) }) {
-                        LibrarySectionHeader(
-                            title = stringResource(R.string.stats_books),
-                            subtitle = "${state.audiobooks.size} Books"
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LibrarySectionHeader(
+                                title = stringResource(R.string.stats_books),
+                                subtitle = "${state.audiobooks.size} Books",
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilledTonalIconButton(
+                                onClick = { isGridView = !isGridView },
+                                modifier = Modifier.size(56.dp),
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = if (isGridView) Icons.AutoMirrored.Rounded.FormatListBulleted else Icons.Rounded.GridView,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
                     }
 
                     items(
@@ -161,13 +166,11 @@ fun LibraryScreen(
                         if (isGridView) {
                             AudiobookGridCard(
                                 audiobook = audiobook,
-                                accessToken = accessToken,
                                 onClick = { onOpenAudiobook(audiobook) }
                             )
                         } else {
                             AudiobookListCard(
                                 audiobook = audiobook,
-                                accessToken = accessToken,
                                 onClick = { onOpenAudiobook(audiobook) }
                             )
                         }
@@ -177,11 +180,11 @@ fun LibraryScreen(
                     item(span = { GridItemSpan(12) }) {
                         LibrarySectionHeader(
                             title = stringResource(R.string.stats_authors),
-                            subtitle = "${authors.size} Authors"
+                            subtitle = "${state.authors.size} Authors"
                         )
                     }
 
-                    if (authors.isEmpty()) {
+                    if (state.authors.isEmpty()) {
                         item(span = { GridItemSpan(12) }) {
                             EmptyState(
                                 title = stringResource(R.string.authors_empty_title),
@@ -191,11 +194,11 @@ fun LibraryScreen(
                         }
                     } else {
                         items(
-                            items = authors,
+                            items = state.authors,
                             key = { it.name },
                             span = { GridItemSpan(3) }
                         ) { author ->
-                            AuthorCard(author = author, accessToken = accessToken)
+                            AuthorCard(author = author)
                         }
                     }
                 }
@@ -221,5 +224,50 @@ private fun LibrarySectionHeader(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun LibraryHeader(
+    libraries: List<LibraryUiModel>,
+    selectedLibraryId: String?,
+    selectedLibraryName: String?,
+    syncStatus: SyncStatus,
+    onLibrarySelected: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Library dropdown with 2-line format - wrap content with min width
+            LibraryDropdown(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                libraries = libraries,
+                selectedLibraryId = selectedLibraryId,
+                selectedLibraryName = selectedLibraryName,
+                syncStatus = syncStatus,
+                onLibrarySelected = onLibrarySelected
+            )
+
+
+        // Settings button only
+        FilledTonalIconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.size(56.dp),
+            shape = CircleShape,
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = stringResource(R.string.settings_icon_desc),
+                modifier = Modifier.size(28.dp)
+            )
+        }
     }
 }

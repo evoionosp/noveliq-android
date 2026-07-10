@@ -16,19 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.request.CachePolicy
-import coil.request.ImageRequest
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
+import org.evoionosp.noveliq.presentation.player.authorizedImageRequest
 
 @Composable
 internal fun AudiobookGridCard(
-    audiobook: Audiobook,
-    accessToken: String,
+    audiobook: AudiobookUiModel,
     onClick: () -> Unit,
     coverAspectRatio: Float = 0.72f,
     modifier: Modifier = Modifier
@@ -50,13 +47,7 @@ internal fun AudiobookGridCard(
                     .aspectRatio(coverAspectRatio),
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(audiobook.coverUrl)
-                        .crossfade(true)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .addHeader("Authorization", "Bearer $accessToken")
-                        .build(),
+                    model = authorizedImageRequest(audiobook.coverUrl),
                     contentDescription = audiobook.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

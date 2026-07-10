@@ -33,7 +33,6 @@ import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 @Composable
 fun NowPlayingBar(
     audiobook: Audiobook?,
-    accessToken: String,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: NowPlayingViewModel = hiltViewModel()
@@ -57,10 +56,7 @@ fun NowPlayingBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             AsyncImage(
-                model = authorizedImageRequest(
-                    url = audiobook.coverUrl,
-                    accessToken = accessToken
-                ),
+                model = authorizedImageRequest(audiobook.coverUrl),
                 contentDescription = audiobook.title,
                 modifier = Modifier
                     .size(48.dp)

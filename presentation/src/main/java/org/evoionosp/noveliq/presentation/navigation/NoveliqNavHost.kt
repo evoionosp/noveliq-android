@@ -6,10 +6,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
 import org.evoionosp.noveliq.presentation.home.HomeScreen
-import org.evoionosp.noveliq.presentation.home.LibraryScreen
+import org.evoionosp.noveliq.presentation.library.LibraryScreen
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
 import org.evoionosp.noveliq.presentation.settings.PreferencesScreen
 import org.evoionosp.noveliq.presentation.settings.SettingsUiState
@@ -29,7 +29,7 @@ internal fun NoveliqNavHost(
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    onOpenAudiobook: (Audiobook) -> Unit
+    onOpenAudiobook: (AudiobookUiModel) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -57,7 +57,6 @@ internal fun NoveliqNavHost(
             val startupDestination = splashState.startupDestination as? StartupDestination.Home
                 ?: return@composable
             HomeScreen(
-                accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = contentPadding.calculateBottomPadding(),
@@ -75,7 +74,6 @@ internal fun NoveliqNavHost(
             val startupDestination = splashState.startupDestination as? StartupDestination.Home
                 ?: return@composable
             LibraryScreen(
-                accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = contentPadding.calculateBottomPadding(),

@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.session.LoginSession
-import org.evoionosp.noveliq.domain.session.SessionStore
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
 import org.evoionosp.noveliq.domain.library.model.CatalogError
@@ -23,7 +24,8 @@ import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
-    private val sessionStore: SessionStore,
+    private val observeSessionUseCase: ObserveSessionUseCase,
+    private val clearSessionUseCase: ClearSessionUseCase,
     private val refreshSessionUseCase: RefreshSessionUseCase,
     private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
 ) : ViewModel() {
@@ -33,7 +35,7 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            sessionStore.session
+            observeSessionUseCase()
                 // Always keep the latest session (including rotated tokens) for retries.
                 .onEach { currentSession = it }
                 // Only react to routing-relevant changes (login/logout/user switch).
@@ -57,7 +59,7 @@ class SplashViewModel @Inject constructor(
         // re-running the bootstrap. This propagates the new access token to authenticated
         // image/media loading while the NavHost stays put (it keys on the route only).
         viewModelScope.launch {
-            sessionStore.session.collect { session ->
+            observeSessionUseCase().collect { session ->
                 if (session == null) return@collect
                 _uiState.update { state ->
                     when (val destination = state.startupDestination) {
@@ -83,7 +85,7 @@ class SplashViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            sessionStore.clearSession()
+            clearSessionUseCase()
         }
     }
 

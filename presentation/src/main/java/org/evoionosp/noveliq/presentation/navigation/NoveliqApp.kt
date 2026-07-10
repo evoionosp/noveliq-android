@@ -20,6 +20,8 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import org.evoionosp.noveliq.presentation.common.LocalAccessToken
+import org.evoionosp.noveliq.presentation.common.model.toDomain
 import org.evoionosp.noveliq.presentation.permissions.RequestNotificationPermissionEffect
 import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
 import org.evoionosp.noveliq.presentation.player.NowPlayingViewModel
@@ -76,7 +78,10 @@ fun NoveliqApp(
             RequestNotificationPermissionEffect()
         }
 
-        CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+        CompositionLocalProvider(
+            LocalSnackbarHostState provides snackbarHostState,
+            LocalAccessToken provides accessToken
+        ) {
             Box {
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -85,7 +90,6 @@ fun NoveliqApp(
                             navController = navController,
                             currentRoute = currentRoute,
                             nowPlayingAudiobook = playingAudiobook,
-                            nowPlayingAccessToken = accessToken,
                             isNowPlayingExpanded = isNowPlayingExpanded,
                             onExpandNowPlaying = {
                                 nowPlayingViewModel.viewCurrentlyPlaying()
@@ -105,7 +109,7 @@ fun NoveliqApp(
                         onThemePreferenceChange = onThemePreferenceChange,
                         onDynamicColorChange = onDynamicColorChange,
                         onOpenAudiobook = { audiobook ->
-                            nowPlayingViewModel.openAudiobook(audiobook)
+                            nowPlayingViewModel.openAudiobook(audiobook.toDomain())
                             isNowPlayingExpanded = true
                         }
                     )
@@ -114,7 +118,6 @@ fun NoveliqApp(
                 NowPlayingOverlay(
                     visible = isNowPlayingExpanded,
                     audiobook = viewedAudiobook,
-                    accessToken = accessToken,
                     onMinimize = { isNowPlayingExpanded = false }
                 )
             }

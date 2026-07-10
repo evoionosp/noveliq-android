@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.R
 
 @Composable
@@ -50,9 +50,8 @@ internal fun SectionBlock(
 
 @Composable
 internal fun HorizontalBookRow(
-    audiobooks: List<Audiobook>,
-    accessToken: String,
-    onOpenAudiobook: (Audiobook) -> Unit
+    audiobooks: List<AudiobookUiModel>,
+    onOpenAudiobook: (AudiobookUiModel) -> Unit
 ) {
     if (audiobooks.isEmpty()) {
         PlaceholderSectionCard(
@@ -73,7 +72,6 @@ internal fun HorizontalBookRow(
         ) { audiobook ->
             AudiobookCarouselCard(
                 audiobook = audiobook,
-                accessToken = accessToken,
                 onClick = { onOpenAudiobook(audiobook) }
             )
         }
@@ -177,13 +175,11 @@ private fun StatCard(
 
 @Composable
 private fun AudiobookCarouselCard(
-    audiobook: Audiobook,
-    accessToken: String,
+    audiobook: AudiobookUiModel,
     onClick: () -> Unit
 ) {
     AudiobookGridCard(
         audiobook = audiobook,
-        accessToken = accessToken,
         onClick = onClick,
         coverAspectRatio = 0.72f,
         modifier = Modifier

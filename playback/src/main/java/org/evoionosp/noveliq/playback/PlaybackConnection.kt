@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.domain.session.SessionStore
+import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookTrack
@@ -40,7 +40,7 @@ import javax.inject.Singleton
 @Singleton
 class PlaybackConnection @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val sessionStore: SessionStore,
+    private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
     private val calculator: PlaybackPositionCalculator,
     private val preparePlayback: PreparePlaybackUseCase,
     private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
@@ -77,7 +77,7 @@ class PlaybackConnection @Inject constructor(
             // returning to it later resumes from the right spot.
             saveCurrentProgressNow()
 
-            val session = sessionStore.session.first() ?: return@launch
+            val session = getCurrentSessionUseCase() ?: return@launch
 
             val detail = preparePlayback(
                 baseUrl = session.baseUrl,
@@ -156,7 +156,7 @@ class PlaybackConnection @Inject constructor(
         val absoluteSeconds = currentAbsoluteSeconds(controller)
 
         // Read the CURRENT session token; it rotates on refresh, so a cached one may be stale (401).
-        val session = sessionStore.session.first() ?: return
+        val session = getCurrentSessionUseCase() ?: return
         if (session.baseUrl.isBlank() || session.accessToken.isBlank()) return
 
         savePlaybackProgress(

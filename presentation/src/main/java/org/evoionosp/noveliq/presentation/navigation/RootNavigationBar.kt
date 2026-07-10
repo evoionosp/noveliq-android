@@ -32,7 +32,6 @@ internal fun RootNavigationBottomBar(
     navController: NavHostController,
     currentRoute: String?,
     nowPlayingAudiobook: Audiobook?,
-    nowPlayingAccessToken: String,
     isNowPlayingExpanded: Boolean,
     onExpandNowPlaying: () -> Unit
 ) {
@@ -41,7 +40,6 @@ internal fun RootNavigationBottomBar(
             if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
                 NowPlayingBar(
                     audiobook = nowPlayingAudiobook,
-                    accessToken = nowPlayingAccessToken,
                     onExpand = onExpandNowPlaying
                 )
             }

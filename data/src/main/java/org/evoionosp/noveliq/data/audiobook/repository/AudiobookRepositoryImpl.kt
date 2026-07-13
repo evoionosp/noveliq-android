@@ -26,7 +26,6 @@ import org.evoionosp.noveliq.data.library.remote.mapper.toDetailEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toContinueListeningEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
 import org.evoionosp.noveliq.data.library.remote.mapper.toTrackEntities
-import org.evoionosp.noveliq.data.library.remote.dto.UpdateProgressRequestDto
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
 import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
@@ -386,23 +385,14 @@ class AudiobookRepositoryImpl @Inject constructor(
                 return@withContext DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
             }
 
-            val duration = progress.durationSeconds?.takeIf { it > 0 }
-            val ratio = if (duration != null) {
-                (progress.currentTimeSeconds / duration).coerceIn(0.0, 1.0)
-            } else {
-                0.0
-            }
+            val body = buildUpdateProgressRequestBody(progress)
+                ?: return@withContext DomainResult.Failure(CatalogError.UNKNOWN)
 
             try {
                 val response = serviceFactory.create(baseUrl).updateMediaProgress(
                     authorization = "Bearer $accessToken",
                     itemId = audiobookId,
-                    body = UpdateProgressRequestDto(
-                        currentTime = progress.currentTimeSeconds,
-                        duration = duration,
-                        progress = ratio,
-                        isFinished = progress.isFinished
-                    )
+                    body = body
                 )
                 if (response.isSuccessful) {
                     DomainResult.Success(Unit)

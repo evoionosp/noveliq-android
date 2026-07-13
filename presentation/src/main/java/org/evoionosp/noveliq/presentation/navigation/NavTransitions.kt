@@ -16,7 +16,6 @@ private fun rootIndex(route: String?): Int? {
     return when (routeBase(route)) {
         AppRoute.Home.route -> 0
         AppRoute.Library.route -> 1
-        AppRoute.Authors.route -> 2
         else -> null
     }
 }

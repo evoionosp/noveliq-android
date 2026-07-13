@@ -19,35 +19,41 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.LoginSession
+import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveContinueListeningUseCase
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveHomeAudiobooksUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveLibrarySyncStatusUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshContinueListeningUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
-import org.evoionosp.noveliq.domain.auth.model.LoginResult
-import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.catalog.usecase.RefreshHomeCatalogUseCase
+import org.evoionosp.noveliq.domain.catalog.usecase.RefreshHomeCatalogResult
+import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.model.SyncStatus
 import org.evoionosp.noveliq.domain.library.usecase.ObserveLibrariesUseCase
 import org.evoionosp.noveliq.domain.library.usecase.ObserveSelectedLibraryUseCase
-import org.evoionosp.noveliq.domain.library.usecase.RefreshLibrariesUseCase
 import org.evoionosp.noveliq.domain.library.usecase.SelectLibraryUseCase
 import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.presentation.common.model.toUiModel
+import org.evoionosp.noveliq.presentation.common.model.AuthorUiModel
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val sessionStore: SessionStore,
-    private val authRepository: AuthRepository,
+    private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
+    private val observeSessionUseCase: ObserveSessionUseCase,
+    private val clearSessionUseCase: ClearSessionUseCase,
+    private val refreshSessionUseCase: RefreshSessionUseCase,
     private val observeLibrariesUseCase: ObserveLibrariesUseCase,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val observeHomeAudiobooksUseCase: ObserveHomeAudiobooksUseCase,
     private val observeContinueListeningUseCase: ObserveContinueListeningUseCase,
     private val observeLibrarySyncStatusUseCase: ObserveLibrarySyncStatusUseCase,
-    private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
+    private val refreshHomeCatalogUseCase: RefreshHomeCatalogUseCase,
     private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase,
     private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
     private val selectLibraryUseCase: SelectLibraryUseCase
@@ -59,8 +65,16 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            observeSessionUseCase().collect { session ->
+                val username = session?.username ?: ""
+                val firstName = username.substringBefore(" ").substringBefore("@").ifBlank { username }
+                _uiState.update { it.copy(username = firstName) }
+            }
+        }
+
+        viewModelScope.launch {
             observeLibrariesUseCase().collect { libraries ->
-                _uiState.update { it.copy(libraries = libraries) }
+                _uiState.update { it.copy(libraries = libraries.map { lib -> lib.toUiModel() }) }
             }
         }
 
@@ -83,7 +97,38 @@ class HomeViewModel @Inject constructor(
                     if (libraryId == null) emptyFlow() else observeHomeAudiobooksUseCase(libraryId)
                 }
                 .collectLatest { audiobooks ->
-                    _uiState.update { it.copy(audiobooks = audiobooks) }
+                    val uiModels = audiobooks.map { it.toUiModel() }
+                    val recentlyAdded = uiModels.take(12)
+                    val discover = uiModels
+                        .sortedBy { it.title.lowercase() }
+                        .filterIndexed { index, _ -> index % 2 == 0 }
+                        .take(12)
+                    val authors = uiModels
+                        .flatMap { audiobook ->
+                            audiobook.authorNames.map { authorName -> authorName to audiobook }
+                        }
+                        .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+                        .map { (author, books) ->
+                            AuthorUiModel(
+                                name = author,
+                                bookCount = books.size,
+                                photoUrl = books.firstOrNull()?.coverUrl
+                            )
+                        }
+                        .sortedBy { it.name.lowercase() }
+                    val authorCount = authors.size
+                    val durationHours = uiModels.sumOf { it.durationInSeconds ?: 0L } / 3600.0
+
+                    _uiState.update {
+                        it.copy(
+                            audiobooks = uiModels,
+                            recentlyAdded = recentlyAdded,
+                            discover = discover,
+                            authors = authors,
+                            authorCount = authorCount,
+                            durationHours = durationHours
+                        )
+                    }
                 }
         }
 
@@ -95,7 +140,7 @@ class HomeViewModel @Inject constructor(
                     if (libraryId == null) emptyFlow() else observeContinueListeningUseCase(libraryId)
                 }
                 .collectLatest { continueListening ->
-                    _uiState.update { it.copy(continueListening = continueListening) }
+                    _uiState.update { it.copy(continueListening = continueListening.map { it.toUiModel() }) }
                 }
         }
 
@@ -118,13 +163,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             when (selectLibraryUseCase(libraryId)) {
                 is DomainResult.Success -> {
-                    val session = sessionStore.session.first() ?: return@launch
+                    val session = getCurrentSessionUseCase() ?: return@launch
                     val refreshResult = refreshSelectedLibraryAudiobooks(
                         session = session,
                         libraryId = libraryId
                     )
                     val continueResult = refreshContinueListening(
-                        session = sessionStore.session.first() ?: session,
+                        session = getCurrentSessionUseCase() ?: session,
                         libraryId = libraryId
                     )
                     if (refreshResult.isAuthFailure() || continueResult.isAuthFailure()) {
@@ -138,62 +183,57 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Manual pull-to-refresh: shows the refresh indicator and reports the outcome. */
     fun refresh() {
-        viewModelScope.launch {
-            val session = sessionStore.session.first() ?: return@launch
-            _uiState.update { it.copy(isRefreshing = true) }
+        performRefresh(silent = false)
+    }
 
-            var activeSession = session
-            var libraryRefreshResult = refreshLibraries(activeSession)
-            if (libraryRefreshResult.isAuthFailure()) {
-                activeSession = refreshSessionOrExpire() ?: run {
-                    _uiState.update { it.copy(isRefreshing = false) }
+    /**
+     * Refresh triggered when the app returns to the foreground. Fetches the latest content
+     * without showing the pull-to-refresh indicator and without surfacing success/network
+     * toasts. A genuinely expired session still routes the user to login.
+     */
+    fun refreshSilently() {
+        performRefresh(silent = true)
+    }
+
+    private fun performRefresh(silent: Boolean) {
+        viewModelScope.launch {
+            if (!silent) {
+                _uiState.update { it.copy(isRefreshing = true) }
+            }
+
+            when (val result = refreshHomeCatalogUseCase()) {
+                is RefreshHomeCatalogResult.Success -> {
+                    if (!silent) {
+                        emitMessage(R.string.home_refresh_complete)
+                    }
+                }
+                is RefreshHomeCatalogResult.SessionExpired -> {
+                    stopRefreshing(silent)
                     expireSession()
                     return@launch
                 }
-                libraryRefreshResult = refreshLibraries(activeSession)
+                is RefreshHomeCatalogResult.Failure -> {
+                    if (!silent) {
+                        emitMessage(toMessageRes(result.error))
+                    }
+                }
             }
 
-            val selectedLibraryId = observeSelectedLibraryUseCase().first()?.id
-                ?: observeLibrariesUseCase().first().firstOrNull()?.id
+            stopRefreshing(silent)
+        }
+    }
 
-            val audiobookRefreshResult = if (selectedLibraryId != null) {
-                var result = refreshSelectedLibraryAudiobooks(activeSession, selectedLibraryId)
-                if (result.isAuthFailure()) {
-                    activeSession = refreshSessionOrExpire() ?: run {
-                        _uiState.update { it.copy(isRefreshing = false) }
-                        expireSession()
-                        return@launch
-                    }
-                    result = refreshSelectedLibraryAudiobooks(activeSession, selectedLibraryId)
-                }
-                val continueResult = refreshContinueListening(activeSession, selectedLibraryId)
-                if (continueResult.isAuthFailure()) {
-                    activeSession = refreshSessionOrExpire() ?: run {
-                        _uiState.update { it.copy(isRefreshing = false) }
-                        expireSession()
-                        return@launch
-                    }
-                    refreshContinueListening(activeSession, selectedLibraryId)
-                }
-                result
-            } else {
-                DomainResult.Failure(CatalogError.NO_AUDIOBOOK_LIBRARIES)
-            }
-
+    private fun stopRefreshing(silent: Boolean) {
+        if (!silent) {
             _uiState.update { it.copy(isRefreshing = false) }
-            when {
-                libraryRefreshResult.isAuthFailure() || audiobookRefreshResult.isAuthFailure() -> handleAuthFailure()
-                libraryRefreshResult is DomainResult.Failure -> emitMessage(toMessageRes(libraryRefreshResult.error))
-                audiobookRefreshResult is DomainResult.Failure -> emitMessage(toMessageRes(audiobookRefreshResult.error))
-                else -> emitMessage(R.string.home_refresh_complete)
-            }
         }
     }
 
     fun clearExpiredSession() {
         viewModelScope.launch {
-            sessionStore.clearSession()
+            clearSessionUseCase()
         }
     }
 
@@ -202,7 +242,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun handleAuthFailure() {
-        if (refreshSessionOrExpire() == null) {
+        if (refreshSessionUseCase() == null) {
             expireSession()
         }
     }
@@ -210,40 +250,8 @@ class HomeViewModel @Inject constructor(
     private fun expireSession() {
         _events.tryEmit(HomeUiEvent.SessionExpired)
         viewModelScope.launch {
-            sessionStore.clearSession()
+            clearSessionUseCase()
         }
-    }
-
-    private suspend fun refreshSessionOrExpire(): LoginSession? {
-        val currentSession = sessionStore.session.first() ?: return null
-        val refreshToken = currentSession.refreshToken?.takeIf { it.isNotBlank() } ?: return null
-        return when (
-            val result = authRepository.refreshSession(
-                baseUrl = currentSession.baseUrl,
-                refreshToken = refreshToken
-            )
-        ) {
-            is LoginResult.Success -> {
-                val accessToken = result.data.accessToken?.trim().orEmpty()
-                if (accessToken.isBlank()) return null
-                val updatedSession = currentSession.copy(
-                    accessToken = accessToken,
-                    refreshToken = result.data.refreshToken?.trim()?.takeIf { it.isNotBlank() }
-                        ?: currentSession.refreshToken,
-                    userId = result.data.userId?.trim() ?: currentSession.userId
-                )
-                sessionStore.saveSession(updatedSession)
-                updatedSession
-            }
-            is LoginResult.Failure -> null
-        }
-    }
-
-    private suspend fun refreshLibraries(session: LoginSession): DomainResult<Unit> {
-        return refreshLibrariesUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken
-        )
     }
 
     private suspend fun refreshSelectedLibraryAudiobooks(

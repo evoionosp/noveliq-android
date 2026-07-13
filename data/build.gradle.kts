@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
 android {
     namespace = "org.evoionosp.noveliq.data"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -29,9 +33,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -41,8 +43,6 @@ dependencies {
     implementation(project(":domain"))
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.room.runtime)
@@ -53,6 +53,8 @@ dependencies {
     implementation(libs.retrofit.converter.scalars)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

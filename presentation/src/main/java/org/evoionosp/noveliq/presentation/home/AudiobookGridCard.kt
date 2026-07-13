@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.home
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.request.CachePolicy
-import coil.request.ImageRequest
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
+import org.evoionosp.noveliq.presentation.player.authorizedImageRequest
 
 @Composable
 internal fun AudiobookGridCard(
-    audiobook: Audiobook,
-    accessToken: String,
+    audiobook: AudiobookUiModel,
     onClick: () -> Unit,
     coverAspectRatio: Float = 0.72f,
     modifier: Modifier = Modifier
@@ -36,12 +34,12 @@ internal fun AudiobookGridCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
         )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -49,13 +47,7 @@ internal fun AudiobookGridCard(
                     .aspectRatio(coverAspectRatio),
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(audiobook.coverUrl)
-                        .crossfade(true)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .addHeader("Authorization", "Bearer $accessToken")
-                        .build(),
+                    model = authorizedImageRequest(audiobook.coverUrl),
                     contentDescription = audiobook.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -65,22 +57,22 @@ internal fun AudiobookGridCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = audiobook.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier= Modifier.basicMarquee()
                 )
                 Text(
                     text = audiobook.author,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier= Modifier.basicMarquee()
                 )
             }
         }

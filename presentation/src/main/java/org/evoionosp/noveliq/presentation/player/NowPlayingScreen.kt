@@ -70,13 +70,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
+import org.evoionosp.noveliq.playback.PlaybackState
 import org.evoionosp.noveliq.presentation.R
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun NowPlayingScreen(
-    accessToken: String,
     onMinimize: () -> Unit,
     viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
@@ -167,10 +167,7 @@ internal fun NowPlayingScreen(
 
                 // Cover Image
                 AsyncImage(
-                    model = authorizedImageRequest(
-                        url = audiobook.coverUrl,
-                        accessToken = accessToken
-                    ),
+                    model = authorizedImageRequest(audiobook.coverUrl),
                     contentDescription = audiobook.title,
                     modifier = Modifier
                         .weight(1f, fill = false)
@@ -445,203 +442,5 @@ private fun glanceStatusText(
             timeLabel
         else ->
             stringResource(R.string.now_playing_duration_at_speed, timeLabel, speedLabel)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SpeedSheet(
-    speed: Float,
-    onSpeedChange: (Float) -> Unit,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, bottom = 48.dp, top = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.now_playing_speed_sheet_title),
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Text(
-                text = "${"%.2f".format(speed)}x",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Slider(
-                value = speed,
-                onValueChange = onSpeedChange,
-                valueRange = 0.5f..4f,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = "0.5x", style = MaterialTheme.typography.labelMedium)
-                Text(text = "1.0x", style = MaterialTheme.typography.labelMedium)
-                Text(text = "2.0x", style = MaterialTheme.typography.labelMedium)
-                Text(text = "4.0x", style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ChaptersSheet(
-    chapters: List<AudiobookChapter>,
-    currentChapterIndex: Int,
-    isPlaying: Boolean,
-    onPlayChapter: (AudiobookChapter) -> Unit,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.now_playing_chapters),
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            if (chapters.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.now_playing_chapters_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                LazyColumn(
-                    // ~25% larger than the previous 400dp cap, with a taller default.
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 320.dp, max = 500.dp)
-                ) {
-                    itemsIndexed(chapters) { index, chapter ->
-                        ChapterRow(
-                            chapter = chapter,
-                            isCurrent = index == currentChapterIndex,
-                            isPlaying = isPlaying,
-                            onPlay = { onPlayChapter(chapter) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChapterRow(
-    chapter: AudiobookChapter,
-    isCurrent: Boolean,
-    isPlaying: Boolean,
-    onPlay: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = chapter.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isCurrent) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = chapter.startInSeconds.toDurationLabel(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Trailing control: the live equalizer for the currently-playing chapter (non-clickable),
-        // otherwise a play button. Kept on the same side so titles get the full remaining width.
-        Box(
-            modifier = Modifier.size(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isCurrent) {
-                PlayingEqualizer(isAnimating = isPlaying)
-            } else {
-                IconButton(onClick = onPlay) {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(R.string.now_playing_play),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * A small animated equalizer used to mark the currently-playing chapter. Bars animate while
- * [isAnimating] is true (playing) and rest at a static height when paused.
- */
-@Composable
-private fun PlayingEqualizer(
-    isAnimating: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val color = MaterialTheme.colorScheme.primary
-    val transition = rememberInfiniteTransition(label = "equalizer")
-    val barCount = 4
-
-    Row(
-        modifier = modifier.height(20.dp),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        repeat(barCount) { index ->
-            val animated by transition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = 360 + index * 90,
-                        easing = LinearEasing
-                    ),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "bar$index"
-            )
-            val fraction = if (isAnimating) animated else 0.45f
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .fillMaxHeight(fraction)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(color)
-            )
-        }
     }
 }

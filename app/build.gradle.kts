@@ -9,6 +9,10 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
 // Release signing is configured via a (gitignored) keystore.properties file at the repo root.
 // See keystore.properties.example. When it is absent, the release build falls back to the debug
 // signing key so it still produces an installable APK for local testing.
@@ -72,9 +76,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
     }
@@ -95,21 +97,18 @@ dependencies {
     implementation(project(":presentation"))
     implementation(project(":data"))
     implementation(project(":domain"))
-    implementation(project(":core"))
+    implementation(project(":playback"))
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
     implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    // Media3 types (DataSource.Factory, ExoPlayer) cross the Hilt DI graph from :playback.
+    // The app assembles the root Hilt components, so it needs these types on its compile classpath.
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
-    ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

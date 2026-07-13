@@ -1,23 +1,22 @@
 package org.evoionosp.noveliq.presentation.navigation
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
-import org.evoionosp.noveliq.presentation.home.AuthorsScreen
 import org.evoionosp.noveliq.presentation.home.HomeScreen
-import org.evoionosp.noveliq.presentation.home.LibraryScreen
+import org.evoionosp.noveliq.presentation.library.LibraryScreen
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
 import org.evoionosp.noveliq.presentation.settings.PreferencesScreen
 import org.evoionosp.noveliq.presentation.settings.SettingsUiState
 import org.evoionosp.noveliq.presentation.splash.CatalogBootstrapErrorScreen
 import org.evoionosp.noveliq.presentation.splash.SplashUiState
 import org.evoionosp.noveliq.presentation.splash.StartupDestination
-import org.evoionosp.noveliq.presentation.ui.theme.ThemePreference
+import org.evoionosp.noveliq.presentation.theme.ThemePreference
 
 @Composable
 internal fun NoveliqNavHost(
@@ -25,12 +24,12 @@ internal fun NoveliqNavHost(
     startDestination: String,
     splashState: SplashUiState,
     settingsState: SettingsUiState,
-    bottomBarPadding: Dp,
+    contentPadding: PaddingValues,
     onRetryCatalogBootstrap: () -> Unit,
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    onOpenAudiobook: (Audiobook) -> Unit
+    onOpenAudiobook: (AudiobookUiModel) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -58,10 +57,9 @@ internal fun NoveliqNavHost(
             val startupDestination = splashState.startupDestination as? StartupDestination.Home
                 ?: return@composable
             HomeScreen(
-                accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
+                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
                 modifier = Modifier
             )
@@ -76,28 +74,10 @@ internal fun NoveliqNavHost(
             val startupDestination = splashState.startupDestination as? StartupDestination.Home
                 ?: return@composable
             LibraryScreen(
-                accessToken = startupDestination.session.accessToken,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
+                bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
-                modifier = Modifier
-            )
-        }
-        composable(
-            route = AppRoute.Authors.route,
-            enterTransition = { rootEnterTransition() },
-            exitTransition = { rootExitTransition() },
-            popEnterTransition = { rootEnterTransition() },
-            popExitTransition = { rootExitTransition() }
-        ) {
-            val startupDestination = splashState.startupDestination as? StartupDestination.Home
-                ?: return@composable
-            AuthorsScreen(
-                accessToken = startupDestination.session.accessToken,
-                onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
-                onSessionExpired = { navController.navigateToAuthRoot() },
-                bottomBarPadding = bottomBarPadding,
                 modifier = Modifier
             )
         }

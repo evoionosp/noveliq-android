@@ -4,12 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import org.evoionosp.noveliq.presentation.common.LocalAccessToken
 
 @Composable
 internal fun authorizedImageRequest(
-    url: String,
-    accessToken: String
+    url: String
 ): ImageRequest {
+    val accessToken = LocalAccessToken.current
     return ImageRequest.Builder(LocalContext.current)
         .data(url)
         .crossfade(true)

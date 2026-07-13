@@ -3,7 +3,6 @@ package org.evoionosp.noveliq.presentation.navigation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
-import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -25,8 +24,7 @@ private data class RootNavItem(
 
 private val rootNavItems = listOf(
     RootNavItem(AppRoute.Home, Icons.Rounded.Home, R.string.root_home),
-    RootNavItem(AppRoute.Library, Icons.Rounded.AutoStories, R.string.root_library),
-    RootNavItem(AppRoute.Authors, Icons.Rounded.Group, R.string.root_authors)
+    RootNavItem(AppRoute.Library, Icons.Rounded.AutoStories, R.string.root_library)
 )
 
 @Composable
@@ -34,7 +32,6 @@ internal fun RootNavigationBottomBar(
     navController: NavHostController,
     currentRoute: String?,
     nowPlayingAudiobook: Audiobook?,
-    nowPlayingAccessToken: String,
     isNowPlayingExpanded: Boolean,
     onExpandNowPlaying: () -> Unit
 ) {
@@ -43,7 +40,6 @@ internal fun RootNavigationBottomBar(
             if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
                 NowPlayingBar(
                     audiobook = nowPlayingAudiobook,
-                    accessToken = nowPlayingAccessToken,
                     onExpand = onExpandNowPlaying
                 )
             }

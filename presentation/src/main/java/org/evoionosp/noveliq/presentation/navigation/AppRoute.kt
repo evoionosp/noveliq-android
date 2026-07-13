@@ -4,7 +4,6 @@ internal enum class AppRoute(val route: String) {
     Auth("auth"),
     Home("home"),
     Library("library"),
-    Authors("authors"),
     CatalogError("catalog_error"),
     Preferences("preferences"),
     Appearance("appearance")
@@ -12,6 +11,5 @@ internal enum class AppRoute(val route: String) {
 
 internal val mainRootRoutes = setOf(
     AppRoute.Home.route,
-    AppRoute.Library.route,
-    AppRoute.Authors.route
+    AppRoute.Library.route
 )

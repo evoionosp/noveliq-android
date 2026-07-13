@@ -10,8 +10,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.evoionosp.noveliq.core.session.LoginSession
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
 import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
@@ -20,6 +20,7 @@ import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginData
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
+import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
@@ -48,9 +49,10 @@ class SplashViewModelTest {
 
     @Test
     fun `routes to auth when session is missing`() = runTest(dispatcher) {
+        val sessionStore = FakeSessionStore(initialSession = null)
         val viewModel = SplashViewModel(
-            sessionStore = FakeSessionStore(initialSession = null),
-            authRepository = FakeAuthRepository(),
+            sessionStore = sessionStore,
+            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
             bootstrapHomeCatalogUseCase = bootstrapUseCase()
         )
 
@@ -63,9 +65,10 @@ class SplashViewModelTest {
     @Test
     fun `routes to home when bootstrap succeeds`() = runTest(dispatcher) {
         val session = testSession()
+        val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = FakeSessionStore(initialSession = session),
-            authRepository = FakeAuthRepository(),
+            sessionStore = sessionStore,
+            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),
@@ -83,9 +86,10 @@ class SplashViewModelTest {
     @Test
     fun `routes to authenticated error when bootstrap fails`() = runTest(dispatcher) {
         val session = testSession()
+        val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = FakeSessionStore(initialSession = session),
-            authRepository = FakeAuthRepository(),
+            sessionStore = sessionStore,
+            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = emptyList(),
                 selectedLibrary = null,
@@ -107,9 +111,10 @@ class SplashViewModelTest {
     fun `retry reruns bootstrap for current session`() = runTest(dispatcher) {
         val session = testSession()
         val audiobookRefreshResult = AtomicReference<DomainResult<Unit>>(DomainResult.Failure(CatalogError.NETWORK))
+        val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = FakeSessionStore(initialSession = session),
-            authRepository = FakeAuthRepository(),
+            sessionStore = sessionStore,
+            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),

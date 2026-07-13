@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.core.session.LoginSession
-import org.evoionosp.noveliq.core.session.SessionStore
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.usecase.SaveSessionUseCase
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.usecase.LoginUseCase
@@ -29,7 +29,7 @@ class AuthViewModel @Inject constructor(
     private val serverPingUseCase: ServerPingUseCase,
     private val serverHealthCheckUseCase: ServerHealthCheckUseCase,
     private val loginUseCase: LoginUseCase,
-    private val sessionStore: SessionStore
+    private val saveSessionUseCase: SaveSessionUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -136,7 +136,7 @@ class AuthViewModel @Inject constructor(
                         return@launch
                     }
 
-                    sessionStore.saveSession(
+                    saveSessionUseCase(
                         LoginSession(
                             accessToken = accessToken,
                             refreshToken = result.data.refreshToken?.trim(),

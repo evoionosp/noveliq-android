@@ -11,9 +11,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.usecase.ObserveLastServerUrlUseCase
 import org.evoionosp.noveliq.domain.session.usecase.SaveSessionUseCase
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
@@ -29,12 +31,31 @@ class AuthViewModel @Inject constructor(
     private val serverPingUseCase: ServerPingUseCase,
     private val serverHealthCheckUseCase: ServerHealthCheckUseCase,
     private val loginUseCase: LoginUseCase,
-    private val saveSessionUseCase: SaveSessionUseCase
+    private val saveSessionUseCase: SaveSessionUseCase,
+    private val observeLastServerUrlUseCase: ObserveLastServerUrlUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
     private val _events = MutableSharedFlow<AuthUiEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<AuthUiEvent> = _events.asSharedFlow()
+
+    init {
+        // Offer the server they used last. Someone arriving here has either logged out or been
+        // pushed back by an expired session, and either way they are almost certainly signing
+        // back in to the same server.
+        viewModelScope.launch {
+            val lastServerUrl = observeLastServerUrlUseCase().first()
+            if (lastServerUrl.isNullOrBlank()) return@launch
+
+            val (protocol, host) = splitProtocol(lastServerUrl)
+            _uiState.update { state ->
+                // Never overwrite something already typed: the prefill loses the race only if the
+                // user was faster, and their input wins.
+                if (state.baseUrl.isNotBlank()) state
+                else state.copy(protocol = protocol, baseUrl = host)
+            }
+        }
+    }
 
     fun onProtocolChange(value: String) {
         _uiState.update { it.copy(protocol = value) }
@@ -42,22 +63,31 @@ class AuthViewModel @Inject constructor(
     fun onBaseUrlChange(value: String) {
         val trimmedValue = value.trim()
         val (newProtocol, newBaseUrl) = when {
-            trimmedValue.startsWith("https://", ignoreCase = true) -> {
-                "https://" to trimmedValue.removePrefix("https://")
-            }
-            trimmedValue.startsWith("http://", ignoreCase = true) -> {
-                "http://" to trimmedValue.removePrefix("http://")
-            }
-            else -> {
-                _uiState.value.protocol to value
-            }
+            trimmedValue.startsWith("https://", ignoreCase = true) ||
+                trimmedValue.startsWith("http://", ignoreCase = true) -> splitProtocol(trimmedValue)
+            else -> _uiState.value.protocol to value
         }
 
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 protocol = newProtocol,
                 baseUrl = newBaseUrl
-            ) 
+            )
+        }
+    }
+
+    /**
+     * Splits a URL into the protocol dropdown value and the host text. Defaults to the currently
+     * selected protocol when the URL carries none.
+     */
+    private fun splitProtocol(url: String): Pair<String, String> {
+        val trimmed = url.trim()
+        return when {
+            trimmed.startsWith(HTTPS_PROTOCOL, ignoreCase = true) ->
+                HTTPS_PROTOCOL to trimmed.drop(HTTPS_PROTOCOL.length)
+            trimmed.startsWith(HTTP_PROTOCOL, ignoreCase = true) ->
+                HTTP_PROTOCOL to trimmed.drop(HTTP_PROTOCOL.length)
+            else -> _uiState.value.protocol to trimmed
         }
     }
 
@@ -211,5 +241,10 @@ class AuthViewModel @Inject constructor(
             AuthError.HTTP -> R.string.error_login_failed
             AuthError.UNEXPECTED -> R.string.error_unknown
         }
+    }
+
+    companion object {
+        const val HTTPS_PROTOCOL = "https://"
+        const val HTTP_PROTOCOL = "http://"
     }
 }

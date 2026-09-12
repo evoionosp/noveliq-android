@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCase
@@ -46,7 +46,7 @@ class NowPlayingViewModel @Inject constructor(
     private val observeAudiobookDetail: ObserveAudiobookDetailUseCase,
     private val refreshAudiobookDetail: RefreshAudiobookDetailUseCase,
     private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
-    private val getCurrentSessionUseCase: GetCurrentSessionUseCase
+    private val getValidSessionUseCase: GetValidSessionUseCase
 ) : ViewModel() {
 
     val playbackState: StateFlow<PlaybackState> = playbackConnection.playbackState
@@ -144,7 +144,7 @@ class NowPlayingViewModel @Inject constructor(
         glance.value = GlanceData(totalSeconds = audiobook.durationInSeconds?.toDouble() ?: 0.0)
 
         viewedJob = viewModelScope.launch {
-            val session = getCurrentSessionUseCase()
+            val session = getValidSessionUseCase()
 
             // Refresh detail so chapters (and tracks for playback) are current.
             if (session != null) {

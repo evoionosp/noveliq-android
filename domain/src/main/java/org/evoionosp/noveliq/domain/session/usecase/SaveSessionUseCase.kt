@@ -7,7 +7,8 @@ import org.evoionosp.noveliq.domain.session.SessionStore
 class SaveSessionUseCase @Inject constructor(
     private val sessionStore: SessionStore
 ) {
-    suspend operator fun invoke(session: LoginSession) {
-        sessionStore.saveSession(session)
+    /** Persists [session] and returns it as stored, including any values the store derived. */
+    suspend operator fun invoke(session: LoginSession): LoginSession {
+        return sessionStore.saveSession(session)
     }
 }

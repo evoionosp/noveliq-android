@@ -1,16 +1,18 @@
 package org.evoionosp.noveliq.data.server.remote.api
 
+import org.evoionosp.noveliq.data.di.NetworkModule
 import org.evoionosp.noveliq.data.network.UrlUtils
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class ServerCheckServiceFactory @Inject constructor(
-    private val okHttpClient: OkHttpClient
+    @param:Named(NetworkModule.AUTH_CLIENT) private val okHttpClient: OkHttpClient
 ) {
     private val serviceCache = mutableMapOf<String, ServerCheckApiService>()
 

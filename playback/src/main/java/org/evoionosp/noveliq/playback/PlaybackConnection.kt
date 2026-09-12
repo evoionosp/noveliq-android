@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookTrack
@@ -40,7 +40,7 @@ import javax.inject.Singleton
 @Singleton
 class PlaybackConnection @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
+    private val getValidSessionUseCase: GetValidSessionUseCase,
     private val calculator: PlaybackPositionCalculator,
     private val preparePlayback: PreparePlaybackUseCase,
     private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
@@ -77,7 +77,7 @@ class PlaybackConnection @Inject constructor(
             // returning to it later resumes from the right spot.
             saveCurrentProgressNow()
 
-            val session = getCurrentSessionUseCase() ?: return@launch
+            val session = getValidSessionUseCase() ?: return@launch
 
             val detail = preparePlayback(
                 baseUrl = session.baseUrl,
@@ -155,8 +155,9 @@ class PlaybackConnection @Inject constructor(
 
         val absoluteSeconds = currentAbsoluteSeconds(controller)
 
-        // Read the CURRENT session token; it rotates on refresh, so a cached one may be stale (401).
-        val session = getCurrentSessionUseCase() ?: return
+        // Resolve the session fresh every time, rotating the token first if it has expired: a
+        // token captured earlier in the playback session may well be stale by now (401).
+        val session = getValidSessionUseCase() ?: return
         if (session.baseUrl.isBlank() || session.accessToken.isBlank()) return
 
         savePlaybackProgress(

@@ -12,6 +12,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.session.SessionStore
+import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookDetail
 import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
@@ -20,7 +23,7 @@ import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginData
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
 import org.evoionosp.noveliq.domain.auth.repository.AuthRepository
-import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
+import org.evoionosp.noveliq.domain.auth.SessionRefreshCoordinator
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
@@ -51,8 +54,12 @@ class SplashViewModelTest {
     fun `routes to auth when session is missing`() = runTest(dispatcher) {
         val sessionStore = FakeSessionStore(initialSession = null)
         val viewModel = SplashViewModel(
-            sessionStore = sessionStore,
-            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
+            observeSessionUseCase = ObserveSessionUseCase(sessionStore),
+            clearSessionUseCase = ClearSessionUseCase(sessionStore),
+            getValidSessionUseCase = GetValidSessionUseCase(
+                sessionStore,
+                SessionRefreshCoordinator(sessionStore, FakeAuthRepository())
+            ),
             bootstrapHomeCatalogUseCase = bootstrapUseCase()
         )
 
@@ -67,8 +74,12 @@ class SplashViewModelTest {
         val session = testSession()
         val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = sessionStore,
-            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
+            observeSessionUseCase = ObserveSessionUseCase(sessionStore),
+            clearSessionUseCase = ClearSessionUseCase(sessionStore),
+            getValidSessionUseCase = GetValidSessionUseCase(
+                sessionStore,
+                SessionRefreshCoordinator(sessionStore, FakeAuthRepository())
+            ),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),
@@ -88,8 +99,12 @@ class SplashViewModelTest {
         val session = testSession()
         val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = sessionStore,
-            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
+            observeSessionUseCase = ObserveSessionUseCase(sessionStore),
+            clearSessionUseCase = ClearSessionUseCase(sessionStore),
+            getValidSessionUseCase = GetValidSessionUseCase(
+                sessionStore,
+                SessionRefreshCoordinator(sessionStore, FakeAuthRepository())
+            ),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = emptyList(),
                 selectedLibrary = null,
@@ -113,8 +128,12 @@ class SplashViewModelTest {
         val audiobookRefreshResult = AtomicReference<DomainResult<Unit>>(DomainResult.Failure(CatalogError.NETWORK))
         val sessionStore = FakeSessionStore(initialSession = session)
         val viewModel = SplashViewModel(
-            sessionStore = sessionStore,
-            refreshSessionUseCase = RefreshSessionUseCase(sessionStore, FakeAuthRepository()),
+            observeSessionUseCase = ObserveSessionUseCase(sessionStore),
+            clearSessionUseCase = ClearSessionUseCase(sessionStore),
+            getValidSessionUseCase = GetValidSessionUseCase(
+                sessionStore,
+                SessionRefreshCoordinator(sessionStore, FakeAuthRepository())
+            ),
             bootstrapHomeCatalogUseCase = bootstrapUseCase(
                 libraries = listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true)),
                 selectedLibrary = AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true),
@@ -191,11 +210,16 @@ private class FakeAuthRepository(
 
 private class FakeSessionStore(initialSession: LoginSession?) : SessionStore {
     private val backingFlow = MutableStateFlow(initialSession)
+    private val lastServerFlow = MutableStateFlow(initialSession?.baseUrl)
 
     override val session: Flow<LoginSession?> = backingFlow
 
-    override suspend fun saveSession(session: LoginSession) {
+    override val lastServerUrl: Flow<String?> = lastServerFlow
+
+    override suspend fun saveSession(session: LoginSession): LoginSession {
         backingFlow.value = session
+        lastServerFlow.value = session.baseUrl
+        return session
     }
 
     override suspend fun clearSession() {

@@ -1,10 +1,9 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 android {
@@ -34,16 +33,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 
 dependencies {
     implementation(libs.javax.inject)
     implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.bundles.unitTest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

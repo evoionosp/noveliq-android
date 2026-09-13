@@ -3,14 +3,13 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 // Release signing is configured via a (gitignored) keystore.properties file at the repo root.
@@ -46,10 +45,7 @@ android {
             libs.versions.versionCode
                 .get()
                 .toInt()
-        versionName =
-            libs.versions.versionName
-                .get()
-                .toString()
+        versionName = libs.versions.versionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -90,13 +86,31 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
+        checkDependencies = true
+        sarifReport = true
+        htmlReport = true
+        textReport = false
+    }
+
     packaging {
         resources {
             excludes +=
@@ -127,7 +141,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
-    testImplementation(libs.junit)
+    testImplementation(libs.bundles.unitTest)
+    testImplementation(libs.bundles.androidUnitTest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

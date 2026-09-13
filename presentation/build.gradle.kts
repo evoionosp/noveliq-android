@@ -1,13 +1,12 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
     compilerOptions {
         freeCompilerArgs.add(
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
@@ -40,12 +39,19 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 }
 
@@ -54,7 +60,6 @@ dependencies {
     implementation(project(":playback"))
 
     implementation(libs.androidx.core.ktx)
-    // Material Components: required by the app themes (Theme.Material3.*) defined in this module's res/.
     implementation(libs.material)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -74,7 +79,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.compose.ui.text.google.fonts)
     ksp(libs.hilt.compiler)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.bundles.unitTest)
+    testImplementation(libs.bundles.androidUnitTest)
 }

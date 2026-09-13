@@ -134,14 +134,11 @@ private class PrefillFakeSessionStore(
 }
 
 private class UnusedServerRepository : ServerRepository {
-    override suspend fun ping(baseUrl: String): ServerCheckResult<Boolean> =
-        ServerCheckResult.Failure(ServerError.UNKNOWN)
+    override suspend fun ping(baseUrl: String): ServerCheckResult<Boolean> = ServerCheckResult.Failure(ServerError.UNKNOWN)
 
-    override suspend fun getStatus(baseUrl: String): ServerCheckResult<ServerStatus> =
-        ServerCheckResult.Failure(ServerError.UNKNOWN)
+    override suspend fun getStatus(baseUrl: String): ServerCheckResult<ServerStatus> = ServerCheckResult.Failure(ServerError.UNKNOWN)
 
-    override suspend fun healthCheck(baseUrl: String): ServerCheckResult<Boolean> =
-        ServerCheckResult.Failure(ServerError.UNKNOWN)
+    override suspend fun healthCheck(baseUrl: String): ServerCheckResult<Boolean> = ServerCheckResult.Failure(ServerError.UNKNOWN)
 }
 
 private class UnusedAuthRepository : AuthRepository {

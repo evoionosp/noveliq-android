@@ -1,0 +1,92 @@
+name: Instrumentation Tests
+
+# Deliberately NOT run on every pull request.
+#
+# Booting an emulator costs 10-15 minutes per run. Right now this repo has two
+# instrumented tests, both of them the auto-generated ExampleInstrumentedTest, so
+# gating every pull request on that is a poor trade. Nightly plus on-demand keeps
+# the signal without taxing the inner loop.
+#
+# Move the `instrumentation` job back into android-ci.yml once there is a real
+# device-test suite worth blocking a merge on.
+on:
+  schedule:
+    # 04:00 UTC — after the working day in America/Los_Angeles.
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      api-level:
+        description: Android API level to test against
+        required: false
+        default: '34'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  instrumentation:
+    name: Instrumentation tests (API ${{ inputs.api-level || '34' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-build
+        with:
+          cache-read-only: true
+
+      # Hardware acceleration. Without this the emulator falls back to software
+      # rendering and the job takes several times longer.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v6
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ inputs.api-level || '34' }}-x86_64-v2
+
+      - name: Create AVD snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ inputs.api-level || '34' }}
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ inputs.api-level || '34' }}
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew --stacktrace connectedDebugAndroidTest
+
+      - name: Upload instrumentation test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: instrumentation-test-results
+          path: |
+            **/build/outputs/androidTest-results/**/*.xml
+            **/build/reports/androidTests/**
+          retention-days: 14
+          if-no-files-found: warn

@@ -2,145 +2,149 @@ name: Android CI
 
 on:
   push:
-    branches: [ dev, master ]
+    branches: [master, dev]
   pull_request:
-    branches: [ master ]
+    branches: [master, dev]
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run irrelevant. Cancel it.
+# Never cancel on master: those runs are the release history.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+permissions:
+  contents: read
+
+env:
+  # The whole build runs on a single JDK 17, so Gradle needs no help locating a
+  # second toolchain.
+  GRADLE_ARGS: --stacktrace
 
 jobs:
-  lint:
-    name: Lint / Format Check
+  # ---------------------------------------------------------------------------
+  # Formatting + Android Lint. Independent of everything else, so it runs first
+  # in wall-clock terms but gates nothing.
+  # ---------------------------------------------------------------------------
+  static-analysis:
+    name: Static analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
+      - uses: ./.github/actions/setup-build
+        # This job does not need to seed the cache; unit-tests does that.
         with:
-          distribution: temurin
-          java-version: '17'
+          cache-read-only: true
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+      - name: ktlint
+        run: ./gradlew $GRADLE_ARGS ktlintCheck
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Android Lint
+        # Runs even when ktlint failed — seeing both problem sets in one run beats
+        # a second round trip.
+        if: ${{ !cancelled() }}
+        run: ./gradlew $GRADLE_ARGS :app:lintDebug
 
-      - name: Run ktlint check
-        run: ./gradlew ktlintCheck
-
-  build:
-    name: Build
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
+      - name: Upload lint reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
         with:
-          distribution: temurin
-          java-version: '17'
+          name: lint-reports
+          path: |
+            **/build/reports/ktlint/**
+            **/build/reports/lint-results-*.html
+            **/build/reports/lint-results-*.sarif
+          retention-days: 14
+          if-no-files-found: ignore
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build with Gradle
-        run: ./gradlew assembleDebug
-
+  # ---------------------------------------------------------------------------
+  # Unit tests + coverage. This is the job that matters for the 90% goal.
+  # ---------------------------------------------------------------------------
   unit-tests:
-    name: Unit Tests
-    needs: build
+    name: Unit tests & coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
+      - uses: ./.github/actions/setup-build
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+      # koverXmlReport/koverHtmlReport depend on the unit test tasks, so this single
+      # invocation runs every module's tests and produces the aggregated report.
+      # koverVerify enforces the floors declared in settings.gradle.kts.
+      - name: Run unit tests with coverage
+        run: ./gradlew $GRADLE_ARGS koverXmlReport koverHtmlReport koverVerify
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Summarise test results
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/ci_summary.py tests
 
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+      - name: Summarise coverage
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/ci_summary.py coverage
+
+      - name: Comment coverage on pull request
+        # Best-effort: never fail the build over a comment.
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/ci_summary.py comment "${{ github.event.number }}"
 
       - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-results
           path: '**/build/test-results/**/*.xml'
+          retention-days: 14
+          if-no-files-found: warn
 
-  instrumentation-tests:
-    name: Instrumentation Tests
-    needs: unit-tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
         with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: AVD cache
-        uses: actions/cache@v5
-        id: avd-cache
-        with:
+          name: coverage-report
           path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-34-x86_64
+            build/reports/kover/html/**
+            build/reports/kover/report.xml
+          retention-days: 14
+          if-no-files-found: warn
 
-      - name: Create AVD snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          script: echo "Generated AVD snapshot for caching."
+  # ---------------------------------------------------------------------------
+  # Does it actually build. Parallel with the two jobs above, not chained behind
+  # them — a compile break and a lint break are independent facts.
+  # ---------------------------------------------------------------------------
+  assemble:
+    name: Assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Run instrumentation tests
-        uses: reactivecircus/android-emulator-runner@v2
+      - uses: ./.github/actions/setup-build
         with:
-          api-level: 34
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest
+          cache-read-only: true
 
-      - name: Upload instrumentation test results
-        if: always()
-        uses: actions/upload-artifact@v6
+      - name: Assemble debug
+        run: ./gradlew $GRADLE_ARGS assembleDebug
+
+      # Only on master: exercises R8/shrinking, which is where release-only
+      # breakage (missing keep rules) shows up. Falls back to debug signing when
+      # keystore.properties is absent, which it always is in CI.
+      - name: Assemble release
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: ./gradlew $GRADLE_ARGS assembleRelease
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
         with:
-          name: instrumentation-test-results
-          path: '**/build/outputs/androidTest-results/**/*.xml'
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+          if-no-files-found: warn

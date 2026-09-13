@@ -9,6 +9,8 @@ agp = "9.2.1"
 kotlin = "2.4.0"
 ksp = "2.3.2"
 hilt = "2.60.1"
+ktlintPlugin = "14.2.0"
+ktlintTool = "1.8.0"
 retrofit = "3.0.0"
 okhttp = "5.4.0"
 coroutines = "1.11.0"
@@ -32,6 +34,14 @@ securityCrypto = "1.1.0"
 dataStore = "1.2.1"
 media3 = "1.10.1"
 material3 = "1.5.0"
+
+# Unit-testing stack. See .agent/best_practices.md "Testing" — fakes first,
+# Turbine for Flow assertions, MockK only where a fake is not the clearer choice.
+turbine = "1.2.1"
+mockk = "1.14.11"
+robolectric = "4.17"
+archCoreTesting = "2.2.0"
+androidxTestCore = "1.7.0"
 
 [libraries]
 androidx-compose-ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts" }
@@ -82,10 +92,42 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCoreTesting" }
+androidx-test-core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+
+[bundles]
+# NOTE: these alias names are camelCase, not kebab-case, on purpose.
+# A dash in an alias creates a NESTED accessor rather than a camelCase one:
+# `unit-test` would have to be referenced as `libs.bundles.unit.test`, and
+# `android-unit-test` as `libs.bundles.android.unit.test`. camelCase aliases stay
+# flat, giving the far more readable `libs.bundles.unitTest`.
+
+# Applies to every module: pure-JVM assertions, coroutines and Flow testing.
+unitTest = [
+    "junit",
+    "kotlinx-coroutines-test",
+    "turbine",
+    "mockk",
+]
+# Additional deps for modules whose unit tests touch android.* types.
+androidUnitTest = [
+    "robolectric",
+    "androidx-arch-core-testing",
+    "androidx-test-core-ktx",
+]
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+# NOTE: there is deliberately no `kotlin-android` entry. Since AGP 9.0, Kotlin
+# support is built into AGP, and applying org.jetbrains.kotlin.android alongside it
+# is a hard error. The Compose compiler plugin below is still applied separately.
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintPlugin" }

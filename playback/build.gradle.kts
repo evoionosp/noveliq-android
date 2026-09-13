@@ -1,12 +1,11 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 android {
@@ -36,8 +35,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 }
 
@@ -52,7 +58,10 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
     implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit)
+
+    testImplementation(libs.bundles.unitTest)
+    testImplementation(libs.bundles.androidUnitTest)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

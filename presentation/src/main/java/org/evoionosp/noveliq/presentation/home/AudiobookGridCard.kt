@@ -1,6 +1,7 @@
 package org.evoionosp.noveliq.presentation.home
 
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,12 @@ internal fun AudiobookGridCard(
     coverAspectRatio: Float = 0.72f,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable{
+                onClick()
+            },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -57,22 +58,20 @@ internal fun AudiobookGridCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
+                    .padding(bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = audiobook.title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    modifier= Modifier.basicMarquee()
+                    maxLines = 2,
                 )
                 Text(
                     text = audiobook.author,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    modifier= Modifier.basicMarquee()
                 )
             }
         }

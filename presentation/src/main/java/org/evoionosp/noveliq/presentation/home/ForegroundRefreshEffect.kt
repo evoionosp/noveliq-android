@@ -21,15 +21,16 @@ fun ForegroundRefreshEffect(onForeground: () -> Unit) {
 
     DisposableEffect(lifecycleOwner) {
         var skippedInitialStart = false
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                if (skippedInitialStart) {
-                    currentOnForeground()
-                } else {
-                    skippedInitialStart = true
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_START) {
+                    if (skippedInitialStart) {
+                        currentOnForeground()
+                    } else {
+                        skippedInitialStart = true
+                    }
                 }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }

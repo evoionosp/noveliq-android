@@ -18,7 +18,7 @@ import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 
 /**
  * Use case that coordinates catalog synchronization based on connectivity and library selection.
- * 
+ *
  * This use case encapsulates the business logic for when and what to sync:
  * - When connectivity is restored, sync the current selection (libraries, audiobooks, continue listening)
  * - When the selected library changes and device is connected, refresh audiobooks and continue listening
@@ -26,79 +26,82 @@ import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
  * The use case returns a Flow that emits Unit when sync operations are triggered. The caller
  * should collect this flow to activate the synchronization logic.
  */
-class ObserveAndSyncCatalogUseCase @Inject constructor(
-    private val connectivityObserver: ConnectivityObserver,
-    private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
-    private val getValidSessionUseCase: GetValidSessionUseCase,
-    private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
-    private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
-    private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase
-) {
-    /**
-     * Returns a Flow that triggers catalog synchronization based on connectivity and library selection.
-     * Collect this flow to activate the sync coordination logic.
-     */
-    operator fun invoke(): Flow<Unit> {
-        // Sync when connectivity is restored
-        val connectivitySync = connectivityObserver.observe()
-            .distinctUntilChanged()
-            .flatMapLatest { isConnected ->
-                if (isConnected) {
-                    flowOf(Unit)
-                } else {
-                    flowOf()
-                }
-            }
-            .map {
-                syncCurrentSelection()
-            }
+class ObserveAndSyncCatalogUseCase
+    @Inject
+    constructor(
+        private val connectivityObserver: ConnectivityObserver,
+        private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
+        private val getValidSessionUseCase: GetValidSessionUseCase,
+        private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
+        private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
+        private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase,
+    ) {
+        /**
+         * Returns a Flow that triggers catalog synchronization based on connectivity and library selection.
+         * Collect this flow to activate the sync coordination logic.
+         */
+        operator fun invoke(): Flow<Unit> {
+            // Sync when connectivity is restored
+            val connectivitySync =
+                connectivityObserver
+                    .observe()
+                    .distinctUntilChanged()
+                    .flatMapLatest { isConnected ->
+                        if (isConnected) {
+                            flowOf(Unit)
+                        } else {
+                            flowOf()
+                        }
+                    }.map {
+                        syncCurrentSelection()
+                    }
 
-        // Sync when selected library changes and device is connected
-        val libraryChangeSync = observeSelectedLibraryUseCase()
-            .filterNotNull()
-            .flatMapLatest { library ->
-                if (connectivityObserver.isConnected()) {
-                    flowOf(library)
-                } else {
-                    flowOf()
-                }
-            }
-            .map { library ->
-                val session = getValidSessionUseCase() ?: return@map
+            // Sync when selected library changes and device is connected
+            val libraryChangeSync =
+                observeSelectedLibraryUseCase()
+                    .filterNotNull()
+                    .flatMapLatest { library ->
+                        if (connectivityObserver.isConnected()) {
+                            flowOf(library)
+                        } else {
+                            flowOf()
+                        }
+                    }.map { library ->
+                        val session = getValidSessionUseCase() ?: return@map
+                        refreshSelectedLibraryAudiobooksUseCase(
+                            baseUrl = session.baseUrl,
+                            accessToken = session.accessToken,
+                            libraryId = library.id,
+                        )
+                        refreshContinueListeningUseCase(
+                            baseUrl = session.baseUrl,
+                            accessToken = session.accessToken,
+                            libraryId = library.id,
+                        )
+                    }
+
+            return combine(connectivitySync, libraryChangeSync) { _, _ -> Unit }
+        }
+
+        private suspend fun syncCurrentSelection() {
+            val session = getValidSessionUseCase() ?: return
+            refreshLibrariesUseCase(
+                baseUrl = session.baseUrl,
+                accessToken = session.accessToken,
+            )
+
+            val selectedLibrary = observeSelectedLibraryUseCase().first()
+            if (selectedLibrary != null) {
                 refreshSelectedLibraryAudiobooksUseCase(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken,
-                    libraryId = library.id
+                    libraryId = selectedLibrary.id,
                 )
                 refreshContinueListeningUseCase(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken,
-                    libraryId = library.id
+                    libraryId = selectedLibrary.id,
                 )
             }
-
-        return combine(connectivitySync, libraryChangeSync) { _, _ -> Unit }
-    }
-
-    private suspend fun syncCurrentSelection() {
-        val session = getValidSessionUseCase() ?: return
-        refreshLibrariesUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken
-        )
-
-        val selectedLibrary = observeSelectedLibraryUseCase().first()
-        if (selectedLibrary != null) {
-            refreshSelectedLibraryAudiobooksUseCase(
-                baseUrl = session.baseUrl,
-                accessToken = session.accessToken,
-                libraryId = selectedLibrary.id
-            )
-            refreshContinueListeningUseCase(
-                baseUrl = session.baseUrl,
-                accessToken = session.accessToken,
-                libraryId = selectedLibrary.id
-            )
         }
     }
-}

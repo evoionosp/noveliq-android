@@ -17,22 +17,22 @@ import org.evoionosp.noveliq.domain.settings.AppSettingsStore
 private val Context.appSettingsDataStore by preferencesDataStore(name = "app_settings")
 
 class AppSettingsDataStore(
-    private val context: Context
+    private val context: Context,
 ) : AppSettingsStore {
     private object Keys {
         val themePreference = stringPreferencesKey("theme_preference")
         val useDynamicColor = booleanPreferencesKey("use_dynamic_color")
     }
 
-    override val settings: Flow<AppSettings> = context.appSettingsDataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map(::toAppSettings)
+    override val settings: Flow<AppSettings> =
+        context.appSettingsDataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }.map(::toAppSettings)
 
     override suspend fun setThemePreference(themePreference: String) {
         context.appSettingsDataStore.edit { preferences ->
@@ -46,11 +46,11 @@ class AppSettingsDataStore(
         }
     }
 
-    private fun toAppSettings(preferences: Preferences): AppSettings {
-        return AppSettings(
-            themePreference = preferences[Keys.themePreference]
-                ?: AppSettings.DEFAULT_THEME_PREFERENCE,
-            useDynamicColor = preferences[Keys.useDynamicColor] ?: true
+    private fun toAppSettings(preferences: Preferences): AppSettings =
+        AppSettings(
+            themePreference =
+                preferences[Keys.themePreference]
+                    ?: AppSettings.DEFAULT_THEME_PREFERENCE,
+            useDynamicColor = preferences[Keys.useDynamicColor] ?: true,
         )
-    }
 }

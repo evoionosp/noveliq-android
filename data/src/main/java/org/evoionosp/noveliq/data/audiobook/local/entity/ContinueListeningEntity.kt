@@ -8,11 +8,11 @@ import androidx.room.PrimaryKey
     tableName = "continue_listening_items",
     indices = [
         Index(value = ["libraryId"]),
-        Index(value = ["libraryId", "progressLastUpdateMillis"])
-    ]
+        Index(value = ["libraryId", "progressLastUpdateMillis"]),
+    ],
 )
 data class ContinueListeningEntity(
     @PrimaryKey val audiobookId: String,
     val libraryId: String,
-    val progressLastUpdateMillis: Long
+    val progressLastUpdateMillis: Long,
 )

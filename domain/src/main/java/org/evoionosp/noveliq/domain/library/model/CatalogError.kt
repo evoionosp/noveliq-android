@@ -6,5 +6,5 @@ enum class CatalogError {
     CONNECTIVITY_UNAVAILABLE,
     NO_AUDIOBOOK_LIBRARIES,
     NOT_FOUND,
-    UNKNOWN
+    UNKNOWN,
 }

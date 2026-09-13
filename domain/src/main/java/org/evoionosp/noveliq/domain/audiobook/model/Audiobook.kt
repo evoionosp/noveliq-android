@@ -7,5 +7,5 @@ data class Audiobook(
     val author: String,
     val coverUrl: String,
     val series: String?,
-    val durationInSeconds: Long?
+    val durationInSeconds: Long?,
 )

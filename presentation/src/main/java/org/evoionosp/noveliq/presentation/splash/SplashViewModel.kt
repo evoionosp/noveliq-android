@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,124 +13,152 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import org.evoionosp.noveliq.domain.session.LoginSession
-import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
-import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
-import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
+import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 
 @HiltViewModel
-class SplashViewModel @Inject constructor(
-    private val observeSessionUseCase: ObserveSessionUseCase,
-    private val clearSessionUseCase: ClearSessionUseCase,
-    private val getValidSessionUseCase: GetValidSessionUseCase,
-    private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
-) : ViewModel() {
-    private val _uiState = MutableStateFlow(SplashUiState())
-    val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
-    private var currentSession: LoginSession? = null
+class SplashViewModel
+    @Inject
+    constructor(
+        private val observeSessionUseCase: ObserveSessionUseCase,
+        private val clearSessionUseCase: ClearSessionUseCase,
+        private val getValidSessionUseCase: GetValidSessionUseCase,
+        private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(SplashUiState())
+        val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
+        private var currentSession: LoginSession? = null
 
-    init {
-        viewModelScope.launch {
-            observeSessionUseCase()
-                // Always keep the latest session (including rotated tokens) for retries.
-                .onEach { currentSession = it }
-                // Only react to routing-relevant changes (login/logout/user switch).
-                // A silent access-token rotation must NOT re-trigger the bootstrap, or the
-                // NavHost briefly rebuilds at the Auth route and flashes the login screen.
-                .distinctUntilChanged { old, new -> old.isSameRouting(new) }
-                .collectLatest { session ->
-                    if (session == null) {
-                        _uiState.value = SplashUiState(
-                            isLoading = false,
-                            startupDestination = StartupDestination.Auth
-                        )
-                        return@collectLatest
+        init {
+            viewModelScope.launch {
+                observeSessionUseCase()
+                    // Always keep the latest session (including rotated tokens) for retries.
+                    .onEach { currentSession = it }
+                    // Only react to routing-relevant changes (login/logout/user switch).
+                    // A silent access-token rotation must NOT re-trigger the bootstrap, or the
+                    // NavHost briefly rebuilds at the Auth route and flashes the login screen.
+                    .distinctUntilChanged { old, new -> old.isSameRouting(new) }
+                    .collectLatest { session ->
+                        if (session == null) {
+                            _uiState.value =
+                                SplashUiState(
+                                    isLoading = false,
+                                    startupDestination = StartupDestination.Auth,
+                                )
+                            return@collectLatest
+                        }
+
+                        bootstrapCatalog()
                     }
+            }
 
-                    bootstrapCatalog()
-                }
-        }
+            // Keep the token embedded in the current destination fresh when it rotates, without
+            // re-running the bootstrap. This propagates the new access token to authenticated
+            // image/media loading while the NavHost stays put (it keys on the route only).
+            viewModelScope.launch {
+                observeSessionUseCase().collect { session ->
+                    if (session == null) return@collect
+                    _uiState.update { state ->
+                        when (val destination = state.startupDestination) {
+                            is StartupDestination.Home -> {
+                                if (destination.session == session) {
+                                    state
+                                } else {
+                                    state.copy(
+                                        startupDestination = StartupDestination.Home(session),
+                                    )
+                                }
+                            }
 
-        // Keep the token embedded in the current destination fresh when it rotates, without
-        // re-running the bootstrap. This propagates the new access token to authenticated
-        // image/media loading while the NavHost stays put (it keys on the route only).
-        viewModelScope.launch {
-            observeSessionUseCase().collect { session ->
-                if (session == null) return@collect
-                _uiState.update { state ->
-                    when (val destination = state.startupDestination) {
-                        is StartupDestination.Home ->
-                            if (destination.session == session) state
-                            else state.copy(startupDestination = StartupDestination.Home(session))
-                        is StartupDestination.CatalogLoadError ->
-                            if (destination.session == session) state
-                            else state.copy(startupDestination = destination.copy(session = session))
-                        StartupDestination.Auth -> state
+                            is StartupDestination.CatalogLoadError -> {
+                                if (destination.session == session) {
+                                    state
+                                } else {
+                                    state.copy(
+                                        startupDestination = destination.copy(session = session),
+                                    )
+                                }
+                            }
+
+                            StartupDestination.Auth -> {
+                                state
+                            }
+                        }
                     }
                 }
             }
         }
-    }
 
-    fun retryCatalogBootstrap() {
-        if (currentSession == null) return
-        viewModelScope.launch {
-            bootstrapCatalog()
-        }
-    }
-
-    fun logout() {
-        viewModelScope.launch {
-            clearSessionUseCase()
-        }
-    }
-
-    private suspend fun bootstrapCatalog() {
-        // Preserve the current destination while loading. Constructing a fresh
-        // SplashUiState() would reset startupDestination to its default (Auth) and
-        // flash the login screen during any re-bootstrap.
-        _uiState.update { it.copy(isLoading = true) }
-
-        // Take the session through the validated path so a token that expired while the app was
-        // closed is rotated before the first request, rather than after it fails.
-        val activeSession = getValidSessionUseCase() ?: run {
-            // The session was unrecoverable and has been cleared. The session observer above will
-            // route to Auth; nothing to bootstrap.
-            _uiState.update { it.copy(isLoading = false) }
-            return
+        fun retryCatalogBootstrap() {
+            if (currentSession == null) return
+            viewModelScope.launch {
+                bootstrapCatalog()
+            }
         }
 
-        val bootstrapResult = bootstrapHomeCatalogUseCase(
-            baseUrl = activeSession.baseUrl,
-            accessToken = activeSession.accessToken
-        )
+        fun logout() {
+            viewModelScope.launch {
+                clearSessionUseCase()
+            }
+        }
 
-        currentCoroutineContext().ensureActive()
+        private suspend fun bootstrapCatalog() {
+            // Preserve the current destination while loading. Constructing a fresh
+            // SplashUiState() would reset startupDestination to its default (Auth) and
+            // flash the login screen during any re-bootstrap.
+            _uiState.update { it.copy(isLoading = true) }
 
-        _uiState.value = SplashUiState(
-            isLoading = false,
-            startupDestination = when (bootstrapResult) {
-                is BootstrapHomeCatalogResult.Success,
-                BootstrapHomeCatalogResult.NoLibrariesAvailable -> StartupDestination.Home(activeSession)
-                is BootstrapHomeCatalogResult.Failure -> StartupDestination.CatalogLoadError(
-                    session = activeSession,
-                    error = bootstrapResult.error
+            // Take the session through the validated path so a token that expired while the app was
+            // closed is rotated before the first request, rather than after it fails.
+            val activeSession =
+                getValidSessionUseCase() ?: run {
+                    // The session was unrecoverable and has been cleared. The session observer above will
+                    // route to Auth; nothing to bootstrap.
+                    _uiState.update { it.copy(isLoading = false) }
+                    return
+                }
+
+            val bootstrapResult =
+                bootstrapHomeCatalogUseCase(
+                    baseUrl = activeSession.baseUrl,
+                    accessToken = activeSession.accessToken,
                 )
-            }
-        )
-    }
 
-    /**
-     * Two sessions route to the same startup destination when they refer to the same
-     * logged-in user on the same server. Deliberately ignores access/refresh tokens so a
-     * silent token rotation does not look like a new session.
-     */
-    private fun LoginSession?.isSameRouting(other: LoginSession?): Boolean {
-        if (this == null || other == null) return this == null && other == null
-        return baseUrl == other.baseUrl && username == other.username && userId == other.userId
+            currentCoroutineContext().ensureActive()
+
+            _uiState.value =
+                SplashUiState(
+                    isLoading = false,
+                    startupDestination =
+                        when (bootstrapResult) {
+                            is BootstrapHomeCatalogResult.Success,
+                            BootstrapHomeCatalogResult.NoLibrariesAvailable,
+                            -> {
+                                StartupDestination.Home(activeSession)
+                            }
+
+                            is BootstrapHomeCatalogResult.Failure -> {
+                                StartupDestination.CatalogLoadError(
+                                    session = activeSession,
+                                    error = bootstrapResult.error,
+                                )
+                            }
+                        },
+                )
+        }
+
+        /**
+         * Two sessions route to the same startup destination when they refer to the same
+         * logged-in user on the same server. Deliberately ignores access/refresh tokens so a
+         * silent token rotation does not look like a new session.
+         */
+        private fun LoginSession?.isSameRouting(other: LoginSession?): Boolean {
+            if (this == null || other == null) return this == null && other == null
+            return baseUrl == other.baseUrl && username == other.username && userId == other.userId
+        }
     }
-}

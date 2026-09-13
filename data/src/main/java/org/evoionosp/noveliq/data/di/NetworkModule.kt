@@ -22,11 +22,8 @@ object NetworkModule {
      */
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        tokenAuthenticator: TokenAuthenticator
-    ): OkHttpClient {
-        return OkHttpProvider.create(authenticator = tokenAuthenticator)
-    }
+    fun provideOkHttpClient(tokenAuthenticator: TokenAuthenticator): OkHttpClient =
+        OkHttpProvider.create(authenticator = tokenAuthenticator)
 
     /**
      * Client without the authenticator, for the calls that establish or renew a session.
@@ -40,7 +37,5 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named(AUTH_CLIENT)
-    fun provideAuthOkHttpClient(): OkHttpClient {
-        return OkHttpProvider.create()
-    }
+    fun provideAuthOkHttpClient(): OkHttpClient = OkHttpProvider.create()
 }

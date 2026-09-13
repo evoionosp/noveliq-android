@@ -8,17 +8,14 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.NavBackStackEntry
 
-private fun routeBase(route: String?): String? {
-    return route?.substringBefore('/')
-}
+private fun routeBase(route: String?): String? = route?.substringBefore('/')
 
-private fun rootIndex(route: String?): Int? {
-    return when (routeBase(route)) {
+private fun rootIndex(route: String?): Int? =
+    when (routeBase(route)) {
         AppRoute.Home.route -> 0
         AppRoute.Library.route -> 1
         else -> null
     }
-}
 
 internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootEnterTransition(): EnterTransition {
     val initialIndex = rootIndex(initialState.destination.route)
@@ -26,7 +23,7 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootEnterTransiti
     val forward = initialIndex != null && targetIndex != null && targetIndex > initialIndex
     return slideInHorizontally(
         animationSpec = tween(durationMillis = 300),
-        initialOffsetX = { fullWidth -> if (forward) fullWidth else -fullWidth }
+        initialOffsetX = { fullWidth -> if (forward) fullWidth else -fullWidth },
     )
 }
 
@@ -36,34 +33,30 @@ internal fun AnimatedContentTransitionScope<NavBackStackEntry>.rootExitTransitio
     val forward = initialIndex != null && targetIndex != null && targetIndex > initialIndex
     return slideOutHorizontally(
         animationSpec = tween(durationMillis = 300),
-        targetOffsetX = { fullWidth -> if (forward) -fullWidth else fullWidth }
+        targetOffsetX = { fullWidth -> if (forward) -fullWidth else fullWidth },
     )
 }
 
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardEnterTransition(): EnterTransition {
-    return slideInHorizontally(
+internal fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardEnterTransition(): EnterTransition =
+    slideInHorizontally(
         animationSpec = tween(durationMillis = 300),
-        initialOffsetX = { fullWidth -> fullWidth }
+        initialOffsetX = { fullWidth -> fullWidth },
     )
-}
 
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardExitTransition(): ExitTransition {
-    return slideOutHorizontally(
+internal fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardExitTransition(): ExitTransition =
+    slideOutHorizontally(
         animationSpec = tween(durationMillis = 300),
-        targetOffsetX = { fullWidth -> -fullWidth }
+        targetOffsetX = { fullWidth -> -fullWidth },
     )
-}
 
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.backEnterTransition(): EnterTransition {
-    return slideInHorizontally(
+internal fun AnimatedContentTransitionScope<NavBackStackEntry>.backEnterTransition(): EnterTransition =
+    slideInHorizontally(
         animationSpec = tween(durationMillis = 300),
-        initialOffsetX = { fullWidth -> -fullWidth }
+        initialOffsetX = { fullWidth -> -fullWidth },
     )
-}
 
-internal fun AnimatedContentTransitionScope<NavBackStackEntry>.backExitTransition(): ExitTransition {
-    return slideOutHorizontally(
+internal fun AnimatedContentTransitionScope<NavBackStackEntry>.backExitTransition(): ExitTransition =
+    slideOutHorizontally(
         animationSpec = tween(durationMillis = 300),
-        targetOffsetX = { fullWidth -> fullWidth }
+        targetOffsetX = { fullWidth -> fullWidth },
     )
-}

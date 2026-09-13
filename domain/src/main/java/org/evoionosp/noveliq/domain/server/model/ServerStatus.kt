@@ -6,5 +6,5 @@ data class ServerStatus(
     val isInit: Boolean,
     val language: String,
     val authMethods: List<String>,
-    val authLoginCustomMessage: String
+    val authLoginCustomMessage: String,
 )

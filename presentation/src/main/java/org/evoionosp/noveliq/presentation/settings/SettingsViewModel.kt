@@ -13,33 +13,36 @@ import org.evoionosp.noveliq.domain.settings.AppSettingsStore
 import org.evoionosp.noveliq.presentation.theme.ThemePreference
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
-    private val appSettingsStore: AppSettingsStore
-) : ViewModel() {
-    val uiState: StateFlow<SettingsUiState> = appSettingsStore.settings
-        .map { settings ->
-            SettingsUiState(
-                themePreference = ThemePreference.entries.firstOrNull {
-                    it.name == settings.themePreference
-                } ?: ThemePreference.SYSTEM,
-                useDynamicColor = settings.useDynamicColor
-            )
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = SettingsUiState()
-        )
+class SettingsViewModel
+    @Inject
+    constructor(
+        private val appSettingsStore: AppSettingsStore,
+    ) : ViewModel() {
+        val uiState: StateFlow<SettingsUiState> =
+            appSettingsStore.settings
+                .map { settings ->
+                    SettingsUiState(
+                        themePreference =
+                            ThemePreference.entries.firstOrNull {
+                                it.name == settings.themePreference
+                            } ?: ThemePreference.SYSTEM,
+                        useDynamicColor = settings.useDynamicColor,
+                    )
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = SettingsUiState(),
+                )
 
-    fun onThemePreferenceChange(preference: ThemePreference) {
-        viewModelScope.launch {
-            appSettingsStore.setThemePreference(preference.name)
+        fun onThemePreferenceChange(preference: ThemePreference) {
+            viewModelScope.launch {
+                appSettingsStore.setThemePreference(preference.name)
+            }
+        }
+
+        fun onDynamicColorChange(enabled: Boolean) {
+            viewModelScope.launch {
+                appSettingsStore.setDynamicColor(enabled)
+            }
         }
     }
-
-    fun onDynamicColorChange(enabled: Boolean) {
-        viewModelScope.launch {
-            appSettingsStore.setDynamicColor(enabled)
-        }
-    }
-}

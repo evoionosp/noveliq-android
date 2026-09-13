@@ -8,13 +8,15 @@ import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.session.SessionStore
 
 @HiltViewModel
-class PreferencesViewModel @Inject constructor(
-    private val sessionStore: SessionStore
-) : ViewModel() {
-    fun logout(onComplete: () -> Unit) {
-        viewModelScope.launch {
-            sessionStore.clearSession()
-            onComplete()
+class PreferencesViewModel
+    @Inject
+    constructor(
+        private val sessionStore: SessionStore,
+    ) : ViewModel() {
+        fun logout(onComplete: () -> Unit) {
+            viewModelScope.launch {
+                sessionStore.clearSession()
+                onComplete()
+            }
         }
     }
-}

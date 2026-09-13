@@ -14,7 +14,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,63 +27,65 @@ import org.evoionosp.noveliq.presentation.R
 @Composable
 fun ServerStatusCard(
     state: AuthUiState,
-    onEdit:() -> Unit) {
-
+    onEdit: () -> Unit,
+) {
     state.serverStatus?.let { status ->
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
         ) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
             ) {
                 FilledTonalIconButton(
                     modifier = Modifier.align(Alignment.TopEnd),
-                    onClick = onEdit
+                    onClick = onEdit,
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Edit,
-                        contentDescription = stringResource(R.string.edit)
+                        contentDescription = stringResource(R.string.edit),
                     )
                 }
                 Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-
                     Text(
-                        text = state.protocol+state.baseUrl,
+                        text = state.protocol + state.baseUrl,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = stringResource(
-                            R.string.server_label,
-                            status.app,
-                            status.serverVersion
-                        ),
+                        text =
+                            stringResource(
+                                R.string.server_label,
+                                status.app,
+                                status.serverVersion,
+                            ),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Text(
                         text = stringResource(R.string.language_label, status.language),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (status.authLoginCustomMessage.isNotBlank()) {
                         Text(
                             text = AnnotatedString.fromHtml(status.authLoginCustomMessage),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
-
         }
     }
 }

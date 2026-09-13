@@ -19,14 +19,14 @@ import org.evoionosp.noveliq.presentation.R
 internal fun RootScreenHeader(
     title: String,
     onOpenSettings: () -> Unit,
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
         title = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         },
         actions = {
@@ -34,9 +34,9 @@ internal fun RootScreenHeader(
             IconButton(onClick = onOpenSettings) {
                 Icon(
                     imageVector = Icons.Rounded.Settings,
-                    contentDescription = stringResource(R.string.settings_icon_desc)
+                    contentDescription = stringResource(R.string.settings_icon_desc),
                 )
             }
-        }
+        },
     )
 }

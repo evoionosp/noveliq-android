@@ -8,9 +8,9 @@ data class LoginStatusResponseDto(
     @SerializedName("isInit") val isInit: Boolean? = null,
     @SerializedName("language") val language: String? = null,
     @SerializedName("authMethods") val authMethods: List<String>? = null,
-    @SerializedName("authFormData") val authFormData: AuthFormDataDto? = null
+    @SerializedName("authFormData") val authFormData: AuthFormDataDto? = null,
 )
 
 data class AuthFormDataDto(
-    @SerializedName("authLoginCustomMessage") val authLoginCustomMessage: String? = null
+    @SerializedName("authLoginCustomMessage") val authLoginCustomMessage: String? = null,
 )

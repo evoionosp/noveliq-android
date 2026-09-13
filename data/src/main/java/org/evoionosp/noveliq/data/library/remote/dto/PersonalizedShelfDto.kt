@@ -8,5 +8,5 @@ data class PersonalizedShelfDto(
     @SerializedName("type")
     val type: String? = null,
     @SerializedName("entities")
-    val entities: List<LibraryItemDto>? = null
+    val entities: List<LibraryItemDto>? = null,
 )

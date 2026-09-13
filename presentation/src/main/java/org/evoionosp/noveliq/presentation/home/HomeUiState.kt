@@ -20,5 +20,5 @@ data class HomeUiState(
     val syncStatus: SyncStatus = SyncStatus.Idle,
     val isRefreshing: Boolean = false,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )

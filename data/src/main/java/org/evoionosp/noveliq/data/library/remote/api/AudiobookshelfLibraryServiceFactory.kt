@@ -8,22 +8,24 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 @Singleton
-class AudiobookshelfLibraryServiceFactory @Inject constructor(
-    private val okHttpClient: OkHttpClient
-) {
-    private val serviceCache = mutableMapOf<String, AudiobookshelfLibraryApiService>()
+class AudiobookshelfLibraryServiceFactory
+    @Inject
+    constructor(
+        private val okHttpClient: OkHttpClient,
+    ) {
+        private val serviceCache = mutableMapOf<String, AudiobookshelfLibraryApiService>()
 
-    @Synchronized
-    fun create(baseUrl: String): AudiobookshelfLibraryApiService {
-        val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
-        return serviceCache.getOrPut(normalizedBaseUrl) {
-            Retrofit.Builder()
-                .baseUrl(normalizedBaseUrl)
-                .client(okHttpClient)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(AudiobookshelfLibraryApiService::class.java)
+        @Synchronized
+        fun create(baseUrl: String): AudiobookshelfLibraryApiService {
+            val normalizedBaseUrl = UrlUtils.normalizeBaseUrl(baseUrl)
+            return serviceCache.getOrPut(normalizedBaseUrl) {
+                Retrofit
+                    .Builder()
+                    .baseUrl(normalizedBaseUrl)
+                    .client(okHttpClient)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                    .create(AudiobookshelfLibraryApiService::class.java)
+            }
         }
     }
-
-}

@@ -8,8 +8,8 @@ import androidx.room.PrimaryKey
     tableName = "audiobooks",
     indices = [
         Index(value = ["libraryId"]),
-        Index(value = ["libraryId", "title"])
-    ]
+        Index(value = ["libraryId", "title"]),
+    ],
 )
 data class AudiobookEntity(
     @PrimaryKey val id: String,
@@ -18,5 +18,5 @@ data class AudiobookEntity(
     val author: String,
     val coverUrl: String,
     val series: String?,
-    val durationInSeconds: Long?
+    val durationInSeconds: Long?,
 )

@@ -10,9 +10,15 @@ import org.evoionosp.noveliq.domain.library.model.SyncStatus
 interface AudiobookRepository {
     fun observeAudiobooks(libraryId: String): Flow<List<Audiobook>>
 
-    fun observeAudiobook(libraryId: String, audiobookId: String): Flow<Audiobook?>
+    fun observeAudiobook(
+        libraryId: String,
+        audiobookId: String,
+    ): Flow<Audiobook?>
 
-    fun observeAudiobookDetail(libraryId: String, audiobookId: String): Flow<AudiobookDetail?>
+    fun observeAudiobookDetail(
+        libraryId: String,
+        audiobookId: String,
+    ): Flow<AudiobookDetail?>
 
     fun observeContinueListening(libraryId: String): Flow<List<Audiobook>>
 
@@ -20,7 +26,7 @@ interface AudiobookRepository {
         baseUrl: String,
         accessToken: String,
         libraryId: String,
-        audiobookId: String
+        audiobookId: String,
     ): DomainResult<Unit>
 
     fun observeLibrarySyncStatus(libraryId: String): Flow<SyncStatus>
@@ -28,13 +34,13 @@ interface AudiobookRepository {
     suspend fun refreshAudiobooks(
         baseUrl: String,
         accessToken: String,
-        libraryId: String
+        libraryId: String,
     ): DomainResult<Unit>
 
     suspend fun refreshContinueListening(
         baseUrl: String,
         accessToken: String,
-        libraryId: String
+        libraryId: String,
     ): DomainResult<Unit>
 
     /**
@@ -44,7 +50,7 @@ interface AudiobookRepository {
     suspend fun fetchProgress(
         baseUrl: String,
         accessToken: String,
-        audiobookId: String
+        audiobookId: String,
     ): DomainResult<PlaybackProgress?>
 
     /**
@@ -54,6 +60,6 @@ interface AudiobookRepository {
         baseUrl: String,
         accessToken: String,
         audiobookId: String,
-        progress: PlaybackProgress
+        progress: PlaybackProgress,
     ): DomainResult<Unit>
 }

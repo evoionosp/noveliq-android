@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "audiobook_details",
-    indices = [Index(value = ["libraryId"])]
+    indices = [Index(value = ["libraryId"])],
 )
 data class AudiobookDetailEntity(
     @PrimaryKey val audiobookId: String,
@@ -17,5 +17,5 @@ data class AudiobookDetailEntity(
     val series: String?,
     val durationInSeconds: Long?,
     val description: String?,
-    val refreshedAtMillis: Long
+    val refreshedAtMillis: Long,
 )

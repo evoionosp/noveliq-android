@@ -22,28 +22,33 @@ import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.presentation.R
 
 @Composable
-fun WelcomeCard () {
+fun WelcomeCard() {
     Surface(
         shape = RoundedCornerShape(32.dp),
         tonalElevation = 5.dp,
-        color = MaterialTheme.colorScheme.primaryContainer
+        color = MaterialTheme.colorScheme.primaryContainer,
     ) {
         Row(
-            modifier = androidx.compose.ui.Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
+            modifier =
+                androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f)
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
             ) {
-                Box(modifier = androidx.compose.ui.Modifier.padding(14.dp)) {
+                Box(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .padding(14.dp),
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.AutoStories,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
             }
@@ -52,12 +57,12 @@ fun WelcomeCard () {
                     text = stringResource(R.string.auth_header_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = stringResource(R.string.auth_header_body),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f)
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f),
                 )
             }
         }

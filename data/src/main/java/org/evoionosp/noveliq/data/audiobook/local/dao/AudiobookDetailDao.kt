@@ -11,13 +11,22 @@ import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookTrackEntity
 
 @Dao
 interface AudiobookDetailDao {
-    @Query("SELECT * FROM audiobook_details WHERE libraryId = :libraryId AND audiobookId = :audiobookId LIMIT 1")
-    fun observeDetail(libraryId: String, audiobookId: String): Flow<AudiobookDetailEntity?>
+    @Query(
+        "SELECT * FROM audiobook_details WHERE libraryId = :libraryId AND audiobookId = :audiobookId LIMIT 1",
+    )
+    fun observeDetail(
+        libraryId: String,
+        audiobookId: String,
+    ): Flow<AudiobookDetailEntity?>
 
-    @Query("SELECT * FROM audiobook_chapters WHERE audiobookId = :audiobookId ORDER BY chapterIndex ASC")
+    @Query(
+        "SELECT * FROM audiobook_chapters WHERE audiobookId = :audiobookId ORDER BY chapterIndex ASC",
+    )
     fun observeChapters(audiobookId: String): Flow<List<AudiobookChapterEntity>>
 
-    @Query("SELECT * FROM audiobook_tracks WHERE audiobookId = :audiobookId ORDER BY trackIndex ASC")
+    @Query(
+        "SELECT * FROM audiobook_tracks WHERE audiobookId = :audiobookId ORDER BY trackIndex ASC",
+    )
     fun observeTracks(audiobookId: String): Flow<List<AudiobookTrackEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

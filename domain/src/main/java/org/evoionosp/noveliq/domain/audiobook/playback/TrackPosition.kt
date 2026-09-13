@@ -6,5 +6,5 @@ package org.evoionosp.noveliq.domain.audiobook.playback
  */
 data class TrackPosition(
     val trackIndex: Int,
-    val offsetMs: Long
+    val offsetMs: Long,
 )

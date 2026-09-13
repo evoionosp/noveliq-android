@@ -9,17 +9,25 @@ import org.evoionosp.noveliq.domain.library.model.DomainResult
  * Fetches the server-side listening progress for an audiobook, or null when none is recorded or the
  * request fails. Callers use [PlaybackProgress.resumeSeconds] to decide where to resume.
  */
-class FetchPlaybackProgressUseCase @Inject constructor(
-    private val audiobookRepository: AudiobookRepository
-) {
-    suspend operator fun invoke(
-        baseUrl: String,
-        accessToken: String,
-        audiobookId: String
-    ): PlaybackProgress? {
-        return when (val result = audiobookRepository.fetchProgress(baseUrl, accessToken, audiobookId)) {
-            is DomainResult.Success -> result.data
-            is DomainResult.Failure -> null
-        }
+class FetchPlaybackProgressUseCase
+    @Inject
+    constructor(
+        private val audiobookRepository: AudiobookRepository,
+    ) {
+        suspend operator fun invoke(
+            baseUrl: String,
+            accessToken: String,
+            audiobookId: String,
+        ): PlaybackProgress? =
+            when (
+                val result =
+                    audiobookRepository.fetchProgress(
+                        baseUrl,
+                        accessToken,
+                        audiobookId,
+                    )
+            ) {
+                is DomainResult.Success -> result.data
+                is DomainResult.Failure -> null
+            }
     }
-}

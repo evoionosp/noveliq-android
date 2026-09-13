@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class LibrariesResponseDto(
     @SerializedName("libraries")
-    val libraries: List<LibraryDto>? = null
+    val libraries: List<LibraryDto>? = null,
 )
 
 data class LibraryDto(
@@ -15,5 +15,5 @@ data class LibraryDto(
     @SerializedName("displayOrder")
     val displayOrder: Int? = null,
     @SerializedName("mediaType")
-    val mediaType: String? = null
+    val mediaType: String? = null,
 )

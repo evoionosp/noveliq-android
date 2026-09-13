@@ -8,5 +8,5 @@ data class LibraryEntity(
     @PrimaryKey val id: String,
     val name: String,
     val displayOrder: Int,
-    val isSelected: Boolean
+    val isSelected: Boolean,
 )

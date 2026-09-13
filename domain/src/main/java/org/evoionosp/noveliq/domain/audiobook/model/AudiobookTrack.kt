@@ -6,5 +6,5 @@ data class AudiobookTrack(
     val durationInSeconds: Long,
     val title: String,
     val remoteUrl: String,
-    val mimeType: String?
+    val mimeType: String?,
 )

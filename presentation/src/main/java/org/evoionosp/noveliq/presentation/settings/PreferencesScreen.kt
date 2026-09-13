@@ -2,7 +2,6 @@ package org.evoionosp.noveliq.presentation.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +16,6 @@ import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,7 +39,7 @@ fun PreferencesScreen(
     onLoggedOut: () -> Unit,
     showLogout: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: PreferencesViewModel = hiltViewModel()
+    viewModel: PreferencesViewModel = hiltViewModel(),
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -50,37 +48,38 @@ fun PreferencesScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.preferences_title),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 },
                 navigationIcon = {
                     FilledTonalIconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.preferences_back)
+                            contentDescription = stringResource(R.string.preferences_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Text(
                 text = stringResource(R.string.preferences_list_intro),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Surface(
                 shape = RoundedCornerShape(30.dp),
                 tonalElevation = 3.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerLow
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     PreferenceListRow(
@@ -90,17 +89,17 @@ fun PreferencesScreen(
                             Icon(
                                 imageVector = Icons.Rounded.Palette,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         },
                         trailing = {
                             Icon(
                                 imageVector = Icons.Rounded.KeyboardArrowRight,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },
-                        onClick = onOpenAppearance
+                        onClick = onOpenAppearance,
                     )
                 }
             }
@@ -109,7 +108,7 @@ fun PreferencesScreen(
                 Surface(
                     shape = RoundedCornerShape(30.dp),
                     tonalElevation = 3.dp,
-                    color = MaterialTheme.colorScheme.errorContainer
+                    color = MaterialTheme.colorScheme.errorContainer,
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         PreferenceListRow(
@@ -119,13 +118,16 @@ fun PreferencesScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Rounded.Logout,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                             },
                             titleColor = MaterialTheme.colorScheme.onErrorContainer,
-                            subtitleColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                            subtitleColor =
+                                MaterialTheme.colorScheme.onErrorContainer.copy(
+                                    alpha = 0.8f,
+                                ),
                             trailing = {},
-                            onClick = { viewModel.logout(onLoggedOut) }
+                            onClick = { viewModel.logout(onLoggedOut) },
                         )
                     }
                 }
@@ -142,14 +144,15 @@ private fun PreferenceListRow(
     trailing: @Composable () -> Unit,
     onClick: () -> Unit,
     titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
-    subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant
+    subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     Surface(onClick = onClick, color = androidx.compose.ui.graphics.Color.Transparent) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             icon()
             Spacer(modifier = Modifier.padding(horizontal = 8.dp))
@@ -158,13 +161,13 @@ private fun PreferenceListRow(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     color = titleColor,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = subtitleColor
+                    color = subtitleColor,
                 )
             }
             trailing()

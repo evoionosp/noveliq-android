@@ -17,22 +17,14 @@ import org.evoionosp.noveliq.domain.server.repository.ServerRepository
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
     @Binds
-    abstract fun bindAuthRepository(
-        impl: AuthRepositoryImpl
-    ): AuthRepository
+    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 
     @Binds
-    abstract fun bindServerRepository(
-        impl: ServerRepositoryImpl
-    ): ServerRepository
+    abstract fun bindServerRepository(impl: ServerRepositoryImpl): ServerRepository
 
     @Binds
-    abstract fun bindLibraryRepository(
-        impl: LibraryRepositoryImpl
-    ): LibraryRepository
+    abstract fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
 
     @Binds
-    abstract fun bindAudiobookRepository(
-        impl: AudiobookRepositoryImpl
-    ): AudiobookRepository
+    abstract fun bindAudiobookRepository(impl: AudiobookRepositoryImpl): AudiobookRepository
 }

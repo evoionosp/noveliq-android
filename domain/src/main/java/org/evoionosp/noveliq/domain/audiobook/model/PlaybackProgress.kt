@@ -7,7 +7,7 @@ package org.evoionosp.noveliq.domain.audiobook.model
 data class PlaybackProgress(
     val currentTimeSeconds: Double,
     val durationSeconds: Double?,
-    val isFinished: Boolean
+    val isFinished: Boolean,
 ) {
     /**
      * The absolute second to resume from, or null when there is nothing useful to resume to

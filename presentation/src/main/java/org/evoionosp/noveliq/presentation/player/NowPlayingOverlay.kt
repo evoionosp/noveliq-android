@@ -16,7 +16,7 @@ fun NowPlayingOverlay(
     visible: Boolean,
     audiobook: Audiobook?,
     onMinimize: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     BackHandler(enabled = visible) {
         onMinimize()
@@ -24,19 +24,21 @@ fun NowPlayingOverlay(
 
     AnimatedVisibility(
         visible = visible && audiobook != null,
-        enter = slideInVertically(
-            animationSpec = tween(durationMillis = 320),
-            initialOffsetY = { fullHeight -> fullHeight }
-        ) + fadeIn(animationSpec = tween(180)),
-        exit = slideOutVertically(
-            animationSpec = tween(durationMillis = 280),
-            targetOffsetY = { fullHeight -> fullHeight }
-        ) + fadeOut(animationSpec = tween(120)),
-        modifier = modifier
+        enter =
+            slideInVertically(
+                animationSpec = tween(durationMillis = 320),
+                initialOffsetY = { fullHeight -> fullHeight },
+            ) + fadeIn(animationSpec = tween(180)),
+        exit =
+            slideOutVertically(
+                animationSpec = tween(durationMillis = 280),
+                targetOffsetY = { fullHeight -> fullHeight },
+            ) + fadeOut(animationSpec = tween(120)),
+        modifier = modifier,
     ) {
         if (audiobook != null) {
             NowPlayingScreen(
-                onMinimize = onMinimize
+                onMinimize = onMinimize,
             )
         }
     }

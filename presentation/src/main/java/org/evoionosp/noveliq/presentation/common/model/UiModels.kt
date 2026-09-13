@@ -15,7 +15,7 @@ data class AudiobookUiModel(
     val authorNames: List<String>,
     val coverUrl: String,
     val durationInSeconds: Long?,
-    val durationLabel: String
+    val durationLabel: String,
 )
 
 /**
@@ -24,7 +24,7 @@ data class AudiobookUiModel(
 data class LibraryUiModel(
     val id: String,
     val name: String,
-    val isSelected: Boolean
+    val isSelected: Boolean,
 )
 
 /**
@@ -33,7 +33,7 @@ data class LibraryUiModel(
 data class AuthorUiModel(
     val name: String,
     val bookCount: Int,
-    val photoUrl: String?
+    val photoUrl: String?,
 )
 
 /**
@@ -49,7 +49,7 @@ fun Audiobook.toUiModel(): AudiobookUiModel {
         authorNames = names,
         coverUrl = coverUrl,
         durationInSeconds = durationInSeconds,
-        durationLabel = durationInSeconds?.toDurationLabel() ?: ""
+        durationLabel = durationInSeconds?.toDurationLabel() ?: "",
     )
 }
 
@@ -58,38 +58,35 @@ fun Audiobook.toUiModel(): AudiobookUiModel {
  * Note: This creates a minimal domain model with only the fields available in UI model.
  * For full domain model, fetch from repository using the ID.
  */
-fun AudiobookUiModel.toDomain(): Audiobook {
-    return Audiobook(
+fun AudiobookUiModel.toDomain(): Audiobook =
+    Audiobook(
         id = id,
         libraryId = libraryId,
         title = title,
         author = author,
         coverUrl = coverUrl,
         series = null,
-        durationInSeconds = durationInSeconds
+        durationInSeconds = durationInSeconds,
     )
-}
 
 /**
  * Converts domain AudiobookLibrary to UI model.
  */
-fun AudiobookLibrary.toUiModel(): LibraryUiModel {
-    return LibraryUiModel(
+fun AudiobookLibrary.toUiModel(): LibraryUiModel =
+    LibraryUiModel(
         id = id,
         name = name,
-        isSelected = isSelected
+        isSelected = isSelected,
     )
-}
 
 /**
  * Parses author string into list of author names.
  */
-internal fun String.toAuthorNames(): List<String> {
-    return split(',')
+internal fun String.toAuthorNames(): List<String> =
+    split(',')
         .map { it.trim() }
         .filter { it.isNotBlank() }
         .ifEmpty { listOf("Unknown Author") }
-}
 
 /**
  * Formats seconds into a duration label (H:MM:SS or M:SS).

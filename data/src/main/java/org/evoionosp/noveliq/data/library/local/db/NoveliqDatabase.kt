@@ -23,15 +23,19 @@ import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
         AudiobookChapterEntity::class,
         AudiobookTrackEntity::class,
         ContinueListeningEntity::class,
-        LibrarySyncStateEntity::class
+        LibrarySyncStateEntity::class,
     ],
     version = 3,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class NoveliqDatabase : RoomDatabase() {
     abstract fun libraryDao(): LibraryDao
+
     abstract fun audiobookDao(): AudiobookDao
+
     abstract fun audiobookDetailDao(): AudiobookDetailDao
+
     abstract fun continueListeningDao(): ContinueListeningDao
+
     abstract fun librarySyncStateDao(): LibrarySyncStateDao
 }

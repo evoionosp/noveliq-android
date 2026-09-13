@@ -10,7 +10,7 @@ data class LoginResponseDto(
     @SerializedName(value = "user_id", alternate = ["userId", "id"])
     val userId: String? = null,
     @SerializedName("user")
-    val user: UserDto? = null
+    val user: UserDto? = null,
 ) {
     data class UserDto(
         @SerializedName(value = "token", alternate = ["accessToken", "access_token"])
@@ -20,6 +20,6 @@ data class LoginResponseDto(
         @SerializedName(value = "id", alternate = ["userId"])
         val id: String? = null,
         @SerializedName(value = "username", alternate = ["userName"])
-        val username: String? = null
+        val username: String? = null,
     )
 }

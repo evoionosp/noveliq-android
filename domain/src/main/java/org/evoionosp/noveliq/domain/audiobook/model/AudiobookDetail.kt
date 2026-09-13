@@ -5,5 +5,5 @@ data class AudiobookDetail(
     val description: String?,
     val chapters: List<AudiobookChapter>,
     val tracks: List<AudiobookTrack>,
-    val refreshedAtMillis: Long
+    val refreshedAtMillis: Long,
 )

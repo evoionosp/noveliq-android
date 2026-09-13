@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun PlayingEqualizerIcon(
     isAnimating: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val color = MaterialTheme.colorScheme.primary
     val transition = rememberInfiniteTransition(label = "equalizer")
@@ -38,28 +38,31 @@ fun PlayingEqualizerIcon(
     Row(
         modifier = modifier.height(20.dp),
         verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         repeat(barCount) { index ->
             val animated by transition.animateFloat(
                 initialValue = 0.3f,
                 targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = 360 + index * 90,
-                        easing = LinearEasing
+                animationSpec =
+                    infiniteRepeatable(
+                        animation =
+                            tween(
+                                durationMillis = 360 + index * 90,
+                                easing = LinearEasing,
+                            ),
+                        repeatMode = RepeatMode.Reverse,
                     ),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "bar$index"
+                label = "bar$index",
             )
             val fraction = if (isAnimating) animated else 0.45f
             Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .fillMaxHeight(fraction)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(color)
+                modifier =
+                    Modifier
+                        .width(3.dp)
+                        .fillMaxHeight(fraction)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(color),
             )
         }
     }

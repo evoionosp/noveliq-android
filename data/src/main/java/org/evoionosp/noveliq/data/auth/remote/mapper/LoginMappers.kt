@@ -10,6 +10,6 @@ internal fun LoginResponseDto.toDomain(): LoginData {
     return LoginData(
         accessToken = resolvedAccessToken,
         refreshToken = resolvedRefreshToken,
-        userId = resolvedUserId
+        userId = resolvedUserId,
     )
 }

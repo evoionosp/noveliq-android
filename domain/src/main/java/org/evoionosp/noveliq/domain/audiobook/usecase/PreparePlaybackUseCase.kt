@@ -10,25 +10,27 @@ import org.evoionosp.noveliq.domain.audiobook.repository.AudiobookRepository
  * from the server on a cache miss. Returns the detail only when it actually has tracks, or null when
  * the book cannot be played.
  */
-class PreparePlaybackUseCase @Inject constructor(
-    private val audiobookRepository: AudiobookRepository
-) {
-    suspend operator fun invoke(
-        baseUrl: String,
-        accessToken: String,
-        libraryId: String,
-        audiobookId: String
-    ): AudiobookDetail? {
-        var detail = audiobookRepository.observeAudiobookDetail(libraryId, audiobookId).first()
-        if (detail == null || detail.tracks.isEmpty()) {
-            audiobookRepository.refreshAudiobookDetail(
-                baseUrl = baseUrl,
-                accessToken = accessToken,
-                libraryId = libraryId,
-                audiobookId = audiobookId
-            )
-            detail = audiobookRepository.observeAudiobookDetail(libraryId, audiobookId).first()
+class PreparePlaybackUseCase
+    @Inject
+    constructor(
+        private val audiobookRepository: AudiobookRepository,
+    ) {
+        suspend operator fun invoke(
+            baseUrl: String,
+            accessToken: String,
+            libraryId: String,
+            audiobookId: String,
+        ): AudiobookDetail? {
+            var detail = audiobookRepository.observeAudiobookDetail(libraryId, audiobookId).first()
+            if (detail == null || detail.tracks.isEmpty()) {
+                audiobookRepository.refreshAudiobookDetail(
+                    baseUrl = baseUrl,
+                    accessToken = accessToken,
+                    libraryId = libraryId,
+                    audiobookId = audiobookId,
+                )
+                detail = audiobookRepository.observeAudiobookDetail(libraryId, audiobookId).first()
+            }
+            return detail?.takeIf { it.tracks.isNotEmpty() }
         }
-        return detail?.takeIf { it.tracks.isNotEmpty() }
     }
-}

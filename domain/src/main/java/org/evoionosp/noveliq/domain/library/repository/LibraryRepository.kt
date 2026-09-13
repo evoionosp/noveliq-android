@@ -11,7 +11,7 @@ interface LibraryRepository {
 
     suspend fun refreshLibraries(
         baseUrl: String,
-        accessToken: String
+        accessToken: String,
     ): DomainResult<Unit>
 
     suspend fun selectLibrary(libraryId: String): DomainResult<Unit>

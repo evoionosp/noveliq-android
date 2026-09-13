@@ -7,5 +7,5 @@ enum class ServerError {
     PING_FAILED,
     HEALTHCHECK_FAILED,
     HEALTHCHECK_UNEXPECTED,
-    UNKNOWN
+    UNKNOWN,
 }

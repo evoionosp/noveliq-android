@@ -13,11 +13,12 @@ class PlaybackPositionCalculatorTest {
     private val calculator = PlaybackPositionCalculator()
 
     // Three back-to-back 100s tracks: [0..100), [100..200), [200..300).
-    private val tracks = listOf(
-        track(index = 0, start = 0, duration = 100),
-        track(index = 1, start = 100, duration = 100),
-        track(index = 2, start = 200, duration = 100)
-    )
+    private val tracks =
+        listOf(
+            track(index = 0, start = 0, duration = 100),
+            track(index = 1, start = 100, duration = 100),
+            track(index = 2, start = 200, duration = 100),
+        )
 
     @Test
     fun `resolveSeekPosition maps absolute seconds into the containing track and offset`() {
@@ -45,12 +46,20 @@ class PlaybackPositionCalculatorTest {
 
     @Test
     fun `absolutePosition adds the track start to the in-track offset`() {
-        assertEquals(250.0, calculator.absolutePosition(trackIndex = 2, positionMs = 50_000, tracks = tracks), 0.001)
+        assertEquals(
+            250.0,
+            calculator.absolutePosition(trackIndex = 2, positionMs = 50_000, tracks = tracks),
+            0.001,
+        )
     }
 
     @Test
     fun `absolutePosition returns zero for an unset track index`() {
-        assertEquals(0.0, calculator.absolutePosition(trackIndex = -1, positionMs = 5_000, tracks = tracks), 0.001)
+        assertEquals(
+            0.0,
+            calculator.absolutePosition(trackIndex = -1, positionMs = 5_000, tracks = tracks),
+            0.001,
+        )
     }
 
     @Test
@@ -71,7 +80,10 @@ class PlaybackPositionCalculatorTest {
     fun `nextChapterStart returns the first chapter beyond the position`() {
         val chapters = listOf(chapter("One", 0), chapter("Two", 100), chapter("Three", 200))
 
-        assertEquals(200.0, calculator.nextChapterStart(positionSeconds = 150.0, chapters = chapters))
+        assertEquals(
+            200.0,
+            calculator.nextChapterStart(positionSeconds = 150.0, chapters = chapters),
+        )
     }
 
     @Test
@@ -86,7 +98,11 @@ class PlaybackPositionCalculatorTest {
         val chapters = listOf(chapter("One", 0), chapter("Two", 100), chapter("Three", 200))
 
         // 130s is 30s into "Two" (> 20s threshold) -> restart "Two".
-        assertEquals(100.0, calculator.previousChapterTarget(positionSeconds = 130.0, chapters = chapters), 0.001)
+        assertEquals(
+            100.0,
+            calculator.previousChapterTarget(positionSeconds = 130.0, chapters = chapters),
+            0.001,
+        )
     }
 
     @Test
@@ -94,7 +110,11 @@ class PlaybackPositionCalculatorTest {
         val chapters = listOf(chapter("One", 0), chapter("Two", 100), chapter("Three", 200))
 
         // 205s is only 5s into "Three" (< 20s threshold) -> go to "Two".
-        assertEquals(100.0, calculator.previousChapterTarget(positionSeconds = 205.0, chapters = chapters), 0.001)
+        assertEquals(
+            100.0,
+            calculator.previousChapterTarget(positionSeconds = 205.0, chapters = chapters),
+            0.001,
+        )
     }
 
     @Test
@@ -111,28 +131,37 @@ class PlaybackPositionCalculatorTest {
         assertEquals("Track 1", calculator.chapterTitleForTrack(track, emptyList()))
     }
 
-    private fun track(index: Int, start: Long, duration: Long, title: String = "Track $index") = AudiobookTrack(
+    private fun track(
+        index: Int,
+        start: Long,
+        duration: Long,
+        title: String = "Track $index",
+    ) = AudiobookTrack(
         index = index,
         startOffsetInSeconds = start,
         durationInSeconds = duration,
         title = title,
         remoteUrl = "https://example.com/$index.mp3",
-        mimeType = "audio/mpeg"
+        mimeType = "audio/mpeg",
     )
 
-    private fun chapter(title: String, start: Long) = AudiobookChapter(
+    private fun chapter(
+        title: String,
+        start: Long,
+    ) = AudiobookChapter(
         title = title,
         startInSeconds = start,
-        endInSeconds = null
+        endInSeconds = null,
     )
 
-    private fun audiobook(durationInSeconds: Long?) = Audiobook(
-        id = "book-1",
-        libraryId = "lib-1",
-        title = "Book",
-        author = "Author",
-        coverUrl = "",
-        series = null,
-        durationInSeconds = durationInSeconds
-    )
+    private fun audiobook(durationInSeconds: Long?) =
+        Audiobook(
+            id = "book-1",
+            libraryId = "lib-1",
+            title = "Book",
+            author = "Author",
+            coverUrl = "",
+            series = null,
+            durationInSeconds = durationInSeconds,
+        )
 }

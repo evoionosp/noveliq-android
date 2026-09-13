@@ -19,13 +19,14 @@ import org.evoionosp.noveliq.presentation.player.NowPlayingBar
 private data class RootNavItem(
     val route: AppRoute,
     val icon: ImageVector,
-    val labelResId: Int
+    val labelResId: Int,
 )
 
-private val rootNavItems = listOf(
-    RootNavItem(AppRoute.Home, Icons.Rounded.Home, R.string.root_home),
-    RootNavItem(AppRoute.Library, Icons.Rounded.AutoStories, R.string.root_library)
-)
+private val rootNavItems =
+    listOf(
+        RootNavItem(AppRoute.Home, Icons.Rounded.Home, R.string.root_home),
+        RootNavItem(AppRoute.Library, Icons.Rounded.AutoStories, R.string.root_library),
+    )
 
 @Composable
 internal fun RootNavigationBottomBar(
@@ -33,14 +34,14 @@ internal fun RootNavigationBottomBar(
     currentRoute: String?,
     nowPlayingAudiobook: Audiobook?,
     isNowPlayingExpanded: Boolean,
-    onExpandNowPlaying: () -> Unit
+    onExpandNowPlaying: () -> Unit,
 ) {
     if (currentRoute in mainRootRoutes) {
         Column {
             if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
                 NowPlayingBar(
                     audiobook = nowPlayingAudiobook,
-                    onExpand = onExpandNowPlaying
+                    onExpand = onExpandNowPlaying,
                 )
             }
             NavigationBar {
@@ -57,7 +58,7 @@ internal fun RootNavigationBottomBar(
                             }
                         },
                         icon = { Icon(imageVector = item.icon, contentDescription = null) },
-                        label = { Text(text = stringResource(item.labelResId)) }
+                        label = { Text(text = stringResource(item.labelResId)) },
                     )
                 }
             }

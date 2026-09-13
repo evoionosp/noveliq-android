@@ -32,10 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.R
 import org.evoionosp.noveliq.presentation.common.components.EmptyState
 import org.evoionosp.noveliq.presentation.common.components.SectionBlock
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.navigation.LocalSnackbarHostState
 import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 
@@ -47,7 +47,7 @@ fun HomeScreen(
     bottomBarPadding: androidx.compose.ui.unit.Dp,
     onOpenAudiobook: (AudiobookUiModel) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
@@ -61,6 +61,7 @@ fun HomeScreen(
                 snackbarHostState.currentSnackbarData?.dismiss()
                 snackbarHostState.showSnackbar(context.getString(event.messageResId))
             }
+
             HomeUiEvent.SessionExpired -> {
                 snackbarHostState.showSnackbar(context.getString(R.string.error_session_expired))
                 onSessionExpired()
@@ -70,29 +71,31 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.Transparent
+        containerColor = Color.Transparent,
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = viewModel::refresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(homeBackgroundBrush())
-                .padding(top = innerPadding.calculateTopPadding())
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(homeBackgroundBrush())
+                    .padding(top = innerPadding.calculateTopPadding()),
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 16.dp,
-                    bottom = bottomBarPadding + 16.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding =
+                    PaddingValues(
+                        top = 16.dp,
+                        bottom = bottomBarPadding + 16.dp,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // Custom header with greeting and settings button
                 item {
                     HomeHeader(
                         username = state.username,
-                        onOpenSettings = onOpenSettings
+                        onOpenSettings = onOpenSettings,
                     )
                 }
 
@@ -101,23 +104,23 @@ fun HomeScreen(
                         EmptyState(
                             title = stringResource(R.string.home_no_libraries),
                             subtitle = stringResource(R.string.home_no_libraries_hint),
-                            modifier = Modifier.fillParentMaxHeight(0.8f)
+                            modifier = Modifier.fillParentMaxHeight(0.8f),
                         )
                     }
                 } else {
                     item {
                         SectionBlock(
-                            title = stringResource(R.string.home_continue_listening)
+                            title = stringResource(R.string.home_continue_listening),
                         ) {
                             if (state.continueListening.isEmpty()) {
                                 PlaceholderSectionCard(
                                     title = stringResource(R.string.home_continue_empty),
-                                    body = stringResource(R.string.home_continue_empty_hint)
+                                    body = stringResource(R.string.home_continue_empty_hint),
                                 )
                             } else {
                                 HorizontalBookRow(
                                     audiobooks = state.continueListening,
-                                    onOpenAudiobook = onOpenAudiobook
+                                    onOpenAudiobook = onOpenAudiobook,
                                 )
                             }
                         }
@@ -129,7 +132,7 @@ fun HomeScreen(
                         ) {
                             HorizontalBookRow(
                                 audiobooks = state.recentlyAdded,
-                                onOpenAudiobook = onOpenAudiobook
+                                onOpenAudiobook = onOpenAudiobook,
                             )
                         }
                     }
@@ -140,7 +143,7 @@ fun HomeScreen(
                         ) {
                             HorizontalBookRow(
                                 audiobooks = state.discover,
-                                onOpenAudiobook = onOpenAudiobook
+                                onOpenAudiobook = onOpenAudiobook,
                             )
                         }
                     }
@@ -152,7 +155,7 @@ fun HomeScreen(
                             StatsRow(
                                 booksCount = state.audiobooks.size,
                                 authorsCount = state.authorCount,
-                                hoursCount = state.durationHours
+                                hoursCount = state.durationHours,
                             )
                         }
                     }
@@ -163,52 +166,55 @@ fun HomeScreen(
 }
 
 @Composable
-internal fun homeBackgroundBrush(): Brush {
-    return Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.surface,
-            MaterialTheme.colorScheme.surfaceContainerLowest
-        )
+internal fun homeBackgroundBrush(): Brush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.surfaceContainerLowest,
+            ),
     )
-}
 
 @Composable
 private fun HomeHeader(
     username: String,
     onOpenSettings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val greeting = if (username.isNotBlank()) {
-        "Hi, $username"
-    } else {
-        "Hi there"
-    }
+    val greeting =
+        if (username.isNotBlank()) {
+            "Hi, $username"
+        } else {
+            "Hi there"
+        }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = greeting,
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         FilledTonalIconButton(
             onClick = onOpenSettings,
-            modifier = Modifier.size(56.dp),  // 10-15% larger than standard 48.dp
+            modifier = Modifier.size(56.dp), // 10-15% larger than standard 48.dp
             shape = CircleShape,
-            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
+            colors =
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
         ) {
             Icon(
                 imageVector = Icons.Rounded.Settings,
                 contentDescription = stringResource(R.string.settings_icon_desc),
-                modifier = Modifier.size(28.dp)  // Slightly larger icon
+                modifier = Modifier.size(28.dp), // Slightly larger icon
             )
         }
     }

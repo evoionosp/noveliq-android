@@ -5,8 +5,10 @@ import kotlinx.coroutines.flow.Flow
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.repository.LibraryRepository
 
-class ObserveSelectedLibraryUseCase @Inject constructor(
-    private val libraryRepository: LibraryRepository
-) {
-    operator fun invoke(): Flow<AudiobookLibrary?> = libraryRepository.observeSelectedLibrary()
-}
+class ObserveSelectedLibraryUseCase
+    @Inject
+    constructor(
+        private val libraryRepository: LibraryRepository,
+    ) {
+        operator fun invoke(): Flow<AudiobookLibrary?> = libraryRepository.observeSelectedLibrary()
+    }

@@ -6,8 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.library.LibraryScreen
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
@@ -29,22 +29,22 @@ internal fun NoveliqNavHost(
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    onOpenAudiobook: (AudiobookUiModel) -> Unit
+    onOpenAudiobook: (AudiobookUiModel) -> Unit,
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
     ) {
         composable(
             route = AppRoute.Auth.route,
             enterTransition = { backEnterTransition() },
             exitTransition = { forwardExitTransition() },
             popEnterTransition = { backEnterTransition() },
-            popExitTransition = { backExitTransition() }
+            popExitTransition = { backExitTransition() },
         ) {
             AuthScreen(
                 modifier = Modifier,
-                onOpenSettings = { navController.navigate(AppRoute.Preferences.route) }
+                onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
             )
         }
         composable(
@@ -52,16 +52,17 @@ internal fun NoveliqNavHost(
             enterTransition = { rootEnterTransition() },
             exitTransition = { rootExitTransition() },
             popEnterTransition = { rootEnterTransition() },
-            popExitTransition = { rootExitTransition() }
+            popExitTransition = { rootExitTransition() },
         ) {
-            val startupDestination = splashState.startupDestination as? StartupDestination.Home
-                ?: return@composable
+            val startupDestination =
+                splashState.startupDestination as? StartupDestination.Home
+                    ?: return@composable
             HomeScreen(
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
         composable(
@@ -69,16 +70,17 @@ internal fun NoveliqNavHost(
             enterTransition = { rootEnterTransition() },
             exitTransition = { rootExitTransition() },
             popEnterTransition = { rootEnterTransition() },
-            popExitTransition = { rootExitTransition() }
+            popExitTransition = { rootExitTransition() },
         ) {
-            val startupDestination = splashState.startupDestination as? StartupDestination.Home
-                ?: return@composable
+            val startupDestination =
+                splashState.startupDestination as? StartupDestination.Home
+                    ?: return@composable
             LibraryScreen(
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
                 onSessionExpired = { navController.navigateToAuthRoot() },
                 bottomBarPadding = contentPadding.calculateBottomPadding(),
                 onOpenAudiobook = onOpenAudiobook,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
         composable(
@@ -86,15 +88,16 @@ internal fun NoveliqNavHost(
             enterTransition = { forwardEnterTransition() },
             exitTransition = { forwardExitTransition() },
             popEnterTransition = { backEnterTransition() },
-            popExitTransition = { backExitTransition() }
+            popExitTransition = { backExitTransition() },
         ) {
-            val startupDestination = splashState.startupDestination as? StartupDestination.CatalogLoadError
-                ?: return@composable
+            val startupDestination =
+                splashState.startupDestination as? StartupDestination.CatalogLoadError
+                    ?: return@composable
             CatalogBootstrapErrorScreen(
                 error = startupDestination.error,
                 onRetry = onRetryCatalogBootstrap,
                 onLogout = onLogout,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
         composable(
@@ -102,14 +105,14 @@ internal fun NoveliqNavHost(
             enterTransition = { forwardEnterTransition() },
             exitTransition = { forwardExitTransition() },
             popEnterTransition = { backEnterTransition() },
-            popExitTransition = { backExitTransition() }
+            popExitTransition = { backExitTransition() },
         ) {
             PreferencesScreen(
                 onBackClick = { navController.popBackStack() },
                 onOpenAppearance = { navController.navigate(AppRoute.Appearance.route) },
                 onLoggedOut = { navController.navigateToAuthRoot() },
                 showLogout = splashState.startupDestination != StartupDestination.Auth,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
         composable(
@@ -117,14 +120,14 @@ internal fun NoveliqNavHost(
             enterTransition = { forwardEnterTransition() },
             exitTransition = { forwardExitTransition() },
             popEnterTransition = { backEnterTransition() },
-            popExitTransition = { backExitTransition() }
+            popExitTransition = { backExitTransition() },
         ) {
             AppearanceSettingsScreen(
                 settingsState = settingsState,
                 onBackClick = { navController.popBackStack() },
                 onThemePreferenceChange = onThemePreferenceChange,
                 onDynamicColorChange = onDynamicColorChange,
-                modifier = Modifier
+                modifier = Modifier,
             )
         }
     }

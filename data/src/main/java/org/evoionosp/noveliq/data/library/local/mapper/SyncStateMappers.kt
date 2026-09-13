@@ -9,15 +9,32 @@ internal fun LibrarySyncStateEntity?.toDomain(): SyncStatus {
         return SyncStatus.Idle
     }
 
-    val error = error?.let { runCatching { CatalogError.valueOf(it) }.getOrDefault(CatalogError.UNKNOWN) }
+    val error =
+        error?.let {
+            runCatching { CatalogError.valueOf(it) }.getOrDefault(CatalogError.UNKNOWN)
+        }
     return when (status) {
-        "SYNCING" -> SyncStatus.Syncing
-        "SUCCESS" -> SyncStatus.Success(lastSyncedAtMillis = lastSyncedAtMillis)
-        "STALE" -> SyncStatus.Stale(
-            lastSyncedAtMillis = lastSyncedAtMillis,
-            reason = error ?: CatalogError.UNKNOWN
-        )
-        "FAILED" -> SyncStatus.Failed(error ?: CatalogError.UNKNOWN)
-        else -> SyncStatus.Idle
+        "SYNCING" -> {
+            SyncStatus.Syncing
+        }
+
+        "SUCCESS" -> {
+            SyncStatus.Success(lastSyncedAtMillis = lastSyncedAtMillis)
+        }
+
+        "STALE" -> {
+            SyncStatus.Stale(
+                lastSyncedAtMillis = lastSyncedAtMillis,
+                reason = error ?: CatalogError.UNKNOWN,
+            )
+        }
+
+        "FAILED" -> {
+            SyncStatus.Failed(error ?: CatalogError.UNKNOWN)
+        }
+
+        else -> {
+            SyncStatus.Idle
+        }
     }
 }

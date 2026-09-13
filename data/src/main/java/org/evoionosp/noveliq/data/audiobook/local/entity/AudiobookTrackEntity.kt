@@ -12,10 +12,10 @@ import androidx.room.Index
             entity = AudiobookDetailEntity::class,
             parentColumns = ["audiobookId"],
             childColumns = ["audiobookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["audiobookId"])]
+    indices = [Index(value = ["audiobookId"])],
 )
 data class AudiobookTrackEntity(
     val audiobookId: String,
@@ -24,5 +24,5 @@ data class AudiobookTrackEntity(
     val durationInSeconds: Long,
     val title: String,
     val remoteUrl: String,
-    val mimeType: String?
+    val mimeType: String?,
 )

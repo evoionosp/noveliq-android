@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
 
             AppTheme(
                 themePreference = settingsState.themePreference,
-                dynamicColor = settingsState.useDynamicColor
+                dynamicColor = settingsState.useDynamicColor,
             ) {
                 NoveliqApp(
                     splashState = splashState,
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                     onRetryCatalogBootstrap = splashViewModel::retryCatalogBootstrap,
                     onLogout = splashViewModel::logout,
                     onThemePreferenceChange = settingsViewModel::onThemePreferenceChange,
-                    onDynamicColorChange = settingsViewModel::onDynamicColorChange
+                    onDynamicColorChange = settingsViewModel::onDynamicColorChange,
                 )
             }
         }

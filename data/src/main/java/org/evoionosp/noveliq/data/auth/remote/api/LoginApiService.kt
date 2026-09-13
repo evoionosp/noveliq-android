@@ -10,12 +10,12 @@ interface LoginApiService {
     @POST(LOGIN_PATH)
     suspend fun login(
         @Header("x-return-tokens") returnTokens: String = "true",
-        @Body request: LoginRequestDto
+        @Body request: LoginRequestDto,
     ): LoginResponseDto
 
     @POST("auth/refresh")
     suspend fun refreshToken(
-        @Header("x-refresh-token") refreshToken: String
+        @Header("x-refresh-token") refreshToken: String,
     ): LoginResponseDto
 
     companion object {

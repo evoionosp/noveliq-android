@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
@@ -34,11 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +55,7 @@ import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 fun AuthScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
@@ -78,28 +76,33 @@ fun AuthScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.ime)
-            .background(homeBackgroundBrush())
-            .verticalScroll(scrollState)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.ime)
+                .background(homeBackgroundBrush())
+                .verticalScroll(scrollState),
     ) {
         TopAppBar(
             title = { },
             actions = {
-                FilledTonalIconButton(onClick = onOpenSettings, modifier = Modifier.padding(end = 8.dp)) {
+                FilledTonalIconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.padding(end = 8.dp),
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.Settings,
-                        contentDescription = stringResource(R.string.settings_icon_desc)
+                        contentDescription = stringResource(R.string.settings_icon_desc),
                     )
                 }
-            }
+            },
         )
 
         Column(
-            modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            modifier =
+                Modifier
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             when (state.serverStatus) {
                 null -> {
@@ -114,6 +117,7 @@ fun AuthScreen(
                         },
                     )
                 }
+
                 else -> {
                     ServerStatusCard(state, onEdit = {
                         viewModel.clearServerState()
@@ -124,19 +128,20 @@ fun AuthScreen(
             if (state.showLoginFields) {
                 Card(
                     shape = RoundedCornerShape(30.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.auth_credentials_title),
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                         OutlinedTextField(
                             value = state.username,
@@ -144,7 +149,7 @@ fun AuthScreen(
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.username_label)) },
                             singleLine = true,
-                            shape = RoundedCornerShape(22.dp)
+                            shape = RoundedCornerShape(22.dp),
                         )
                         OutlinedTextField(
                             value = state.password,
@@ -154,19 +159,19 @@ fun AuthScreen(
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            shape = RoundedCornerShape(22.dp)
+                            shape = RoundedCornerShape(22.dp),
                         )
                         Button(
                             onClick = viewModel::login,
                             enabled = !state.isChecking && !state.isLoggingIn,
                             modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 14.dp)
+                            contentPadding = PaddingValues(vertical = 14.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (state.isLoggingIn) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp
+                                        strokeWidth = 2.dp,
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(stringResource(R.string.logging_in))
@@ -182,7 +187,7 @@ fun AuthScreen(
                     text = stringResource(R.string.auth_server_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
 

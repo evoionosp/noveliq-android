@@ -7,11 +7,10 @@ import coil.request.ImageRequest
 import org.evoionosp.noveliq.presentation.common.LocalAccessToken
 
 @Composable
-internal fun authorizedImageRequest(
-    url: String
-): ImageRequest {
+internal fun authorizedImageRequest(url: String): ImageRequest {
     val accessToken = LocalAccessToken.current
-    return ImageRequest.Builder(LocalContext.current)
+    return ImageRequest
+        .Builder(LocalContext.current)
         .data(url)
         .crossfade(true)
         .diskCachePolicy(CachePolicy.ENABLED)

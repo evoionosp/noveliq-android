@@ -19,150 +19,169 @@ import org.evoionosp.noveliq.data.library.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
 import org.evoionosp.noveliq.data.library.remote.mapper.isAudiobookLibrary
 import org.evoionosp.noveliq.data.library.remote.mapper.toEntity
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.library.model.AudiobookLibrary
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.repository.LibraryRepository
-import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import retrofit2.HttpException
 
 @Singleton
-class LibraryRepositoryImpl @Inject constructor(
-    private val database: NoveliqDatabase,
-    private val libraryDao: LibraryDao,
-    private val audiobookDao: AudiobookDao,
-    private val syncStateDao: LibrarySyncStateDao,
-    private val serviceFactory: AudiobookshelfLibraryServiceFactory,
-    private val connectivityObserver: ConnectivityObserver,
-    @param:Named("io") private val ioDispatcher: CoroutineDispatcher
-) : LibraryRepository {
-    companion object {
-        private const val TAG = "LibraryRefresh"
-    }
-
-    override fun observeLibraries(): Flow<List<AudiobookLibrary>> {
-        return libraryDao.observeLibraries().map { entities ->
-            entities.map { it.toDomain() }
+class LibraryRepositoryImpl
+    @Inject
+    constructor(
+        private val database: NoveliqDatabase,
+        private val libraryDao: LibraryDao,
+        private val audiobookDao: AudiobookDao,
+        private val syncStateDao: LibrarySyncStateDao,
+        private val serviceFactory: AudiobookshelfLibraryServiceFactory,
+        private val connectivityObserver: ConnectivityObserver,
+        @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
+    ) : LibraryRepository {
+        companion object {
+            private const val TAG = "LibraryRefresh"
         }
-    }
 
-    override fun observeSelectedLibrary(): Flow<AudiobookLibrary?> {
-        return libraryDao.observeSelectedLibrary().map { entity ->
-            entity?.toDomain()
-        }
-    }
+        override fun observeLibraries(): Flow<List<AudiobookLibrary>> =
+            libraryDao.observeLibraries().map { entities ->
+                entities.map { it.toDomain() }
+            }
 
-    override suspend fun refreshLibraries(
-        baseUrl: String,
-        accessToken: String
-    ): DomainResult<Unit> {
-        return withContext(ioDispatcher) {
-            if (!connectivityObserver.isConnected()) {
-                val hasCachedLibraries = libraryDao.countLibraries() > 0
-                if (hasCachedLibraries) {
-                    DomainResult.Success(Unit)
+        override fun observeSelectedLibrary(): Flow<AudiobookLibrary?> =
+            libraryDao.observeSelectedLibrary().map { entity ->
+                entity?.toDomain()
+            }
+
+        override suspend fun refreshLibraries(
+            baseUrl: String,
+            accessToken: String,
+        ): DomainResult<Unit> {
+            return withContext(ioDispatcher) {
+                if (!connectivityObserver.isConnected()) {
+                    val hasCachedLibraries = libraryDao.countLibraries() > 0
+                    if (hasCachedLibraries) {
+                        DomainResult.Success(Unit)
+                    } else {
+                        DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
+                    }
                 } else {
-                    DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE)
-                }
-            } else {
-                try {
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.d(
-                            TAG,
-                            "Refreshing libraries from baseUrl=$baseUrl tokenPresent=${accessToken.isNotBlank()} tokenLength=${accessToken.length}"
-                        )
-                    }
-                    val previousSelectionId = libraryDao.getSelectedLibrary()?.id
-                    val libraries = serviceFactory.create(baseUrl)
-                        .libraries(authorization = "Bearer $accessToken")
-                        .libraries
-                        .orEmpty()
-                        .filter { it.isAudiobookLibrary() }
+                    try {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.d(
+                                TAG,
+                                "Refreshing libraries from baseUrl=$baseUrl tokenPresent=${accessToken.isNotBlank()} tokenLength=${accessToken.length}",
+                            )
+                        }
+                        val previousSelectionId = libraryDao.getSelectedLibrary()?.id
+                        val libraries =
+                            serviceFactory
+                                .create(baseUrl)
+                                .libraries(authorization = "Bearer $accessToken")
+                                .libraries
+                                .orEmpty()
+                                .filter { it.isAudiobookLibrary() }
 
-                    if (libraries.isEmpty()) {
+                        if (libraries.isEmpty()) {
+                            database.withTransaction {
+                                libraryDao.deleteAll()
+                                audiobookDao.deleteAll()
+                                syncStateDao.deleteAll()
+                            }
+                            return@withContext DomainResult.Failure(
+                                CatalogError.NO_AUDIOBOOK_LIBRARIES,
+                            )
+                        }
+
+                        val selectedLibraryId =
+                            libraries.firstOrNull { it.id == previousSelectionId }?.id
+                                ?: libraries.firstNotNullOfOrNull { dto -> dto.id }
+
+                        val entities =
+                            libraries.mapNotNull { dto ->
+                                dto.toEntity(isSelected = dto.id == selectedLibraryId)
+                            }
+
                         database.withTransaction {
-                            libraryDao.deleteAll()
-                            audiobookDao.deleteAll()
-                            syncStateDao.deleteAll()
+                            libraryDao.upsertLibraries(entities)
+                            libraryDao.deleteLibrariesNotIn(entities.map { it.id })
+                            audiobookDao.deleteByLibrariesNotIn(entities.map { it.id })
+                            syncStateDao.deleteByLibrariesNotIn(entities.map { it.id })
                         }
-                        return@withContext DomainResult.Failure(CatalogError.NO_AUDIOBOOK_LIBRARIES)
-                    }
-
-                    val selectedLibraryId = libraries.firstOrNull { it.id == previousSelectionId }?.id
-                        ?: libraries.firstNotNullOfOrNull { dto -> dto.id }
-
-                    val entities = libraries.mapNotNull { dto ->
-                        dto.toEntity(isSelected = dto.id == selectedLibraryId)
-                    }
-
-                    database.withTransaction {
-                        libraryDao.upsertLibraries(entities)
-                        libraryDao.deleteLibrariesNotIn(entities.map { it.id })
-                        audiobookDao.deleteByLibrariesNotIn(entities.map { it.id })
-                        syncStateDao.deleteByLibrariesNotIn(entities.map { it.id })
-                    }
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.d(
-                            TAG,
-                            "Library refresh success count=${entities.size} selectedLibraryId=$selectedLibraryId"
-                        )
-                    }
-                    DomainResult.Success(Unit)
-                } catch (exception: HttpException) {
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.w(
-                            TAG,
-                            "Library refresh failed with HTTP ${exception.code()} for GET /api/libraries at baseUrl=$baseUrl",
-                            exception
-                        )
-                    }
-                    if (libraryDao.countLibraries() > 0) {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.d(
+                                TAG,
+                                "Library refresh success count=${entities.size} selectedLibraryId=$selectedLibraryId",
+                            )
+                        }
                         DomainResult.Success(Unit)
-                    } else {
-                        val error = if (exception.code() == 401 || exception.code() == 403) {
-                            CatalogError.AUTH
+                    } catch (exception: HttpException) {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.w(
+                                TAG,
+                                "Library refresh failed with HTTP ${exception.code()} for GET /api/libraries at baseUrl=$baseUrl",
+                                exception,
+                            )
+                        }
+                        if (libraryDao.countLibraries() > 0) {
+                            DomainResult.Success(Unit)
                         } else {
-                            CatalogError.UNKNOWN
+                            val error =
+                                if (exception.code() == 401 || exception.code() == 403) {
+                                    CatalogError.AUTH
+                                } else {
+                                    CatalogError.UNKNOWN
+                                }
+                            DomainResult.Failure(error)
                         }
-                        DomainResult.Failure(error)
+                    } catch (exception: IllegalArgumentException) {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.e(
+                                TAG,
+                                "Library refresh failed due to invalid base URL: $baseUrl",
+                                exception,
+                            )
+                        }
+                        DomainResult.Failure(CatalogError.UNKNOWN)
+                    } catch (exception: IOException) {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.w(
+                                TAG,
+                                "Library refresh network failure for baseUrl=$baseUrl",
+                                exception,
+                            )
+                        }
+                        if (libraryDao.countLibraries() > 0) {
+                            DomainResult.Success(Unit)
+                        } else {
+                            DomainResult.Failure(CatalogError.NETWORK)
+                        }
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (exception: Exception) {
+                        if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
+                            Log.e(
+                                TAG,
+                                "Library refresh unexpected failure for baseUrl=$baseUrl",
+                                exception,
+                            )
+                        }
+                        DomainResult.Failure(CatalogError.UNKNOWN)
                     }
-                } catch (exception: IllegalArgumentException) {
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.e(TAG, "Library refresh failed due to invalid base URL: $baseUrl", exception)
-                    }
-                    DomainResult.Failure(CatalogError.UNKNOWN)
-                } catch (exception: IOException) {
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.w(TAG, "Library refresh network failure for baseUrl=$baseUrl", exception)
-                    }
-                    if (libraryDao.countLibraries() > 0) {
-                        DomainResult.Success(Unit)
-                    } else {
-                        DomainResult.Failure(CatalogError.NETWORK)
-                    }
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: Exception) {
-                    if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
-                        Log.e(TAG, "Library refresh unexpected failure for baseUrl=$baseUrl", exception)
-                    }
-                    DomainResult.Failure(CatalogError.UNKNOWN)
                 }
             }
         }
-    }
 
-    override suspend fun selectLibrary(libraryId: String): DomainResult<Unit> {
-        return withContext(ioDispatcher) {
-            val libraryExists = libraryDao.getLibraries().any { it.id == libraryId }
-            if (!libraryExists) {
-                return@withContext DomainResult.Failure(CatalogError.NOT_FOUND)
-            }
+        override suspend fun selectLibrary(libraryId: String): DomainResult<Unit> {
+            return withContext(ioDispatcher) {
+                val libraryExists = libraryDao.getLibraries().any { it.id == libraryId }
+                if (!libraryExists) {
+                    return@withContext DomainResult.Failure(CatalogError.NOT_FOUND)
+                }
 
-            database.withTransaction {
-                libraryDao.selectLibrary(libraryId)
+                database.withTransaction {
+                    libraryDao.selectLibrary(libraryId)
+                }
+                DomainResult.Success(Unit)
             }
-            DomainResult.Success(Unit)
         }
     }
-}

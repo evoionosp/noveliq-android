@@ -8,6 +8,7 @@ import androidx.compose.runtime.compositionLocalOf
  *
  * This eliminates prop drilling of accessToken through multiple layers.
  */
-val LocalAccessToken = compositionLocalOf<String> {
-    error("No access token provided")
-}
+val LocalAccessToken =
+    compositionLocalOf<String> {
+        error("No access token provided")
+    }

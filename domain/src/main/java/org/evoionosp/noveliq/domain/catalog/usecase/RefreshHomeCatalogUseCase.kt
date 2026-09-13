@@ -23,7 +23,9 @@ sealed class RefreshHomeCatalogResult {
     data object SessionExpired : RefreshHomeCatalogResult()
 
     /** Refresh failed with a specific error. */
-    data class Failure(val error: CatalogError) : RefreshHomeCatalogResult()
+    data class Failure(
+        val error: CatalogError,
+    ) : RefreshHomeCatalogResult()
 }
 
 /**
@@ -35,85 +37,90 @@ sealed class RefreshHomeCatalogResult {
  * already been tried and the session has already been cleared — the only thing left to do is tell
  * the caller to send the user to login.
  */
-class RefreshHomeCatalogUseCase @Inject constructor(
-    private val getValidSessionUseCase: GetValidSessionUseCase,
-    private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
-    private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
-    private val observeLibrariesUseCase: ObserveLibrariesUseCase,
-    private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
-    private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase
-) {
-    /**
-     * Performs a full refresh of the home catalog.
-     *
-     * @return RefreshHomeCatalogResult indicating success, session expiration, or failure
-     */
-    suspend operator fun invoke(): RefreshHomeCatalogResult {
-        val session = getValidSessionUseCase() ?: return RefreshHomeCatalogResult.SessionExpired
+class RefreshHomeCatalogUseCase
+    @Inject
+    constructor(
+        private val getValidSessionUseCase: GetValidSessionUseCase,
+        private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
+        private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
+        private val observeLibrariesUseCase: ObserveLibrariesUseCase,
+        private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
+        private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase,
+    ) {
+        /**
+         * Performs a full refresh of the home catalog.
+         *
+         * @return RefreshHomeCatalogResult indicating success, session expiration, or failure
+         */
+        suspend operator fun invoke(): RefreshHomeCatalogResult {
+            val session = getValidSessionUseCase() ?: return RefreshHomeCatalogResult.SessionExpired
 
-        val libraryRefreshResult = refreshLibraries(session)
-        if (libraryRefreshResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
+            val libraryRefreshResult = refreshLibraries(session)
+            if (libraryRefreshResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
 
-        val selectedLibraryId = observeSelectedLibraryUseCase().first()?.id
-            ?: observeLibrariesUseCase().first().firstOrNull()?.id
-            ?: return resultFor(libraryRefreshResult, CatalogError.NO_AUDIOBOOK_LIBRARIES)
+            val selectedLibraryId =
+                observeSelectedLibraryUseCase().first()?.id
+                    ?: observeLibrariesUseCase().first().firstOrNull()?.id
+                    ?: return resultFor(libraryRefreshResult, CatalogError.NO_AUDIOBOOK_LIBRARIES)
 
-        val audiobookRefreshResult = refreshSelectedLibraryAudiobooks(session, selectedLibraryId)
-        if (audiobookRefreshResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
+            val audiobookRefreshResult =
+                refreshSelectedLibraryAudiobooks(session, selectedLibraryId)
+            if (audiobookRefreshResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
 
-        val continueListeningResult = refreshContinueListening(session, selectedLibraryId)
-        if (continueListeningResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
+            val continueListeningResult = refreshContinueListening(session, selectedLibraryId)
+            if (continueListeningResult.isAuthFailure()) return RefreshHomeCatalogResult.SessionExpired
 
-        return when {
-            libraryRefreshResult is DomainResult.Failure ->
+            return when {
+                libraryRefreshResult is DomainResult.Failure -> {
+                    RefreshHomeCatalogResult.Failure(libraryRefreshResult.error)
+                }
+
+                audiobookRefreshResult is DomainResult.Failure -> {
+                    RefreshHomeCatalogResult.Failure(audiobookRefreshResult.error)
+                }
+
+                else -> {
+                    RefreshHomeCatalogResult.Success
+                }
+            }
+        }
+
+        private fun resultFor(
+            libraryRefreshResult: DomainResult<Unit>,
+            fallbackError: CatalogError,
+        ): RefreshHomeCatalogResult =
+            if (libraryRefreshResult is DomainResult.Failure) {
                 RefreshHomeCatalogResult.Failure(libraryRefreshResult.error)
-            audiobookRefreshResult is DomainResult.Failure ->
-                RefreshHomeCatalogResult.Failure(audiobookRefreshResult.error)
-            else -> RefreshHomeCatalogResult.Success
-        }
-    }
+            } else {
+                RefreshHomeCatalogResult.Failure(fallbackError)
+            }
 
-    private fun resultFor(
-        libraryRefreshResult: DomainResult<Unit>,
-        fallbackError: CatalogError
-    ): RefreshHomeCatalogResult {
-        return if (libraryRefreshResult is DomainResult.Failure) {
-            RefreshHomeCatalogResult.Failure(libraryRefreshResult.error)
-        } else {
-            RefreshHomeCatalogResult.Failure(fallbackError)
-        }
-    }
+        private suspend fun refreshLibraries(session: LoginSession): DomainResult<Unit> =
+            refreshLibrariesUseCase(
+                baseUrl = session.baseUrl,
+                accessToken = session.accessToken,
+            )
 
-    private suspend fun refreshLibraries(session: LoginSession): DomainResult<Unit> {
-        return refreshLibrariesUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken
-        )
-    }
+        private suspend fun refreshSelectedLibraryAudiobooks(
+            session: LoginSession,
+            libraryId: String,
+        ): DomainResult<Unit> =
+            refreshSelectedLibraryAudiobooksUseCase(
+                baseUrl = session.baseUrl,
+                accessToken = session.accessToken,
+                libraryId = libraryId,
+            )
 
-    private suspend fun refreshSelectedLibraryAudiobooks(
-        session: LoginSession,
-        libraryId: String
-    ): DomainResult<Unit> {
-        return refreshSelectedLibraryAudiobooksUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken,
-            libraryId = libraryId
-        )
-    }
+        private suspend fun refreshContinueListening(
+            session: LoginSession,
+            libraryId: String,
+        ): DomainResult<Unit> =
+            refreshContinueListeningUseCase(
+                baseUrl = session.baseUrl,
+                accessToken = session.accessToken,
+                libraryId = libraryId,
+            )
 
-    private suspend fun refreshContinueListening(
-        session: LoginSession,
-        libraryId: String
-    ): DomainResult<Unit> {
-        return refreshContinueListeningUseCase(
-            baseUrl = session.baseUrl,
-            accessToken = session.accessToken,
-            libraryId = libraryId
-        )
+        private fun DomainResult<Unit>.isAuthFailure(): Boolean =
+            this is DomainResult.Failure && error == CatalogError.AUTH
     }
-
-    private fun DomainResult<Unit>.isAuthFailure(): Boolean {
-        return this is DomainResult.Failure && error == CatalogError.AUTH
-    }
-}

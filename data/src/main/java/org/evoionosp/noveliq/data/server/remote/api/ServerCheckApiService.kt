@@ -1,7 +1,7 @@
 package org.evoionosp.noveliq.data.server.remote.api
 
-import org.evoionosp.noveliq.data.server.remote.dto.ServerPingResponseDto
 import org.evoionosp.noveliq.data.server.remote.dto.LoginStatusResponseDto
+import org.evoionosp.noveliq.data.server.remote.dto.ServerPingResponseDto
 import retrofit2.Response
 import retrofit2.http.GET
 

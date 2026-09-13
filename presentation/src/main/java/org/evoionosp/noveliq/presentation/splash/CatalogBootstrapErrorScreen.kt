@@ -30,52 +30,53 @@ fun CatalogBootstrapErrorScreen(
     error: CatalogError,
     onRetry: () -> Unit,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = stringResource(R.string.startup_catalog_error_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = stringResource(R.string.startup_catalog_error_body),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(20.dp))
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Text(
                 text = stringResource(error.toMessageResId()),
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onRetry,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(text = stringResource(R.string.retry))
         }
         Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
         ) {
             TextButton(onClick = onLogout) {
                 Text(text = stringResource(R.string.preferences_logout))
@@ -85,8 +86,8 @@ fun CatalogBootstrapErrorScreen(
 }
 
 @StringRes
-private fun CatalogError.toMessageResId(): Int {
-    return when (this) {
+private fun CatalogError.toMessageResId(): Int =
+    when (this) {
         CatalogError.AUTH -> R.string.error_login_failed
         CatalogError.NETWORK -> R.string.error_network
         CatalogError.CONNECTIVITY_UNAVAILABLE -> R.string.error_network
@@ -94,4 +95,3 @@ private fun CatalogError.toMessageResId(): Int {
         CatalogError.NOT_FOUND -> R.string.error_unknown
         CatalogError.UNKNOWN -> R.string.error_unknown
     }
-}

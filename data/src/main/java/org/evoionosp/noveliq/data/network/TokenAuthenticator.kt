@@ -22,52 +22,61 @@ import org.evoionosp.noveliq.domain.auth.TokenRefreshResult
  * itself, so a rejected login can never recurse back into a refresh.
  */
 @Singleton
-class TokenAuthenticator @Inject constructor(
-    private val sessionRefreshCoordinator: SessionRefreshCoordinator
-) : Authenticator {
+class TokenAuthenticator
+    @Inject
+    constructor(
+        private val sessionRefreshCoordinator: SessionRefreshCoordinator,
+    ) : Authenticator {
+        override fun authenticate(
+            route: Route?,
+            response: Response,
+        ): Request? {
+            // Give up rather than loop: if replaying with a fresh token still 401s, the problem is
+            // not the token.
+            if (priorResponseCount(response) >= MAX_ATTEMPTS) return null
 
-    override fun authenticate(route: Route?, response: Response): Request? {
-        // Give up rather than loop: if replaying with a fresh token still 401s, the problem is
-        // not the token.
-        if (priorResponseCount(response) >= MAX_ATTEMPTS) return null
+            val staleToken =
+                response.request
+                    .header(AUTHORIZATION_HEADER)
+                    ?.removePrefix(BEARER_PREFIX)
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
 
-        val staleToken = response.request.header(AUTHORIZATION_HEADER)
-            ?.removePrefix(BEARER_PREFIX)
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+            // OkHttp calls authenticators on its own background threads and expects a blocking
+            // answer, so bridging out of coroutines here is the intended shape. The coordinator's
+            // mutex means parallel 401s wait on one refresh instead of triggering several.
+            val refreshed = runBlocking { sessionRefreshCoordinator.refresh(staleToken) }
 
-        // OkHttp calls authenticators on its own background threads and expects a blocking
-        // answer, so bridging out of coroutines here is the intended shape. The coordinator's
-        // mutex means parallel 401s wait on one refresh instead of triggering several.
-        val refreshed = runBlocking { sessionRefreshCoordinator.refresh(staleToken) }
+            val newToken =
+                when (refreshed) {
+                    is TokenRefreshResult.Refreshed -> refreshed.session.accessToken
 
-        val newToken = when (refreshed) {
-            is TokenRefreshResult.Refreshed -> refreshed.session.accessToken
-            // Session is gone, or we could not reach the server. Either way there is nothing to
-            // retry with; let the 401 surface so the caller can report it.
-            TokenRefreshResult.LoggedOut, TokenRefreshResult.Retryable -> return null
+                    // Session is gone, or we could not reach the server. Either way there is nothing to
+                    // retry with; let the 401 surface so the caller can report it.
+                    TokenRefreshResult.LoggedOut, TokenRefreshResult.Retryable -> return null
+                }
+
+            if (newToken.isBlank() || newToken == staleToken) return null
+
+            return response.request
+                .newBuilder()
+                .header(AUTHORIZATION_HEADER, "$BEARER_PREFIX$newToken")
+                .build()
         }
 
-        if (newToken.isBlank() || newToken == staleToken) return null
-
-        return response.request.newBuilder()
-            .header(AUTHORIZATION_HEADER, "$BEARER_PREFIX$newToken")
-            .build()
-    }
-
-    private fun priorResponseCount(response: Response): Int {
-        var count = 1
-        var prior = response.priorResponse
-        while (prior != null) {
-            count++
-            prior = prior.priorResponse
+        private fun priorResponseCount(response: Response): Int {
+            var count = 1
+            var prior = response.priorResponse
+            while (prior != null) {
+                count++
+                prior = prior.priorResponse
+            }
+            return count
         }
-        return count
-    }
 
-    private companion object {
-        const val AUTHORIZATION_HEADER = "Authorization"
-        const val BEARER_PREFIX = "Bearer "
-        const val MAX_ATTEMPTS = 2
+        private companion object {
+            const val AUTHORIZATION_HEADER = "Authorization"
+            const val BEARER_PREFIX = "Bearer "
+            const val MAX_ATTEMPTS = 2
+        }
     }
-}

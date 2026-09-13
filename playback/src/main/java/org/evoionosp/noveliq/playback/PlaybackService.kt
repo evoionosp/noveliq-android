@@ -14,7 +14,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class PlaybackService : MediaLibraryService() {
-
     @Inject
     lateinit var player: ExoPlayer
 
@@ -29,20 +28,22 @@ class PlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
 
-        val bitmapLoader = CacheBitmapLoader(
-            DataSourceBitmapLoader.Builder(this)
-                .setDataSourceFactory(dataSourceFactory)
+        val bitmapLoader =
+            CacheBitmapLoader(
+                DataSourceBitmapLoader
+                    .Builder(this)
+                    .setDataSourceFactory(dataSourceFactory)
+                    .build(),
+            )
+
+        mediaLibrarySession =
+            MediaLibrarySession
+                .Builder(this, player, LibrarySessionCallback())
+                .setBitmapLoader(bitmapLoader)
                 .build()
-        )
-
-        mediaLibrarySession = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
-            .setBitmapLoader(bitmapLoader)
-            .build()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
-        return mediaLibrarySession
-    }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
 
     override fun onDestroy() {
         mediaLibrarySession?.run {

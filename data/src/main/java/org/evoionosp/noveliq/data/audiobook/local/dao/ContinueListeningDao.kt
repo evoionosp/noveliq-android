@@ -17,7 +17,7 @@ interface ContinueListeningDao {
         INNER JOIN audiobooks ON audiobooks.id = continue_listening_items.audiobookId
         WHERE continue_listening_items.libraryId = :libraryId
         ORDER BY continue_listening_items.progressLastUpdateMillis DESC
-        """
+        """,
     )
     fun observeContinueListening(libraryId: String): Flow<List<AudiobookEntity>>
 

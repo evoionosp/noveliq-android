@@ -6,7 +6,7 @@ import javax.inject.Inject
 import org.evoionosp.noveliq.catalog.CatalogSyncCoordinator
 
 @HiltAndroidApp
-class NoveliqApplication: Application() {
+class NoveliqApplication : Application() {
     @Inject
     lateinit var catalogSyncCoordinator: CatalogSyncCoordinator
 

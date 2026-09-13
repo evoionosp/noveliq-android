@@ -1,15 +1,18 @@
 package org.evoionosp.noveliq.presentation.navigation
 
-internal enum class AppRoute(val route: String) {
+internal enum class AppRoute(
+    val route: String,
+) {
     Auth("auth"),
     Home("home"),
     Library("library"),
     CatalogError("catalog_error"),
     Preferences("preferences"),
-    Appearance("appearance")
+    Appearance("appearance"),
 }
 
-internal val mainRootRoutes = setOf(
-    AppRoute.Home.route,
-    AppRoute.Library.route
-)
+internal val mainRootRoutes =
+    setOf(
+        AppRoute.Home.route,
+        AppRoute.Library.route,
+    )

@@ -13,7 +13,7 @@ import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.session.SessionStore
 
 class SessionDataStore(
-    private val context: Context
+    private val context: Context,
 ) : SessionStore {
     private object Keys {
         const val accessToken = "access_token"
@@ -26,26 +26,29 @@ class SessionDataStore(
     }
 
     /** Everything that belongs to the signed-in session, and so is dropped on logout. */
-    private val sessionKeys = listOf(
-        Keys.accessToken,
-        Keys.refreshToken,
-        Keys.accessTokenExpiresAt,
-        Keys.userId,
-        Keys.username,
-        Keys.baseUrl
-    )
+    private val sessionKeys =
+        listOf(
+            Keys.accessToken,
+            Keys.refreshToken,
+            Keys.accessTokenExpiresAt,
+            Keys.userId,
+            Keys.username,
+            Keys.baseUrl,
+        )
 
     private val encryptedPreferences: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        val masterKey =
+            MasterKey
+                .Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
 
         EncryptedSharedPreferences.create(
             context,
             "encrypted_session_store",
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
     }
     private val sessionState by lazy { MutableStateFlow(readEncryptedSession()) }
@@ -59,9 +62,13 @@ class SessionDataStore(
         // Derive the expiry here rather than trusting callers: this is the one path every token
         // takes into storage, whether it came from a login or a refresh, so nothing can slip
         // through without it.
-        val stored = session.copy(
-            accessTokenExpiresAtEpochSeconds = JwtExpiry.expiresAtEpochSeconds(session.accessToken)
-        )
+        val stored =
+            session.copy(
+                accessTokenExpiresAtEpochSeconds =
+                    JwtExpiry.expiresAtEpochSeconds(
+                        session.accessToken,
+                    ),
+            )
 
         encryptedPreferences.edit(commit = true) {
             putString(Keys.accessToken, stored.accessToken)
@@ -88,35 +95,40 @@ class SessionDataStore(
 
     private fun readEncryptedSession(): LoginSession? {
         val accessToken = encryptedPreferences.getString(Keys.accessToken, null).orEmpty()
-        val session = LoginSession(
-            accessToken = accessToken,
-            refreshToken = encryptedPreferences.getString(Keys.refreshToken, null),
-            userId = encryptedPreferences.getString(Keys.userId, null),
-            username = encryptedPreferences.getString(Keys.username, null).orEmpty(),
-            baseUrl = encryptedPreferences.getString(Keys.baseUrl, null).orEmpty(),
-            // Sessions persisted before expiry tracking existed have no stored value, so fall
-            // back to reading it off the token. That way an install that has been sitting on a
-            // long-dead token picks up proactive refresh without needing to log in again first.
-            accessTokenExpiresAtEpochSeconds = readExpiry()
-                ?: accessToken.takeIf { it.isNotBlank() }
-                    ?.let { JwtExpiry.expiresAtEpochSeconds(it) }
-        )
+        val session =
+            LoginSession(
+                accessToken = accessToken,
+                refreshToken = encryptedPreferences.getString(Keys.refreshToken, null),
+                userId = encryptedPreferences.getString(Keys.userId, null),
+                username = encryptedPreferences.getString(Keys.username, null).orEmpty(),
+                baseUrl = encryptedPreferences.getString(Keys.baseUrl, null).orEmpty(),
+                // Sessions persisted before expiry tracking existed have no stored value, so fall
+                // back to reading it off the token. That way an install that has been sitting on a
+                // long-dead token picks up proactive refresh without needing to log in again first.
+                accessTokenExpiresAtEpochSeconds =
+                    readExpiry()
+                        ?: accessToken
+                            .takeIf { it.isNotBlank() }
+                            ?.let { JwtExpiry.expiresAtEpochSeconds(it) },
+            )
         return session.takeIf { it.isValid() }
     }
 
-    private fun readLastServerUrl(): String? {
-        return encryptedPreferences.getString(Keys.lastServerUrl, null)
+    private fun readLastServerUrl(): String? =
+        encryptedPreferences.getString(Keys.lastServerUrl, null)
             // Installs that signed in before the server URL was remembered separately still have
             // the session's base URL, so seed from that.
             ?: encryptedPreferences.getString(Keys.baseUrl, null)
-    }
 
-    private fun readExpiry(): Long? {
-        return encryptedPreferences.getLong(Keys.accessTokenExpiresAt, NO_EXPIRY)
+    private fun readExpiry(): Long? =
+        encryptedPreferences
+            .getLong(Keys.accessTokenExpiresAt, NO_EXPIRY)
             .takeIf { it != NO_EXPIRY }
-    }
 
-    private fun SharedPreferences.Editor.putOptional(key: String, value: String?) {
+    private fun SharedPreferences.Editor.putOptional(
+        key: String,
+        value: String?,
+    ) {
         if (value.isNullOrBlank()) {
             remove(key)
         } else {
@@ -124,7 +136,10 @@ class SessionDataStore(
         }
     }
 
-    private fun SharedPreferences.Editor.putOptional(key: String, value: Long?) {
+    private fun SharedPreferences.Editor.putOptional(
+        key: String,
+        value: Long?,
+    ) {
         if (value == null) {
             remove(key)
         } else {

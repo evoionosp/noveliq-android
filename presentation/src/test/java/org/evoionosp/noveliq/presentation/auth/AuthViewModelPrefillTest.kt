@@ -43,55 +43,60 @@ class AuthViewModelPrefillTest {
     }
 
     @Test
-    fun `prefills the last used https server`() = runTest(dispatcher) {
-        val viewModel = viewModel(lastServerUrl = "https://books.example.com")
+    fun `prefills the last used https server`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(lastServerUrl = "https://books.example.com")
 
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        assertEquals("https://", viewModel.uiState.value.protocol)
-        assertEquals("books.example.com", viewModel.uiState.value.baseUrl)
-    }
-
-    @Test
-    fun `prefills the protocol that was used last`() = runTest(dispatcher) {
-        val viewModel = viewModel(lastServerUrl = "http://192.168.1.10:13378")
-
-        advanceUntilIdle()
-
-        assertEquals("http://", viewModel.uiState.value.protocol)
-        assertEquals("192.168.1.10:13378", viewModel.uiState.value.baseUrl)
-    }
+            assertEquals("https://", viewModel.uiState.value.protocol)
+            assertEquals("books.example.com", viewModel.uiState.value.baseUrl)
+        }
 
     @Test
-    fun `leaves the form empty when no server has been used yet`() = runTest(dispatcher) {
-        val viewModel = viewModel(lastServerUrl = null)
+    fun `prefills the protocol that was used last`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(lastServerUrl = "http://192.168.1.10:13378")
 
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        assertEquals("https://", viewModel.uiState.value.protocol)
-        assertEquals("", viewModel.uiState.value.baseUrl)
-    }
-
-    @Test
-    fun `does not overwrite a url the user already typed`() = runTest(dispatcher) {
-        val viewModel = viewModel(lastServerUrl = "https://books.example.com")
-
-        viewModel.onBaseUrlChange("other.example.com")
-        advanceUntilIdle()
-
-        assertEquals("other.example.com", viewModel.uiState.value.baseUrl)
-    }
+            assertEquals("http://", viewModel.uiState.value.protocol)
+            assertEquals("192.168.1.10:13378", viewModel.uiState.value.baseUrl)
+        }
 
     @Test
-    fun `splits a pasted protocol regardless of case`() = runTest(dispatcher) {
-        val viewModel = viewModel(lastServerUrl = null)
-        advanceUntilIdle()
+    fun `leaves the form empty when no server has been used yet`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(lastServerUrl = null)
 
-        viewModel.onBaseUrlChange("HTTP://books.example.com")
+            advanceUntilIdle()
 
-        assertEquals("http://", viewModel.uiState.value.protocol)
-        assertEquals("books.example.com", viewModel.uiState.value.baseUrl)
-    }
+            assertEquals("https://", viewModel.uiState.value.protocol)
+            assertEquals("", viewModel.uiState.value.baseUrl)
+        }
+
+    @Test
+    fun `does not overwrite a url the user already typed`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(lastServerUrl = "https://books.example.com")
+
+            viewModel.onBaseUrlChange("other.example.com")
+            advanceUntilIdle()
+
+            assertEquals("other.example.com", viewModel.uiState.value.baseUrl)
+        }
+
+    @Test
+    fun `splits a pasted protocol regardless of case`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(lastServerUrl = null)
+            advanceUntilIdle()
+
+            viewModel.onBaseUrlChange("HTTP://books.example.com")
+
+            assertEquals("http://", viewModel.uiState.value.protocol)
+            assertEquals("books.example.com", viewModel.uiState.value.baseUrl)
+        }
 
     private fun viewModel(lastServerUrl: String?): AuthViewModel {
         val sessionStore = PrefillFakeSessionStore(lastServerUrl)
@@ -102,12 +107,14 @@ class AuthViewModelPrefillTest {
             serverHealthCheckUseCase = ServerHealthCheckUseCase(serverRepository),
             loginUseCase = LoginUseCase(authRepository),
             saveSessionUseCase = SaveSessionUseCase(sessionStore),
-            observeLastServerUrlUseCase = ObserveLastServerUrlUseCase(sessionStore)
+            observeLastServerUrlUseCase = ObserveLastServerUrlUseCase(sessionStore),
         )
     }
 }
 
-private class PrefillFakeSessionStore(lastServerUrl: String?) : SessionStore {
+private class PrefillFakeSessionStore(
+    lastServerUrl: String?,
+) : SessionStore {
     private val sessionFlow = MutableStateFlow<LoginSession?>(null)
     private val lastServerFlow = MutableStateFlow(lastServerUrl)
 
@@ -141,11 +148,11 @@ private class UnusedAuthRepository : AuthRepository {
     override suspend fun login(
         baseUrl: String,
         username: String,
-        password: String
+        password: String,
     ): LoginResult = LoginResult.Failure(AuthError.UNEXPECTED)
 
     override suspend fun refreshSession(
         baseUrl: String,
-        refreshToken: String
+        refreshToken: String,
     ): LoginResult = LoginResult.Failure(AuthError.UNEXPECTED)
 }

@@ -14,7 +14,7 @@ data class MediaProgressDto(
     @SerializedName("progress")
     val progress: Double? = null,
     @SerializedName("isFinished")
-    val isFinished: Boolean? = null
+    val isFinished: Boolean? = null,
 )
 
 /**
@@ -28,5 +28,5 @@ data class UpdateProgressRequestDto(
     @SerializedName("progress")
     val progress: Double,
     @SerializedName("isFinished")
-    val isFinished: Boolean
+    val isFinished: Boolean,
 )

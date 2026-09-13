@@ -26,42 +26,44 @@ fun ChaptersSheet(
     currentChapterIndex: Int,
     isPlaying: Boolean,
     onPlayChapter: (AudiobookChapter) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
+        sheetState = rememberModalBottomSheetState(),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = stringResource(R.string.now_playing_chapters),
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
             )
 
             if (chapters.isEmpty()) {
                 Text(
                     text = stringResource(R.string.now_playing_chapters_empty),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 LazyColumn(
                     // ~25% larger than the previous 400dp cap, with a taller default.
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 320.dp, max = 500.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 320.dp, max = 500.dp),
                 ) {
                     itemsIndexed(chapters) { index, chapter ->
                         ChapterRow(
                             chapter = chapter,
                             isCurrent = index == currentChapterIndex,
                             isPlaying = isPlaying,
-                            onPlay = { onPlayChapter(chapter) }
+                            onPlay = { onPlayChapter(chapter) },
                         )
                     }
                 }

@@ -18,12 +18,12 @@ object StorageModule {
     @Provides
     @Singleton
     fun provideSessionStore(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
     ): SessionStore = SessionDataStore(context)
 
     @Provides
     @Singleton
     fun provideAppSettingsStore(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
     ): AppSettingsStore = AppSettingsDataStore(context)
 }

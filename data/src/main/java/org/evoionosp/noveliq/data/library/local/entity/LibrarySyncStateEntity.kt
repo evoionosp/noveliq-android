@@ -8,5 +8,5 @@ data class LibrarySyncStateEntity(
     @PrimaryKey val libraryId: String,
     val status: String,
     val lastSyncedAtMillis: Long?,
-    val error: String?
+    val error: String?,
 )

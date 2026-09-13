@@ -21,19 +21,22 @@ import org.evoionosp.noveliq.domain.session.SessionStore
 @Module
 @InstallIn(ServiceComponent::class)
 object PlaybackModule {
-
     @OptIn(UnstableApi::class)
     @Provides
     @ServiceScoped
-    fun provideDataSourceFactory(
-        sessionStore: SessionStore
-    ): DataSource.Factory {
+    fun provideDataSourceFactory(sessionStore: SessionStore): DataSource.Factory {
         // Resolve the Authorization header per request so streaming (and notification artwork)
         // always use the CURRENT session token. The token is refreshed/rotated on app start, so a
         // token captured once at service creation goes stale and causes 401s.
         val upstreamFactory = DefaultHttpDataSource.Factory()
         return ResolvingDataSource.Factory(upstreamFactory) { dataSpec ->
-            val token = runBlocking { sessionStore.session.first()?.accessToken.orEmpty() }
+            val token =
+                runBlocking {
+                    sessionStore.session
+                        .first()
+                        ?.accessToken
+                        .orEmpty()
+                }
             dataSpec.withRequestHeaders(mapOf("Authorization" to "Bearer $token"))
         }
     }
@@ -43,10 +46,10 @@ object PlaybackModule {
     @ServiceScoped
     fun provideExoPlayer(
         @ApplicationContext context: Context,
-        dataSourceFactory: DataSource.Factory
-    ): ExoPlayer {
-        return ExoPlayer.Builder(context)
+        dataSourceFactory: DataSource.Factory,
+    ): ExoPlayer =
+        ExoPlayer
+            .Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .build()
-    }
 }

@@ -10,16 +10,26 @@ Implemented:
 - [x] Log in and persist your session across app launches.
 - [x] Browse libraries and audiobooks, cached locally for offline-first reads.
 - [x] Continue Listening shelf on the home dashboard.
-- [x] Audiobook detail screen with chapters and cached track metadata.
+- [x] Audiobook detail overlay with chapters and cached track metadata.
 - [x] Stream and play audiobooks with background playback, a media notification, and media session controls.
+- [x] Track playback progress and sync it with the server (resume from saved position; local/offline persistence still open).
+- [x] Chapter navigation and playback speed control.
+
+### Coverage
+
+- Per module: `./gradlew :data:jacocoTestReport` → `data/build/reports/jacoco/test/html/index.html`
+- Whole app: `./gradlew jacocoMergedReport` → `build/reports/jacoco/merged/html/index.html`
+
+Both show line and branch coverage per file — an untested `if`/`else` branch appears
+as a partially-covered (yellow) or missed (red) line. Generated code (`R`,
+`BuildConfig`, Hilt/Room impls) is excluded.
 
 Planned:
 
 - [ ] Search and filter your library.
 - [ ] Download content for offline listening.
-- [ ] Track playback progress and sync it with the server.
 - [ ] Support for multiple libraries (single-library selection today).
-- [ ] Sleep timer and playback speed control.
+- [ ] Sleep timer.
 - [ ] Android Auto and Wear OS support.
 
 ## Tech Stack

@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,6 +40,7 @@ import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.navigation.LocalSnackbarHostState
 import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(

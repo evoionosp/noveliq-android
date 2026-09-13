@@ -1,5 +1,6 @@
 package org.evoionosp.noveliq.presentation.library
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,6 +55,7 @@ import org.evoionosp.noveliq.presentation.home.homeBackgroundBrush
 import org.evoionosp.noveliq.presentation.navigation.LocalSnackbarHostState
 import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(

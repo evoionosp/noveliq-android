@@ -10,10 +10,10 @@ The goal is not to add features as quickly as possible. The goal is to add them 
 
 - Milestone 1 is largely complete.
 - Milestone 2 has started.
-- The app has a real detail route with Room-backed expanded detail, chapters, and ordered remote track caching.
+- The app has a detail overlay (glance mode in the Now Playing surfaces) with Room-backed expanded detail, chapters, and ordered remote track caching. There is no detail destination in the nav graph.
 - The app syncs server-backed Continue Listening into Room for the home dashboard.
 - Milestone 2.5 established a playback-ready detail cache as the bridge from catalog browsing to playback.
-- Milestone 3 has started: real Media3 playback (ExoPlayer + MediaSession), a background media session service, and now-playing surfaces are implemented. Progress persistence and a queue model are still outstanding.
+- Milestone 3 has started: real Media3 playback (ExoPlayer + MediaSession) in the `:playback` module, a background media session service, now-playing surfaces, server-side progress sync/resume, chapter navigation, and speed control are implemented. Local progress persistence and a queue model/UI are still outstanding.
 - Downloads have not started.
 
 ## Cross-Cutting Standards
@@ -99,7 +99,7 @@ Details: `milestones/07-quality-and-release.md`
 
 ## Immediate Next Focus
 
-1. Finish Milestone 3: persist playback position, add resume behavior, sync progress with the server, and introduce a playback queue/queue-source model on top of the cached tracks.
-2. Extract playback into a surface-agnostic module so Android Auto and Wear OS can reuse it.
+1. Finish Milestone 3: add local progress persistence (offline-safe saves) and introduce a playback queue/queue-source model plus queue UI on top of the cached tracks. (Server-side progress sync, resume, chapter navigation, and speed control are already done.)
+2. Reuse the `:playback` module for Android Auto and Wear OS — the surface-agnostic extraction is already in place.
 3. Polish the main browsing surfaces: `Home`, `Library`, and `Authors`, including search/filter affordances and production-ready section design.
 4. Keep the chapter-capable detail screen as the playback entry and later download action surface.

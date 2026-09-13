@@ -78,7 +78,7 @@ class PlaybackPositionCalculator
             val chapter =
                 chapters.firstOrNull { chapter ->
                     startSeconds >= chapter.startInSeconds &&
-                        (chapter.endInSeconds == null || startSeconds < chapter.endInSeconds!!)
+                        (chapter.endInSeconds == null || startSeconds < chapter.endInSeconds)
                 }
             return chapter?.title ?: track.title
         }

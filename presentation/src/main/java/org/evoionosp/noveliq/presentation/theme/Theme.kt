@@ -270,9 +270,7 @@ fun AppTheme(
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
-    content:
-        @Composable()
-        () -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val darkTheme =
         when (themePreference) {

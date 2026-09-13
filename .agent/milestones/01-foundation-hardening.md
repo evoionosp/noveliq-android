@@ -47,9 +47,8 @@ Turn the current prototype foundation into a safer and cleaner base for future c
 
 - Startup/auth/catalog state separation is in place.
 - Navigation Compose is now used for root navigation.
-- Session storage is encrypted and owned by `:core`.
+- Session storage is encrypted and owned by `:data` (`SessionDataStore`), with contracts in `:domain/session`.
 - Debug logging is safer for authenticated traffic.
 - Main repository/coordinator paths now use injected dispatchers.
 - Key transient UI messages use `SharedFlow`.
-- The connectivity contract no longer lives in `data`.
-- `common` has been renamed to `core`.
+- The connectivity contract lives in `domain` (`ConnectivityObserver`), implemented in `data` (`AndroidConnectivityObserver`).

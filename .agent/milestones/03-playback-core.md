@@ -8,9 +8,14 @@ Introduce a production-viable playback architecture that can be reused by phone,
 
 - [x] Add Media3 player integration.
 - [x] Introduce `MediaSession` / `MediaSessionService`.
+- [x] Extract playback core into the `:playback` module (`PlaybackService`, `PlaybackConnection`, `PlaybackState`).
 - [ ] Define playback queue model and queue source.
 - [x] Support play, pause, seek, skip, and resume.
-- [ ] Persist playback position.
+- [x] Sync playback progress with the server (fetch on play for resume; save every 15s while playing plus on pause, seek, chapter jump, track switch, and playback end).
+- [ ] Persist playback position locally (server-only today; saves are skipped while offline).
+- [x] Chapter navigation (next/previous chapter, play-from-chapter) via the domain `PlaybackPositionCalculator`.
+- [x] Playback speed control (0.5x–4x) with a speed sheet.
+- [ ] Sleep timer (footer action is a placeholder with no handler).
 - [x] Define how playback state is exposed to UI surfaces.
 - [x] Add notification and background playback behavior.
 

@@ -25,7 +25,7 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 
 ## Exit Criteria
 
-- The app supports navigating from library list to book detail context.
+- The app supports opening a book detail overlay (glance mode) from the library list. There is intentionally no detail destination in the nav graph yet.
 - Catalog state is represented clearly across loading, stale, offline, and error conditions.
 - Models are rich enough to support playback work without immediate replacement.
 - Route contracts remain small and stable rather than passing complex objects between screens.
@@ -40,9 +40,8 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 
 ## Started In Repo
 
-- Navigation from the home catalog to an audiobook detail screen is implemented.
-- Route arguments use IDs rather than passing large models.
-- The detail screen shows cached summary metadata from the local catalog model.
+- Opening an audiobook detail overlay from the home catalog is implemented (`onOpenAudiobook` → `NowPlayingOverlay` glance mode; no detail nav route).
+- The detail overlay shows cached summary metadata from the local catalog model.
 - Chapters are fetched from the Audiobookshelf item-detail API and shown at the bottom of the detail screen.
 - The detail screen exposes a `Play` action that is now wired to the Media3 playback core (see Milestone 3).
 - The Home dashboard now reads Continue Listening from a Room-backed cache populated from Audiobookshelf personalized shelves.

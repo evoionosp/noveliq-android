@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import org.evoionosp.noveliq.data.session.EncryptedSessionPreferences
 import org.evoionosp.noveliq.data.session.SessionDataStore
 import org.evoionosp.noveliq.data.settings.AppSettingsDataStore
 import org.evoionosp.noveliq.domain.session.SessionStore
@@ -19,7 +20,7 @@ object StorageModule {
     @Singleton
     fun provideSessionStore(
         @ApplicationContext context: Context,
-    ): SessionStore = SessionDataStore(context)
+    ): SessionStore = SessionDataStore(EncryptedSessionPreferences.create(context))
 
     @Provides
     @Singleton

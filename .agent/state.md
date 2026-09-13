@@ -75,6 +75,22 @@ Impact:
 - Playback resolves cached detail and remote track URLs from the repository layer.
 - The model still needs progress, bookmarks, local-file resolution, and eventual download state before offline playback.
 
+#### 3.5 Session lifetime is now handled centrally
+
+Audiobookshelf 2.26.0+ issues short-lived JWT access tokens with a longer-lived refresh token.
+Token rotation is centralised in `SessionRefreshCoordinator` (domain) and driven from an OkHttp
+`Authenticator` (`data.network.TokenAuthenticator`) plus a proactive `GetValidSessionUseCase`
+that rotates an expired token before a request rather than after it 401s.
+
+Rules that must be preserved:
+
+- Only the coordinator clears the session, and only when the server definitively rejects the
+  refresh token. Transient failures must never log the user out.
+- The authenticated OkHttp client and the auth client (login / server check / refresh) are
+  separate on purpose. See `NetworkModule`.
+- Cache fallbacks must not absorb `CatalogError.AUTH`; serving stale content over a dead session
+  is what made an expired token look like a working signed-in app.
+
 #### 4. Sync orchestration is still app-process scoped
 
 Catalog refresh is still coordinated from `Application` with an application-scoped coroutine pattern. This is better structured than before, but it is still not a durable background execution model.
@@ -111,6 +127,10 @@ Impact:
 - Presentation UI files have been split into screen-specific and component-specific Kotlin files for home/catalog, detail, and now-playing surfaces.
 - App navigation, route definitions, transition helpers, root bottom navigation, and now-playing scaffold state have been extracted from `MainActivity` into a dedicated `presentation.navigation` package.
 - Real Media3 playback wired behind the detail `Play` action, with a background media session service and now-playing surfaces synchronized through shared playback state.
+- Centralised access-token refresh: `SessionRefreshCoordinator`, an OkHttp `Authenticator`, JWT
+  expiry tracking on the stored session, and proactive rotation via `GetValidSessionUseCase`.
+- The login form remembers the last server URL and protocol across logout, so signing back in
+  does not start from a blank field.
 
 ## Current Product Fit
 

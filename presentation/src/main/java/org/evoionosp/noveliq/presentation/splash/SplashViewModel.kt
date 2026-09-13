@@ -17,16 +17,15 @@ import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
-import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
-import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
     private val observeSessionUseCase: ObserveSessionUseCase,
     private val clearSessionUseCase: ClearSessionUseCase,
-    private val refreshSessionUseCase: RefreshSessionUseCase,
+    private val getValidSessionUseCase: GetValidSessionUseCase,
     private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SplashUiState())
@@ -51,7 +50,7 @@ class SplashViewModel @Inject constructor(
                         return@collectLatest
                     }
 
-                    bootstrapCatalog(session)
+                    bootstrapCatalog()
                 }
         }
 
@@ -77,9 +76,9 @@ class SplashViewModel @Inject constructor(
     }
 
     fun retryCatalogBootstrap() {
-        val session = currentSession ?: return
+        if (currentSession == null) return
         viewModelScope.launch {
-            bootstrapCatalog(session)
+            bootstrapCatalog()
         }
     }
 
@@ -89,27 +88,25 @@ class SplashViewModel @Inject constructor(
         }
     }
 
-    private suspend fun bootstrapCatalog(session: LoginSession) {
+    private suspend fun bootstrapCatalog() {
         // Preserve the current destination while loading. Constructing a fresh
         // SplashUiState() would reset startupDestination to its default (Auth) and
         // flash the login screen during any re-bootstrap.
         _uiState.update { it.copy(isLoading = true) }
 
-        var activeSession = session
-        var bootstrapResult = bootstrapHomeCatalogUseCase(
+        // Take the session through the validated path so a token that expired while the app was
+        // closed is rotated before the first request, rather than after it fails.
+        val activeSession = getValidSessionUseCase() ?: run {
+            // The session was unrecoverable and has been cleared. The session observer above will
+            // route to Auth; nothing to bootstrap.
+            _uiState.update { it.copy(isLoading = false) }
+            return
+        }
+
+        val bootstrapResult = bootstrapHomeCatalogUseCase(
             baseUrl = activeSession.baseUrl,
             accessToken = activeSession.accessToken
         )
-
-        if (bootstrapResult is BootstrapHomeCatalogResult.Failure && bootstrapResult.error == CatalogError.AUTH) {
-            activeSession = refreshSessionUseCase() ?: session
-            if (activeSession.accessToken != session.accessToken) {
-                bootstrapResult = bootstrapHomeCatalogUseCase(
-                    baseUrl = activeSession.baseUrl,
-                    accessToken = activeSession.accessToken
-                )
-            }
-        }
 
         currentCoroutineContext().ensureActive()
 

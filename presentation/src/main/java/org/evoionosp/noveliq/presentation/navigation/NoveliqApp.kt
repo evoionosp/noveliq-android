@@ -1,9 +1,22 @@
 package org.evoionosp.noveliq.presentation.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +26,12 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,6 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import org.evoionosp.noveliq.presentation.R
 import org.evoionosp.noveliq.presentation.common.LocalAccessToken
 import org.evoionosp.noveliq.presentation.common.model.toDomain
 import org.evoionosp.noveliq.presentation.permissions.RequestNotificationPermissionEffect
@@ -82,7 +102,23 @@ fun NoveliqApp(
             LocalSnackbarHostState provides snackbarHostState,
             LocalAccessToken provides accessToken
         ) {
-            Box {
+            val showSearchFab = currentRoute == AppRoute.Home.route || currentRoute == AppRoute.Library.route
+
+            var isFabVisible by remember { mutableStateOf(true) }
+            val nestedScrollConnection = remember {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                        if (available.y < -1) {
+                            isFabVisible = false
+                        } else if (available.y > 1) {
+                            isFabVisible = true
+                        }
+                        return Offset.Zero
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.nestedScroll(nestedScrollConnection)) {
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
                     bottomBar = {
@@ -96,6 +132,18 @@ fun NoveliqApp(
                                 isNowPlayingExpanded = true
                             }
                         )
+                    },
+                    floatingActionButton = {
+                        AnimatedVisibility(
+                            visible = showSearchFab && isFabVisible,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                        ) {
+                            FloatingActionButton(
+                                onClick = { /* TODO: Implement Search */ }){
+                                 Icon(Icons.Default.Search, "Search")
+                                }
+                        }
                     }
                 ) { innerPadding ->
                     NoveliqNavHost(

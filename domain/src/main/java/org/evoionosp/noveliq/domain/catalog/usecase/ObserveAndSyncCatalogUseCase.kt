@@ -14,7 +14,7 @@ import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudi
 import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.library.usecase.ObserveSelectedLibraryUseCase
 import org.evoionosp.noveliq.domain.library.usecase.RefreshLibrariesUseCase
-import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 
 /**
  * Use case that coordinates catalog synchronization based on connectivity and library selection.
@@ -29,7 +29,7 @@ import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
 class ObserveAndSyncCatalogUseCase @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
-    private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
+    private val getValidSessionUseCase: GetValidSessionUseCase,
     private val refreshLibrariesUseCase: RefreshLibrariesUseCase,
     private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
     private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase
@@ -64,7 +64,7 @@ class ObserveAndSyncCatalogUseCase @Inject constructor(
                 }
             }
             .map { library ->
-                val session = getCurrentSessionUseCase() ?: return@map
+                val session = getValidSessionUseCase() ?: return@map
                 refreshSelectedLibraryAudiobooksUseCase(
                     baseUrl = session.baseUrl,
                     accessToken = session.accessToken,
@@ -81,7 +81,7 @@ class ObserveAndSyncCatalogUseCase @Inject constructor(
     }
 
     private suspend fun syncCurrentSelection() {
-        val session = getCurrentSessionUseCase() ?: return
+        val session = getValidSessionUseCase() ?: return
         refreshLibrariesUseCase(
             baseUrl = session.baseUrl,
             accessToken = session.accessToken

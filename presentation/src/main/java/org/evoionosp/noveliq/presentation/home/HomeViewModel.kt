@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveContinueListeningUseCase
-import org.evoionosp.noveliq.domain.session.usecase.GetCurrentSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveHomeAudiobooksUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveLibrarySyncStatusUseCase
@@ -29,7 +29,6 @@ import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshContinueListeningUs
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshSelectedLibraryAudiobooksUseCase
 import org.evoionosp.noveliq.domain.catalog.usecase.RefreshHomeCatalogUseCase
 import org.evoionosp.noveliq.domain.catalog.usecase.RefreshHomeCatalogResult
-import org.evoionosp.noveliq.domain.auth.usecase.RefreshSessionUseCase
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.model.SyncStatus
@@ -44,10 +43,9 @@ import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getCurrentSessionUseCase: GetCurrentSessionUseCase,
     private val observeSessionUseCase: ObserveSessionUseCase,
     private val clearSessionUseCase: ClearSessionUseCase,
-    private val refreshSessionUseCase: RefreshSessionUseCase,
+    private val getValidSessionUseCase: GetValidSessionUseCase,
     private val observeLibrariesUseCase: ObserveLibrariesUseCase,
     private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
     private val observeHomeAudiobooksUseCase: ObserveHomeAudiobooksUseCase,
@@ -163,17 +161,22 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             when (selectLibraryUseCase(libraryId)) {
                 is DomainResult.Success -> {
-                    val session = getCurrentSessionUseCase() ?: return@launch
+                    val session = getValidSessionUseCase() ?: run {
+                        expireSession()
+                        return@launch
+                    }
                     val refreshResult = refreshSelectedLibraryAudiobooks(
                         session = session,
                         libraryId = libraryId
                     )
                     val continueResult = refreshContinueListening(
-                        session = getCurrentSessionUseCase() ?: session,
+                        session = session,
                         libraryId = libraryId
                     )
+                    // The HTTP authenticator already tried to rotate the token before these
+                    // surfaced as auth failures, so there is nothing left to retry.
                     if (refreshResult.isAuthFailure() || continueResult.isAuthFailure()) {
-                        handleAuthFailure()
+                        expireSession()
                     }
                 }
                 is DomainResult.Failure -> {
@@ -239,12 +242,6 @@ class HomeViewModel @Inject constructor(
 
     private fun emitMessage(messageResId: Int) {
         _events.tryEmit(HomeUiEvent.ShowMessage(messageResId))
-    }
-
-    private suspend fun handleAuthFailure() {
-        if (refreshSessionUseCase() == null) {
-            expireSession()
-        }
     }
 
     private fun expireSession() {

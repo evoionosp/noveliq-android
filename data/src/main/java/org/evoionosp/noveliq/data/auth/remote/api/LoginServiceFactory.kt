@@ -1,15 +1,17 @@
 package org.evoionosp.noveliq.data.auth.remote.api
 
+import org.evoionosp.noveliq.data.di.NetworkModule
 import org.evoionosp.noveliq.data.network.UrlUtils
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class LoginServiceFactory @Inject constructor(
-    private val okHttpClient: OkHttpClient
+    @param:Named(NetworkModule.AUTH_CLIENT) private val okHttpClient: OkHttpClient
 ) {
     private val serviceCache = mutableMapOf<String, LoginApiService>()
 

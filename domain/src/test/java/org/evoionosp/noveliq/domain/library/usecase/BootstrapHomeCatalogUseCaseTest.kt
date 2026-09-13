@@ -118,6 +118,65 @@ class BootstrapHomeCatalogUseCaseTest {
     }
 
     @Test
+    fun `bootstrap reports auth failure instead of serving the audiobook cache`() = runTest {
+        val libraries = MutableStateFlow(
+            listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true))
+        )
+        val selected = MutableStateFlow<AudiobookLibrary?>(libraries.value.first())
+        val cachedBooks = MutableStateFlow(
+            listOf(
+                Audiobook(
+                    id = "book-1",
+                    libraryId = "lib-1",
+                    title = "Title",
+                    author = "Author",
+                    coverUrl = "https://example.com/cover",
+                    series = null,
+                    durationInSeconds = null
+                )
+            )
+        )
+
+        val result = BootstrapHomeCatalogUseCase(
+            libraryRepository = FakeLibraryRepository(libraries, selected, DomainResult.Success(Unit)),
+            audiobookRepository = FakeAudiobookRepository(
+                audiobooksByLibraryId = mutableMapOf("lib-1" to cachedBooks),
+                refreshResult = DomainResult.Failure(CatalogError.AUTH)
+            )
+        )(
+            baseUrl = "https://example.com",
+            accessToken = "token"
+        )
+
+        assertEquals(BootstrapHomeCatalogResult.Failure(CatalogError.AUTH), result)
+    }
+
+    @Test
+    fun `bootstrap reports auth failure from library refresh even with cached libraries`() = runTest {
+        val libraries = MutableStateFlow(
+            listOf(AudiobookLibrary(id = "lib-1", name = "Main", isSelected = true))
+        )
+        val selected = MutableStateFlow<AudiobookLibrary?>(libraries.value.first())
+
+        val result = BootstrapHomeCatalogUseCase(
+            libraryRepository = FakeLibraryRepository(
+                libraries = libraries,
+                selectedLibrary = selected,
+                refreshResult = DomainResult.Failure(CatalogError.AUTH)
+            ),
+            audiobookRepository = FakeAudiobookRepository(
+                audiobooksByLibraryId = mutableMapOf("lib-1" to MutableStateFlow(emptyList())),
+                refreshResult = DomainResult.Success(Unit)
+            )
+        )(
+            baseUrl = "https://example.com",
+            accessToken = "token"
+        )
+
+        assertEquals(BootstrapHomeCatalogResult.Failure(CatalogError.AUTH), result)
+    }
+
+    @Test
     fun `bootstrap returns no libraries when sync leaves library cache empty`() = runTest {
         val result = BootstrapHomeCatalogUseCase(
             libraryRepository = FakeLibraryRepository(

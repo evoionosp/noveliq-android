@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -26,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -86,17 +88,16 @@ fun LibraryScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = Color.Transparent
-    ) { innerPadding ->
+    Surface(
+        modifier = modifier.fillMaxSize().background(color = MaterialTheme.colorScheme.background)
+    ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
+                .systemBarsPadding()
                 .background(homeBackgroundBrush())
-                .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (state.audiobooks.isEmpty() && state.libraries.isNotEmpty()) {
                 EmptyState(

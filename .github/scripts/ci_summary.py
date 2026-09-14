@@ -148,6 +148,16 @@ def build_coverage_markdown() -> str | None:
 
     line_cov, line_total = counter(root, "LINE")
     branch_cov, branch_total = counter(root, "BRANCH")
+    if line_total == 0:
+        # Seen when koverXmlReport runs without the unit tests (it does not depend
+        # on them): no Kover binaries exist, so the report is an empty skeleton.
+        return (
+            "### Coverage\n"
+            "\n"
+            "The Kover report is empty (0 lines). The unit tests probably did not run "
+            "before `koverXmlReport` — make sure the workflow invokes `testDebugUnitTest` "
+            "first."
+        )
     overall = pct(line_cov, line_total)
 
     # Aggregate packages up to their owning Gradle module.
@@ -164,9 +174,7 @@ def build_coverage_markdown() -> str | None:
         gaps.append((name.replace("/", "."), total - covered, pct(covered, total)))
 
     gap_to_target = max(0.0, COVERAGE_TARGET - overall)
-    headline = (
-        f"**{overall:.1f}%** line coverage " f"({line_cov:,}/{line_total:,} lines)"
-    )
+    headline = f"**{overall:.1f}%** line coverage ({line_cov:,}/{line_total:,} lines)"
     if gap_to_target > 0:
         headline += (
             f" — {gap_to_target:.1f} points below the {COVERAGE_TARGET:.0f}% target"

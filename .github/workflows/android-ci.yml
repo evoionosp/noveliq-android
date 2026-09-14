@@ -74,11 +74,12 @@ jobs:
 
       - uses: ./.github/actions/setup-build
 
-      # koverXmlReport/koverHtmlReport depend on the unit test tasks, so this single
-      # invocation runs every module's tests and produces the aggregated report.
+      # koverXmlReport/koverHtmlReport do NOT depend on the unit test tasks, so the
+      # tests must be requested explicitly first: without testDebugUnitTest there are
+      # no Kover binaries and the aggregated report comes out empty (0/0 lines).
       # koverVerify enforces the floors declared in settings.gradle.kts.
       - name: Run unit tests with coverage
-        run: ./gradlew $GRADLE_ARGS koverXmlReport koverHtmlReport koverVerify
+        run: ./gradlew $GRADLE_ARGS testDebugUnitTest koverXmlReport koverHtmlReport koverVerify
 
       - name: Summarise test results
         if: ${{ !cancelled() }}

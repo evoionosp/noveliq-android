@@ -17,6 +17,7 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -68,6 +69,7 @@ class PlaybackConnectionTest {
             verify { graph.controller.play() }
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun `pause delegates and saves progress after a book is loaded`() =
         runTest {
@@ -76,6 +78,7 @@ class PlaybackConnectionTest {
             graph.connection.playbackState.first { it.audiobook != null }
 
             graph.connection.pause()
+            runCurrent()
 
             verify { graph.controller.pause() }
             coVerify { graph.saveProgress("https://example.com", "access-1", "book-1", 0.0, 300.0) }
@@ -181,6 +184,7 @@ class PlaybackConnectionTest {
             graph.connection.playbackState.first { it.audiobook != null }
 
             graph.connection.seekToBookSeconds(250.0)
+            runCurrent()
 
             verify { graph.controller.seekTo(2, 50_000L) }
             coVerify { graph.saveProgress("https://example.com", "access-1", "book-1", 0.0, 300.0) }

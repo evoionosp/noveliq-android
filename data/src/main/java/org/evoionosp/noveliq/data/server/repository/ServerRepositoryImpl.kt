@@ -2,6 +2,7 @@ package org.evoionosp.noveliq.data.server.repository
 
 import android.util.Log
 import java.io.IOException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -10,6 +11,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.server.remote.api.ServerCheckServiceFactory
 import org.evoionosp.noveliq.data.server.remote.mapper.toDomain
+import org.evoionosp.noveliq.domain.connectivity.ConnectivityObserver
 import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
 import org.evoionosp.noveliq.domain.server.model.ServerError
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
@@ -21,6 +23,7 @@ class ServerRepositoryImpl
     @Inject
     constructor(
         private val serviceFactory: ServerCheckServiceFactory,
+        private val connectivityObserver: ConnectivityObserver,
         @param:Named("io") private val ioDispatcher: CoroutineDispatcher,
     ) : ServerRepository {
         override suspend fun ping(baseUrl: String): ServerCheckResult<Boolean> {
@@ -64,6 +67,8 @@ class ServerRepositoryImpl
                     )
                 } catch (exception: IllegalArgumentException) {
                     ServerCheckResult.Failure(ServerError.INVALID_BASE_URL)
+                } catch (exception: UnknownHostException) {
+                    unknownHostError()
                 } catch (exception: IOException) {
                     ServerCheckResult.Failure(ServerError.NETWORK)
                 } catch (exception: CancellationException) {
@@ -73,6 +78,18 @@ class ServerRepositoryImpl
                 }
             }
         }
+
+        /**
+         * DNS did not resolve. That means different things depending on connectivity:
+         * online, the host itself is wrong (typo'd URL); offline, even a correct URL
+         * fails DNS, so blame the connection.
+         */
+        private fun unknownHostError(): ServerCheckResult.Failure =
+            if (connectivityObserver.isConnected()) {
+                ServerCheckResult.Failure(ServerError.SERVER_NOT_FOUND)
+            } else {
+                ServerCheckResult.Failure(ServerError.NETWORK)
+            }
 
         private suspend fun <T> safeCall(block: suspend () -> T): ServerCheckResult<T> =
             withContext(ioDispatcher) {
@@ -85,6 +102,8 @@ class ServerRepositoryImpl
                     )
                 } catch (exception: IllegalArgumentException) {
                     ServerCheckResult.Failure(ServerError.INVALID_BASE_URL)
+                } catch (exception: UnknownHostException) {
+                    unknownHostError()
                 } catch (exception: IOException) {
                     ServerCheckResult.Failure(ServerError.NETWORK)
                 } catch (exception: CancellationException) {

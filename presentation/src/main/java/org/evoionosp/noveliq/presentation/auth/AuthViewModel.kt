@@ -200,8 +200,11 @@ class AuthViewModel
                             ),
                         )
 
-                        _uiState.update { it.copy(isLoggingIn = false) }
-                        emitMessage(R.string.login_success)
+                        // Deliberately no state reset and no success message. The session
+                        // observer in SplashViewModel takes over from here and routes to
+                        // Home (or the catalog-error screen) once bootstrap finishes.
+                        // Clearing isLoggingIn now would strand the user on a dead login
+                        // form for the whole bootstrap with nothing to look at.
                     }
 
                     is LoginResult.Failure -> {
@@ -251,6 +254,7 @@ class AuthViewModel
             when (error) {
                 ServerError.INVALID_BASE_URL -> R.string.error_invalid_base_url
                 ServerError.NETWORK -> R.string.error_network
+                ServerError.SERVER_NOT_FOUND -> R.string.error_server_not_found
                 ServerError.HTTP -> R.string.error_http
                 ServerError.PING_FAILED -> R.string.error_ping_failed
                 ServerError.HEALTHCHECK_FAILED -> R.string.error_healthcheck_failed

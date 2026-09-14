@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.presentation.R
@@ -86,11 +88,20 @@ fun ConnectToServerCard(
                 modifier =
                     androidx.compose.ui.Modifier
                         .fillMaxWidth(),
-                prefix = { Text(text = state.protocol) },
                 label = { Text(stringResource(R.string.server_url_label)) },
                 placeholder = { Text(stringResource(R.string.server_url_placeholder)) },
                 shape = RoundedCornerShape(22.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                // Wrapping is fine for long URLs, but ⏎ must not insert a line
+                // break: ✓ submits, exactly like the Connect button.
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = { if (!state.isChecking) onSubmit() },
+                    ),
             )
             Button(
                 onClick = onSubmit,

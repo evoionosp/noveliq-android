@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,14 +34,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -63,6 +69,7 @@ fun AuthScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val snackbarHostState = LocalSnackbarHostState.current
 
     ObserveAsEvents(viewModel.events) { event ->
@@ -86,7 +93,12 @@ fun AuthScreen(
                 .verticalScroll(scrollState),
     ) {
         TopAppBar(
-            title = { },
+            title = { Text(text = stringResource(R.string.auth_app_title)) },
+            // Transparent so the screen's background gradient flows continuously
+            // behind the bar. The M3 default (solid `surface`) leaves a visible
+            // seam in dark mode, where `surface` and the gradient's
+            // `surfaceContainerLowest` end are distinct tones.
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             actions = {
                 FilledTonalIconButton(
                     onClick = onOpenSettings,
@@ -106,9 +118,9 @@ fun AuthScreen(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            WelcomeHeader()
             when (state.serverStatus) {
                 null -> {
-                    WelcomeCard()
                     ConnectToServerCard(
                         state = state,
                         onProtocolChange = viewModel::onProtocolChange,
@@ -151,6 +163,14 @@ fun AuthScreen(
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.username_label)) },
                             singleLine = true,
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    imeAction = ImeAction.Next,
+                                ),
+                            keyboardActions =
+                                KeyboardActions(
+                                    onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                                ),
                             shape = RoundedCornerShape(22.dp),
                         )
                         OutlinedTextField(
@@ -160,11 +180,28 @@ fun AuthScreen(
                             label = { Text(stringResource(R.string.password_label)) },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            keyboardActions =
+                                KeyboardActions(
+                                    // Same guard as the Login button's enabled state.
+                                    onDone = {
+                                        keyboardController?.hide()
+                                        if (!state.isChecking && !state.isLoggingIn) {
+                                            viewModel.login()
+                                        }
+                                    },
+                                ),
                             shape = RoundedCornerShape(22.dp),
                         )
                         Button(
-                            onClick = viewModel::login,
+                            onClick = {
+                                keyboardController?.hide()
+                                viewModel.login()
+                            },
                             enabled = !state.isChecking && !state.isLoggingIn,
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(vertical = 14.dp),

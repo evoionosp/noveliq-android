@@ -8,6 +8,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.evoionosp.noveliq.data.server.remote.api.ServerCheckServiceFactory
+import org.evoionosp.noveliq.data.test.FakeConnectivityObserver
 import org.evoionosp.noveliq.data.test.MockWebServerRule
 import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
 import org.evoionosp.noveliq.domain.server.model.ServerError
@@ -26,6 +27,7 @@ class ServerRepositoryImplTest {
     private val repository =
         ServerRepositoryImpl(
             serviceFactory = ServerCheckServiceFactory(OkHttpClient()),
+            connectivityObserver = FakeConnectivityObserver(),
             ioDispatcher = testDispatcher,
         )
 
@@ -127,12 +129,44 @@ class ServerRepositoryImplTest {
             val failingRepository =
                 ServerRepositoryImpl(
                     serviceFactory = failingFactory,
+                    connectivityObserver = FakeConnectivityObserver(),
                     ioDispatcher = testDispatcher,
                 )
 
             assertEquals(
                 ServerCheckResult.Failure(ServerError.HTTP, 500),
                 failingRepository.healthCheck(serverRule.baseUrl()),
+            )
+        }
+
+    @Test
+    fun `unresolvable host while online maps to server not found`() =
+        runTest(testDispatcher) {
+            // .invalid never resolves (RFC 2606): with connectivity, that means a
+            // typo'd host, not a network outage.
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.SERVER_NOT_FOUND),
+                repository.ping("http://invalid.invalid/"),
+            )
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.SERVER_NOT_FOUND),
+                repository.healthCheck("http://invalid.invalid/"),
+            )
+        }
+
+    @Test
+    fun `unresolvable host while offline maps to network`() =
+        runTest(testDispatcher) {
+            val offlineRepository =
+                ServerRepositoryImpl(
+                    serviceFactory = ServerCheckServiceFactory(OkHttpClient()),
+                    connectivityObserver = FakeConnectivityObserver(connected = false),
+                    ioDispatcher = testDispatcher,
+                )
+            // Offline, even a correct URL fails DNS, so blame the connection.
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.NETWORK),
+                offlineRepository.ping("http://invalid.invalid/"),
             )
         }
 

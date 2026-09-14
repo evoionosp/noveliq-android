@@ -6,9 +6,9 @@ Current implementation snapshot:
 
 - Foundation hardening is largely complete.
 - Catalog expansion is in progress.
-- The app supports audiobook detail navigation and chapter loading from the server.
-- Real audio playback is implemented with Media3 (ExoPlayer + MediaSession), including background playback and a media notification.
-- Downloads, offline storage, and playback progress sync are still not implemented.
+- The app supports audiobook detail via an overlay (glance mode) and chapter loading from the server, cached in Room.
+- Real audio playback is implemented with Media3 (ExoPlayer + MediaSession) in the `:playback` module, including background playback, a media notification, server-side progress sync/resume, chapter navigation, and speed control.
+- Still not implemented: local progress persistence, queue UI, downloads/offline storage, sleep timer, search/filter, Android Auto, and Wear OS.
 
 Files in this directory:
 

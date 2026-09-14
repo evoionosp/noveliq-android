@@ -33,13 +33,8 @@ Suggested long-term structure:
 - `:feature-book-details`
 - `:feature-playback`
 - `:feature-downloads`
-- `:core-domain`
-- `:core-data`
-- `:core-database`
-- `:core-network`
-- `:core-session`
-- `:core-playback`
-- `:core-common`
+- `:playback` (already exists)
+- shared capability modules by boundary (e.g. database, network) — only when they justify their own boundaries
 
 This does not need to happen all at once. The current codebase can move there incrementally.
 
@@ -50,15 +45,14 @@ Current modules can evolve as follows:
 - `domain` becomes the pure domain contract layer.
 - `data` keeps repository implementations and persistence/network adapters.
 - `presentation` should eventually split into feature-oriented UI modules.
-- `core` should stay narrow and intentional rather than becoming a generic shared bucket.
+- Any future shared modules should stay narrow and intentional rather than becoming a generic shared bucket.
 - `app` should remain a thin app shell.
 - navigation should move to Navigation Compose before the route graph expands significantly.
 
 Current note:
 
-- `common` has already been renamed to `core`.
-- `core` currently contains session persistence only.
-- Additional shared capabilities should become dedicated core modules when they justify their own boundaries.
+- Playback core is already extracted into `:playback` (service, connection, state, DI); now-playing UI stays in `presentation.player`.
+- Additional shared capabilities should become dedicated modules when they justify their own boundaries.
 
 ## Playback Direction
 

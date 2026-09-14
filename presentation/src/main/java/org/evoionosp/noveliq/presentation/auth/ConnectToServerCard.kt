@@ -23,12 +23,11 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import java.lang.reflect.Modifier
-import java.util.Locale.getDefault
 import org.evoionosp.noveliq.presentation.R
 
 @Composable
@@ -71,13 +70,13 @@ fun ConnectToServerCard(
                         shape = SegmentedButtonDefaults.itemShape(0, 2),
                         onClick = { onProtocolChange(https) },
                         selected = state.protocol.equals(https, true),
-                        label = { Text(text = https.uppercase(getDefault())) },
+                        label = { Text(text = https.uppercase(LocalLocale.current.platformLocale)) },
                     )
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(1, 2),
                         onClick = { onProtocolChange(http) },
                         selected = state.protocol.equals(http, true),
-                        label = { Text(text = http.uppercase(getDefault())) },
+                        label = { Text(text = http.uppercase(LocalLocale.current.platformLocale)) },
                     )
                 },
             )

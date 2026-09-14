@@ -14,9 +14,23 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ServiceScoped
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.evoionosp.noveliq.domain.session.SessionStore
+
+internal const val AUTHORIZATION_HEADER = "Authorization"
+
+/** The current access token, or empty when signed out (requests then go out unauthenticated). */
+internal suspend fun SessionStore.currentAccessToken(): String = session.first()?.accessToken.orEmpty()
+
+/** The per-request auth headers for streaming and notification artwork fetches. */
+internal fun authorizationHeaders(accessToken: String): Map<String, String> =
+    mapOf(AUTHORIZATION_HEADER to "Bearer $accessToken")
 
 @Module
 @InstallIn(ServiceComponent::class)
@@ -30,14 +44,8 @@ object PlaybackModule {
         // token captured once at service creation goes stale and causes 401s.
         val upstreamFactory = DefaultHttpDataSource.Factory()
         return ResolvingDataSource.Factory(upstreamFactory) { dataSpec ->
-            val token =
-                runBlocking {
-                    sessionStore.session
-                        .first()
-                        ?.accessToken
-                        .orEmpty()
-                }
-            dataSpec.withRequestHeaders(mapOf("Authorization" to "Bearer $token"))
+            val token = runBlocking { sessionStore.currentAccessToken() }
+            dataSpec.withRequestHeaders(authorizationHeaders(token))
         }
     }
 
@@ -52,4 +60,20 @@ object PlaybackModule {
             .Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .build()
+}
+
+/**
+ * Application-lifetime bindings for [PlaybackConnection]. Lives in [SingletonComponent] (not the
+ * service component above) because the connection itself is a singleton.
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+internal object PlaybackConnectionBindings {
+    @Provides
+    @Singleton
+    fun provideConnectionScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    @Provides
+    @Singleton
+    fun provideControllerConnector(impl: SessionMediaControllerConnector): MediaControllerConnector = impl
 }

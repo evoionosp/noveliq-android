@@ -21,13 +21,14 @@ The long-term product direction is broader than a basic Android phone app. The a
 - Async/reactive state: Kotlin coroutines + Flow + StateFlow
 - Networking: Retrofit + OkHttp
 - Local persistence: Room
-- Session persistence: encrypted shared preferences in `:core`
+- Session persistence: encrypted shared preferences in `:data` (`SessionDataStore`, contracts in `:domain/session`)
 - Playback: AndroidX Media3 (ExoPlayer + `MediaLibraryService`/`MediaSession`)
 
 ## Current Module Layout
 
 - `app`: app shell, `Application`, app-level DI wiring, app-wide sync coordinator.
-- `presentation`: Compose UI, screen ViewModels, app theme, navigation, and the Media3 playback surfaces/service (`presentation.player`).
+- `playback`: surface-agnostic playback core — Media3 service (`PlaybackService`), `MediaController` adapter (`PlaybackConnection`), shared `PlaybackState`, playback DI (`PlaybackModule`).
+- `presentation`: Compose UI, screen ViewModels, app theme, navigation, and the now-playing surfaces (`presentation.player`: bar, overlay, full screen, chapters/speed sheets).
 - `domain`: domain models, repository interfaces, use cases.
 - `data`: repository implementations, Retrofit services, Room DAOs/entities, connectivity observation.
 - `core`: shared session and settings persistence types and helpers.
@@ -41,29 +42,31 @@ The long-term product direction is broader than a basic Android phone app. The a
 - Audiobook list fetch for the selected library.
 - Local Room-backed catalog state and sync status.
 - Server-backed Continue Listening synced from personalized shelves and cached locally.
-- Audiobook detail screen reachable from the home catalog.
+- Audiobook detail overlay reachable from the home catalog (glance vs playing states in `NowPlayingUiState`; there is no detail destination in the Navigation Compose graph).
 - Chapter fetch for a selected audiobook via item-detail API call, cached in Room along with ordered remote tracks.
 - Real audio playback from the `Play` action using Media3 (ExoPlayer + MediaSession).
 - Background playback with a media notification and system media controls.
 - Now-playing surfaces (bar, overlay, full screen) kept in sync via shared playback state.
+- Server-side playback progress sync: resume from saved position on play; save every 15s while playing plus on pause, seek, chapter jump, track switch, and playback end.
+- Chapter navigation (next/previous, play-from-chapter) and playback speed control (0.5x–4x).
 - Basic settings and appearance preferences UI.
 
 ## What Does Not Exist Yet
 
-- Playback queue model and queue source.
-- Playback progress persistence and progress sync with the server.
+- Playback queue model and queue UI (tracks play in order, but there is no queue management yet).
+- Local playback progress persistence (progress syncs with the server; nothing is cached locally and saves are skipped while offline).
 - Download manager / offline storage.
 - Download action and offline media storage.
 - Local-file playback source resolution (remote streaming only today).
-- Bookmarks, sleep timer, playback speed.
-- Library search and filtering.
+- Bookmarks and sleep timer (the sleep action in the player footer is a placeholder with no handler).
+- Library search and filtering (the search FAB is a `TODO` placeholder).
 - Android Auto and Wear OS surfaces.
 
 ## Architectural Intent
 
 The codebase already uses module separation and repository/use-case boundaries, which is a good foundation. However, the project should continue evolving from a phone-first app with a single UI surface into a platform-capable media product. That means shared business logic must be reusable by multiple clients, and playback/download responsibilities must be structured so they can be shared across surfaces rather than embedded into the phone UI layer.
 
-Playback currently lives in the `presentation.player` package (Media3 service plus a `PlaybackConnection` and now-playing UI). It is service-backed rather than screen-ViewModel-backed, but it is not yet extracted into a dedicated surface-agnostic playback module. That extraction should happen before Android Auto and Wear OS work begins.
+Playback core lives in the `:playback` module (`PlaybackService`, `PlaybackConnection`, `PlaybackState`, `PlaybackModule`); now-playing UI surfaces stay in the `presentation.player` package. The connection owns the `MediaController` and delegates position math, chapter navigation, resume, and progress-save policy to domain (`PlaybackPositionCalculator` plus the fetch/save progress use-cases), so the rules stay reusable across phone, Auto, and Wear without further extraction.
 
 The target direction is:
 

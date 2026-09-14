@@ -1,6 +1,7 @@
 package org.evoionosp.noveliq.domain.catalog.usecase
 
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -40,6 +41,7 @@ class ObserveAndSyncCatalogUseCase
          * Returns a Flow that triggers catalog synchronization based on connectivity and library selection.
          * Collect this flow to activate the sync coordination logic.
          */
+        @OptIn(ExperimentalCoroutinesApi::class)
         operator fun invoke(): Flow<Unit> {
             // Sync when connectivity is restored
             val connectivitySync =
@@ -80,7 +82,7 @@ class ObserveAndSyncCatalogUseCase
                         )
                     }
 
-            return combine(connectivitySync, libraryChangeSync) { _, _ -> Unit }
+            return combine(connectivitySync, libraryChangeSync) { _, _ -> }
         }
 
         private suspend fun syncCurrentSelection() {

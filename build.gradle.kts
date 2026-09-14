@@ -27,3 +27,12 @@ allprojects {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Coverage: Kover only (configured in settings.gradle.kts).
+//
+// Aggregated:  ./gradlew koverHtmlReport  -> build/reports/kover/html/index.html
+// Per module:  ./gradlew :data:koverHtmlReport
+//              -> data/build/reports/kover/html/index.html
+// Verify:      ./gradlew koverVerify (floors in settings.gradle.kts)
+// ---------------------------------------------------------------------------

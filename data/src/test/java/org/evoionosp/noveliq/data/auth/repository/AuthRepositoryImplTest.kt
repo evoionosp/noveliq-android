@@ -91,4 +91,20 @@ class AuthRepositoryImplTest {
                 repository.refreshSession(serverRule.baseUrl(), "dead-refresh"),
             )
         }
+
+    @Test
+    fun `refreshSession maps network and invalid url failures`() =
+        runTest(testDispatcher) {
+            assertEquals(
+                LoginResult.Failure(AuthError.INVALID_BASE_URL),
+                repository.refreshSession("", "refresh"),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                LoginResult.Failure(AuthError.NETWORK),
+                repository.refreshSession(deadUrl, "refresh"),
+            )
+        }
 }

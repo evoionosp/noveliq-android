@@ -1,12 +1,17 @@
 package org.evoionosp.noveliq.data.audiobook.repository
 
 import app.cash.turbine.test
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookEntity
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
+import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
 import org.evoionosp.noveliq.data.test.FakeConnectivityObserver
 import org.evoionosp.noveliq.data.test.MockWebServerRule
@@ -14,6 +19,7 @@ import org.evoionosp.noveliq.data.test.TestDatabase
 import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
+import org.evoionosp.noveliq.domain.library.model.SyncStatus
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,6 +31,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import retrofit2.HttpException
+import retrofit2.Response
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -291,6 +299,394 @@ class AudiobookRepositoryImplTest {
                     progress = PlaybackProgress(1.0, 2.0, false),
                 ),
             )
+        }
+
+    @Test
+    fun `observeAudiobooks emits cached books`() =
+        runTest(testDispatcher) {
+            database.audiobookDao().upsertAudiobooks(listOf(cachedBook()))
+
+            repository.observeAudiobooks("lib1").test {
+                assertEquals(listOf("cached"), awaitItem().map { it.id })
+            }
+        }
+
+    @Test
+    fun `observeAudiobook emits the requested book or null`() =
+        runTest(testDispatcher) {
+            database.audiobookDao().upsertAudiobooks(listOf(cachedBook()))
+
+            repository.observeAudiobook("lib1", "cached").filterNotNull().test {
+                assertEquals("Cached", awaitItem().title)
+            }
+            repository.observeAudiobook("lib1", "missing").test {
+                assertEquals(null, awaitItem())
+            }
+        }
+
+    @Test
+    fun `observeLibrarySyncStatus maps stored state`() =
+        runTest(testDispatcher) {
+            repository.observeLibrarySyncStatus("lib1").test {
+                assertEquals(SyncStatus.Idle, awaitItem())
+            }
+
+            database.librarySyncStateDao().upsert(
+                LibrarySyncStateEntity("lib1", "SUCCESS", 1L, null),
+            )
+            repository.observeLibrarySyncStatus("lib1").test {
+                assertEquals(SyncStatus.Success(1L), awaitItem())
+            }
+        }
+
+    @Test
+    fun `refreshAudiobookDetail maps transport failures`() =
+        runTest(testDispatcher) {
+            connectivity.setConnected(false)
+            assertEquals(
+                DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE),
+                repository.refreshAudiobookDetail(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+            connectivity.setConnected(true)
+
+            serverRule.enqueueJson(200, bookJson(id = ""))
+            assertEquals(
+                DomainResult.Failure(CatalogError.NOT_FOUND),
+                repository.refreshAudiobookDetail(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshAudiobookDetail(
+                    baseUrl = "",
+                    accessToken = "token",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                DomainResult.Failure(CatalogError.NETWORK),
+                repository.refreshAudiobookDetail(
+                    baseUrl = deadUrl,
+                    accessToken = "token",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+        }
+
+    @Test
+    fun `refreshAudiobookDetail maps http errors`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(401, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.AUTH),
+                repository.refreshAudiobookDetail(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "stale",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+
+            serverRule.enqueueJson(500, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshAudiobookDetail(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                    audiobookId = "item1",
+                ),
+            )
+        }
+
+    @Test
+    fun `refreshAudiobooks maps unexpected errors and marks sync failed`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(500, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshAudiobooks(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+            val failed = database.librarySyncStateDao().getSyncState("lib1")!!
+            assertEquals("FAILED", failed.status)
+            assertEquals("UNKNOWN", failed.error)
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshAudiobooks(
+                    baseUrl = "",
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                DomainResult.Failure(CatalogError.NETWORK),
+                repository.refreshAudiobooks(
+                    baseUrl = deadUrl,
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+        }
+
+    @Test
+    fun `refreshAudiobooks marks sync stale on unexpected failures with cache`() =
+        runTest(testDispatcher) {
+            database.audiobookDao().upsertAudiobooks(listOf(cachedBook()))
+
+            val failingFactory = mockk<AudiobookshelfLibraryServiceFactory>()
+            every { failingFactory.create(any()) } throws IllegalStateException("boom")
+            val failingRepository =
+                AudiobookRepositoryImpl(
+                    database = database,
+                    audiobookDao = database.audiobookDao(),
+                    audiobookDetailDao = database.audiobookDetailDao(),
+                    continueListeningDao = database.continueListeningDao(),
+                    syncStateDao = database.librarySyncStateDao(),
+                    serviceFactory = failingFactory,
+                    connectivityObserver = connectivity,
+                    ioDispatcher = testDispatcher,
+                )
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                failingRepository.refreshAudiobooks(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+            val stale = database.librarySyncStateDao().getSyncState("lib1")!!
+            assertEquals("STALE", stale.status)
+            assertEquals("UNKNOWN", stale.error)
+        }
+
+    @Test
+    fun `refreshContinueListening maps failures`() =
+        runTest(testDispatcher) {
+            connectivity.setConnected(false)
+            assertEquals(
+                DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE),
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+            connectivity.setConnected(true)
+
+            serverRule.enqueueJson(401, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.AUTH),
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "stale",
+                    libraryId = "lib1",
+                ),
+            )
+
+            serverRule.enqueueJson(404, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.NOT_FOUND),
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+
+            serverRule.enqueueJson(500, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshContinueListening(
+                    baseUrl = "",
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                DomainResult.Failure(CatalogError.NETWORK),
+                repository.refreshContinueListening(
+                    baseUrl = deadUrl,
+                    accessToken = "token",
+                    libraryId = "lib1",
+                ),
+            )
+        }
+
+    @Test
+    fun `fetchProgress maps transport failures`() =
+        runTest(testDispatcher) {
+            connectivity.setConnected(false)
+            assertEquals(
+                DomainResult.Failure(CatalogError.CONNECTIVITY_UNAVAILABLE),
+                repository.fetchProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    audiobookId = "item1",
+                ),
+            )
+            connectivity.setConnected(true)
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.fetchProgress(
+                    baseUrl = "",
+                    accessToken = "token",
+                    audiobookId = "item1",
+                ),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                DomainResult.Failure(CatalogError.NETWORK),
+                repository.fetchProgress(
+                    baseUrl = deadUrl,
+                    accessToken = "token",
+                    audiobookId = "item1",
+                ),
+            )
+        }
+
+    @Test
+    fun `saveProgress maps failures and zero duration`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(200, "{}")
+            assertEquals(
+                DomainResult.Success(Unit),
+                repository.saveProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(10.0, 0.0, false),
+                ),
+            )
+            val zeroDurationBody = JSONObject(serverRule.takeRequest().body.readUtf8())
+            assertEquals(0.0, zeroDurationBody.getDouble("progress"), 0.0)
+
+            serverRule.enqueueJson(401, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.AUTH),
+                repository.saveProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "stale",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                ),
+            )
+
+            serverRule.enqueueJson(404, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.NOT_FOUND),
+                repository.saveProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                ),
+            )
+
+            serverRule.enqueueJson(500, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.saveProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                ),
+            )
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.saveProgress(
+                    baseUrl = "",
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                ),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                DomainResult.Failure(CatalogError.NETWORK),
+                repository.saveProgress(
+                    baseUrl = deadUrl,
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                ),
+            )
+        }
+
+    @Test
+    fun `saveProgress maps http failures from the service`() =
+        runTest(testDispatcher) {
+            fun repositoryThrowing(code: Int): AudiobookRepositoryImpl {
+                val failingFactory = mockk<AudiobookshelfLibraryServiceFactory>()
+                every { failingFactory.create(any()) } throws
+                    HttpException(
+                        Response.error<String>(code, "".toResponseBody("text/plain".toMediaType())),
+                    )
+                return AudiobookRepositoryImpl(
+                    database = database,
+                    audiobookDao = database.audiobookDao(),
+                    audiobookDetailDao = database.audiobookDetailDao(),
+                    continueListeningDao = database.continueListeningDao(),
+                    syncStateDao = database.librarySyncStateDao(),
+                    serviceFactory = failingFactory,
+                    connectivityObserver = connectivity,
+                    ioDispatcher = testDispatcher,
+                )
+            }
+
+            suspend fun saveProgressWith(code: Int): DomainResult<Unit> =
+                repositoryThrowing(code).saveProgress(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    audiobookId = "item1",
+                    progress = PlaybackProgress(1.0, 2.0, false),
+                )
+
+            assertEquals(DomainResult.Failure(CatalogError.AUTH), saveProgressWith(401))
+            assertEquals(DomainResult.Failure(CatalogError.NOT_FOUND), saveProgressWith(404))
+            assertEquals(DomainResult.Failure(CatalogError.UNKNOWN), saveProgressWith(500))
         }
 
     private fun cachedBook(): AudiobookEntity =

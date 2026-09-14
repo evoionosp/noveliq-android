@@ -1,5 +1,3 @@
-import org.gradle.api.tasks.testing.Test
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
@@ -47,12 +45,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-}
-
-// No unit tests yet: don't fail the test task (or the merged coverage
-// report) on zero discovered tests. Remove once the first real test lands.
-tasks.withType<Test>().configureEach {
-    failOnNoDiscoveredTests = false
 }
 
 dependencies {

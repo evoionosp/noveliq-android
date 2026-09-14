@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
@@ -54,7 +56,7 @@ fun PreferencesScreen(
                 navigationIcon = {
                     FilledTonalIconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Rounded.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = stringResource(R.string.preferences_back),
                         )
                     }
@@ -94,7 +96,7 @@ fun PreferencesScreen(
                         },
                         trailing = {
                             Icon(
-                                imageVector = Icons.Rounded.KeyboardArrowRight,
+                                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

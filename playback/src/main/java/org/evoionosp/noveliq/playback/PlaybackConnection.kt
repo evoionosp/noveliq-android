@@ -13,14 +13,14 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookTrack
@@ -29,6 +29,33 @@ import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCa
 import org.evoionosp.noveliq.domain.audiobook.usecase.PreparePlaybackUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.SavePlaybackProgressUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+
+/**
+ * Acquires the [MediaController] for [PlaybackService]. The production implementation performs the
+ * real Media3 session handshake; tests supply a fake that hands back a mock controller (or null
+ * for the disconnected path) without touching Android IPC.
+ */
+interface MediaControllerConnector {
+    suspend fun connect(): Player?
+}
+
+/** Production [MediaControllerConnector]: connects to [PlaybackService]'s media session. */
+class SessionMediaControllerConnector
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : MediaControllerConnector {
+        override suspend fun connect(): Player? =
+            suspendCancellableCoroutine { continuation ->
+                val sessionToken =
+                    SessionToken(context, ComponentName(context, PlaybackService::class.java))
+                val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+                controllerFuture.addListener({
+                    continuation.resume(controllerFuture.get())
+                }, MoreExecutors.directExecutor())
+                continuation.invokeOnCancellation { controllerFuture.cancel(true) }
+            }
+    }
 
 /**
  * Media3 adapter: owns the [MediaController] connection and translates UI intents into player
@@ -40,18 +67,18 @@ import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 class PlaybackConnection
     @Inject
     constructor(
-        @ApplicationContext private val context: Context,
         private val getValidSessionUseCase: GetValidSessionUseCase,
         private val calculator: PlaybackPositionCalculator,
         private val preparePlayback: PreparePlaybackUseCase,
         private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
         private val savePlaybackProgress: SavePlaybackProgressUseCase,
+        private val controllerConnector: MediaControllerConnector,
+        private val connectionScope: CoroutineScope,
     ) {
         private val _playbackState = MutableStateFlow(PlaybackState())
         val playbackState = _playbackState.asStateFlow()
 
-        private var mediaController: MediaController? = null
-        private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        private var mediaController: Player? = null
 
         // Context for the currently-loaded book, used to sync progress to the server.
         private var currentAudiobookId: String? = null
@@ -60,16 +87,15 @@ class PlaybackConnection
         private var secondsSinceServerSave: Int = 0
 
         init {
-            val sessionToken =
-                SessionToken(context, ComponentName(context, PlaybackService::class.java))
-            val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-            controllerFuture.addListener({
-                mediaController =
-                    controllerFuture.get().apply {
-                        addListener(PlayerListener())
-                        updateState()
-                    }
-            }, MoreExecutors.directExecutor())
+            connectionScope.launch {
+                // Assign before attaching: updateState() reads mediaController, so it must be
+                // set before the listener and initial state update run.
+                controllerConnector.connect()?.let { controller ->
+                    mediaController = controller
+                    controller.addListener(PlayerListener())
+                    updateState()
+                }
+            }
 
             startProgressUpdateLoop()
         }
@@ -151,7 +177,7 @@ class PlaybackConnection
         }
 
         /** The current absolute position (seconds across the book), derived via the domain calculator. */
-        private fun currentAbsoluteSeconds(controller: MediaController): Double {
+        private fun currentAbsoluteSeconds(controller: Player): Double {
             val index = controller.currentMediaItemIndex
             if (index == C.INDEX_UNSET) return 0.0
             return calculator.absolutePosition(index, controller.currentPosition, currentTracks)
@@ -282,7 +308,7 @@ class PlaybackConnection
             }
         }
 
-        private inner class PlayerListener : Player.Listener {
+        internal inner class PlayerListener : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _playbackState.update { it.copy(isPlaying = isPlaying) }
             }

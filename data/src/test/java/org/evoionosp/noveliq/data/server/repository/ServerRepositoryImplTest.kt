@@ -1,8 +1,12 @@
 package org.evoionosp.noveliq.data.server.repository
 
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.evoionosp.noveliq.data.server.remote.api.ServerCheckServiceFactory
 import org.evoionosp.noveliq.data.test.MockWebServerRule
 import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
@@ -11,6 +15,8 @@ import org.evoionosp.noveliq.domain.server.model.ServerStatus
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.HttpException
+import retrofit2.Response
 
 class ServerRepositoryImplTest {
     @get:Rule
@@ -93,6 +99,40 @@ class ServerRepositoryImplTest {
             assertEquals(
                 ServerCheckResult.Failure(ServerError.HEALTHCHECK_FAILED, 500),
                 repository.healthCheck(serverRule.baseUrl()),
+            )
+        }
+
+    @Test
+    fun `healthCheck maps transport and invalid url failures`() =
+        runTest(testDispatcher) {
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.INVALID_BASE_URL),
+                repository.healthCheck(""),
+            )
+
+            val deadUrl = serverRule.baseUrl()
+            serverRule.server.shutdown()
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.NETWORK),
+                repository.healthCheck(deadUrl),
+            )
+        }
+
+    @Test
+    fun `healthCheck maps http failures from the service`() =
+        runTest(testDispatcher) {
+            val failingFactory = mockk<ServerCheckServiceFactory>()
+            every { failingFactory.create(any()) } throws
+                HttpException(Response.error<String>(500, "".toResponseBody("text/plain".toMediaType())))
+            val failingRepository =
+                ServerRepositoryImpl(
+                    serviceFactory = failingFactory,
+                    ioDispatcher = testDispatcher,
+                )
+
+            assertEquals(
+                ServerCheckResult.Failure(ServerError.HTTP, 500),
+                failingRepository.healthCheck(serverRule.baseUrl()),
             )
         }
 

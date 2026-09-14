@@ -1,5 +1,8 @@
 package org.evoionosp.noveliq.data.library.repository
 
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
@@ -169,6 +172,66 @@ class LibraryRepositoryImplTest {
             assertEquals(
                 DomainResult.Success(Unit),
                 repository.refreshLibraries(deadUrl, "token"),
+            )
+        }
+
+    @Test
+    fun `observeLibraries emits mapped entities`() =
+        runTest(testDispatcher) {
+            database.libraryDao().upsertLibraries(listOf(library("lib1", isSelected = true)))
+
+            assertEquals(listOf("lib1"), repository.observeLibraries().first().map { it.id })
+        }
+
+    @Test
+    fun `observeSelectedLibrary emits the selection`() =
+        runTest(testDispatcher) {
+            assertNull(repository.observeSelectedLibrary().first())
+
+            database.libraryDao().upsertLibraries(listOf(library("lib1", isSelected = true)))
+            assertEquals("lib1", repository.observeSelectedLibrary().first()?.id)
+        }
+
+    @Test
+    fun `refreshLibraries maps unexpected http errors`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(500, "{}")
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshLibraries(serverRule.baseUrl(), "token"),
+            )
+        }
+
+    @Test
+    fun `refreshLibraries maps invalid base urls`() =
+        runTest(testDispatcher) {
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                repository.refreshLibraries("", "token"),
+            )
+        }
+
+    @Test
+    fun `refreshLibraries maps unexpected failures`() =
+        runTest(testDispatcher) {
+            // A non-IO runtime failure (truncated JSON surfaces as IOException
+            // via Gson streaming, so stub the service instead).
+            val failingFactory = mockk<AudiobookshelfLibraryServiceFactory>()
+            every { failingFactory.create(any()) } throws IllegalStateException("boom")
+            val failingRepository =
+                LibraryRepositoryImpl(
+                    database = database,
+                    libraryDao = database.libraryDao(),
+                    audiobookDao = database.audiobookDao(),
+                    syncStateDao = database.librarySyncStateDao(),
+                    serviceFactory = failingFactory,
+                    connectivityObserver = connectivity,
+                    ioDispatcher = testDispatcher,
+                )
+
+            assertEquals(
+                DomainResult.Failure(CatalogError.UNKNOWN),
+                failingRepository.refreshLibraries(serverRule.baseUrl(), "token"),
             )
         }
 

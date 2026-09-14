@@ -133,6 +133,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     // Media3 types (DataSource.Factory, ExoPlayer) cross the Hilt DI graph from :playback.

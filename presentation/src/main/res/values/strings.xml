@@ -3,8 +3,8 @@
     <string name="connect_to_server">Connect to Server</string>
     <string name="server_url_label">Server URL</string>
     <string name="server_url_placeholder">example.com</string>
-    <string name="check_server">Check Server</string>
-    <string name="checking_server">Checking…</string>
+    <string name="check_server">Connect</string>
+    <string name="checking_server">Connecting…</string>
     <string name="server_label">Server: %1$s %2$s</string>
     <string name="url_label">URL: %1$s</string>
     <string name="language_label">Language: %1$s</string>
@@ -12,12 +12,12 @@
     <string name="password_label">Password</string>
     <string name="login_button">Login</string>
     <string name="logging_in">Logging in…</string>
-    <string name="login_success">Login successful.</string>
     <string name="login_title">Login</string>
-    <string name="auth_header_title">Welcome to Noveliq</string>
+    <string name="auth_app_title">Noveliq</string>
+    <string name="auth_header_title">Welcome</string>
     <string name="auth_header_body">Connect your Audiobookshelf server and pick up your library to start listening to your favorite books.</string>
-    <string name="auth_credentials_title">Sign in</string>
-    <string name="auth_server_hint">Check your server first. Once it responds, your sign-in fields will appear below.</string>
+    <string name="auth_credentials_title">Login</string>
+    <string name="auth_server_hint">Connect to your server first. Once it responds, your sign-in fields will appear below.</string>
     <string name="settings_title">Settings</string>
     <string name="preferences_title">Preferences</string>
     <string name="preferences_back">Back</string>
@@ -124,6 +124,7 @@
     <string name="error_server_url_required">Please enter a server URL.</string>
     <string name="error_invalid_base_url">Invalid base URL.</string>
     <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_server_not_found">Couldn\'t find a server at this address. Check the URL and try again.</string>
     <string name="error_http">Server error. Please try again.</string>
     <string name="error_ping_failed">Ping failed. Please check the server URL.</string>
     <string name="error_healthcheck_failed">Healthcheck failed.</string>

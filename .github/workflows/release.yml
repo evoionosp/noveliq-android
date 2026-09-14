@@ -1,0 +1,91 @@
+name: Release APK
+
+# CD pipeline: every push to master produces an installable release APK and
+# publishes it as a GitHub Release asset, so the download link appears on the
+# repository's Releases page (https://github.com/evoionosp/noveliq-android/releases).
+#
+# Required permission: contents: write (creates the release + uploads the asset).
+# Concurrency: never cancel — each master push is a release worth keeping.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  GRADLE_ARGS: --stacktrace
+
+jobs:
+  build-and-release:
+    name: Build release APK & publish GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so --generate-notes can diff against the previous tag.
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-build
+
+      # Real Play-ready signing is opt-in via repository secrets. When they are
+      # absent the build falls back to debug signing (see app/build.gradle.kts),
+      # which still yields an installable APK for sideloading/testing.
+      #
+      # To enable, add these Actions secrets (Settings → Secrets and variables →
+      # Actions) and keep the keystore file itself out of git:
+      #   ANDROID_KEYSTORE_BASE64 — `base64 -w0 release.keystore`
+      #   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+      - name: Configure release signing (optional)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No signing secrets configured — release will use debug signing (sideload-only)."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          cat > keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          echo "Release signing configured from secrets."
+
+      - name: Assemble release
+        run: ./gradlew $GRADLE_ARGS assembleRelease
+
+      - name: Prepare release metadata
+        id: meta
+        run: |
+          VERSION_NAME=$(grep '^versionName' gradle/libs.versions.toml | cut -d'"' -f2)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="v${VERSION_NAME}-${{ github.run_number }}"
+          APK_NAME="noveliq-${TAG}-${SHORT_SHA}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK_NAME"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "apk=$APK_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+      # `gh` is preinstalled on ubuntu-latest. --generate-notes builds the
+      # changelog from commits since the previous tag; --latest moves the
+      # "Latest" badge so there is exactly one latest download link.
+      - name: Create GitHub Release with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            --title "Noveliq ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.sha }})" \
+            --generate-notes \
+            --latest \
+            "${{ steps.meta.outputs.apk }}#Noveliq release APK"

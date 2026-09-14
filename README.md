@@ -134,6 +134,8 @@ org.gradle.java.installations.paths=/Applications/Android Studio.app/Contents/jb
   assemble, all running in parallel on every push and pull request to `master`/`dev`.
 - `.github/workflows/instrumentation.yml` — emulator tests, nightly and on demand.
   Kept off the pull request path because booting an emulator costs 10-15 minutes.
+- `.github/workflows/release.yml` — CD: on every push to `master` builds the
+  release APK and publishes it as a GitHub Release asset (the download link).
 
 ## Contributing
 

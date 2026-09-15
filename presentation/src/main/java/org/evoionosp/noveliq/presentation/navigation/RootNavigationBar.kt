@@ -1,5 +1,11 @@
 package org.evoionosp.noveliq.presentation.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
@@ -38,11 +44,24 @@ internal fun RootNavigationBottomBar(
 ) {
     if (currentRoute in mainRootRoutes) {
         Column {
-            if (nowPlayingAudiobook != null && !isNowPlayingExpanded) {
-                NowPlayingBar(
-                    audiobook = nowPlayingAudiobook,
-                    onExpand = onExpandNowPlaying,
-                )
+            // Fade/slide only (no resize) so the nav bar below never jumps while
+            // the sheet lands on top of the bar being revealed underneath.
+            AnimatedVisibility(
+                visible = nowPlayingAudiobook != null && !isNowPlayingExpanded,
+                enter =
+                    fadeIn(animationSpec = tween(200)) +
+                        slideInVertically(animationSpec = tween(250)) { fullHeight -> fullHeight / 4 },
+                exit =
+                    fadeOut(animationSpec = tween(120)) +
+                        slideOutVertically(animationSpec = tween(150)) { fullHeight -> fullHeight / 4 },
+            ) {
+                val audiobook = nowPlayingAudiobook
+                if (audiobook != null) {
+                    NowPlayingBar(
+                        audiobook = audiobook,
+                        onExpand = onExpandNowPlaying,
+                    )
+                }
             }
             NavigationBar {
                 rootNavItems.forEach { item ->

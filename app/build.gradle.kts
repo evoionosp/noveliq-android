@@ -135,6 +135,8 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.hilt.android)
+    // Coil types (ImageLoaderFactory) cross from :presentation's cover pipeline.
+    implementation(libs.coil.compose)
     ksp(libs.hilt.compiler)
     // Media3 types (DataSource.Factory, ExoPlayer) cross the Hilt DI graph from :playback.
     // The app assembles the root Hilt components, so it needs these types on its compile classpath.

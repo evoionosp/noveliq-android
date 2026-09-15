@@ -16,13 +16,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
-import org.evoionosp.noveliq.presentation.player.authorizedImageRequest
+import org.evoionosp.noveliq.presentation.utils.BookCoverArtwork
 
 @Composable
 internal fun AudiobookListCard(
@@ -51,11 +49,11 @@ internal fun AudiobookListCard(
                         .fillMaxHeight()
                         .aspectRatio(0.72f),
             ) {
-                AsyncImage(
-                    model = authorizedImageRequest(audiobook.coverUrl),
-                    contentDescription = audiobook.title,
+                BookCoverArtwork(
+                    coverUrl = audiobook.coverUrl,
+                    title = audiobook.title,
+                    author = audiobook.author,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
                 )
             }
 

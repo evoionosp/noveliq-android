@@ -1,23 +1,48 @@
 package org.evoionosp.noveliq.presentation.player
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import org.evoionosp.noveliq.presentation.common.LocalAccessToken
+import org.evoionosp.noveliq.presentation.utils.CoverArt
 
-@Composable
-internal fun authorizedImageRequest(url: String): ImageRequest {
-    val accessToken = LocalAccessToken.current
-    return ImageRequest
-        .Builder(LocalContext.current)
+internal fun authorizedImageRequest(
+    context: Context,
+    accessToken: String,
+    url: String,
+): ImageRequest =
+    ImageRequest
+        .Builder(context)
         .data(url)
         .crossfade(true)
         .diskCachePolicy(CachePolicy.ENABLED)
         .memoryCachePolicy(CachePolicy.ENABLED)
         .addHeader("Authorization", "Bearer $accessToken")
         .build()
-}
+
+@Composable
+internal fun authorizedImageRequest(url: String): ImageRequest =
+    authorizedImageRequest(LocalContext.current, LocalAccessToken.current, url)
+
+internal fun authorizedImageRequest(
+    context: Context,
+    accessToken: String,
+    art: CoverArt,
+): ImageRequest =
+    ImageRequest
+        .Builder(context)
+        .data(art)
+        .crossfade(true)
+        .diskCachePolicy(CachePolicy.ENABLED)
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .addHeader("Authorization", "Bearer $accessToken")
+        .build()
+
+@Composable
+internal fun authorizedImageRequest(art: CoverArt): ImageRequest =
+    authorizedImageRequest(LocalContext.current, LocalAccessToken.current, art)
 
 internal fun Long.toDurationLabel(): String {
     val totalSeconds = this

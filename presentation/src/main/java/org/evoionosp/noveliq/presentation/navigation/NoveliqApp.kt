@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -86,7 +87,9 @@ fun NoveliqApp(
         val nowPlayingUiState by nowPlayingViewModel.uiState.collectAsStateWithLifecycle()
         val playingAudiobook = nowPlayingUiState.playback.audiobook
         val viewedAudiobook = nowPlayingUiState.viewedAudiobook
-        var isNowPlayingExpanded by remember { mutableStateOf(false) }
+        // Saveable, not plain remember: rotation recreates the Activity, and the
+        // expanded player must survive that (playback itself continues regardless).
+        var isNowPlayingExpanded by rememberSaveable { mutableStateOf(false) }
         val currentBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStackEntry?.destination?.route
         val homeDestination = splashState.startupDestination as? StartupDestination.Home

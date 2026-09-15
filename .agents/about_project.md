@@ -31,7 +31,6 @@ The long-term product direction is broader than a basic Android phone app. The a
 - `presentation`: Compose UI, screen ViewModels, app theme, navigation, and the now-playing surfaces (`presentation.player`: bar, overlay, full screen, chapters/speed sheets).
 - `domain`: domain models, repository interfaces, use cases.
 - `data`: repository implementations, Retrofit services, Room DAOs/entities, connectivity observation.
-- `core`: shared session and settings persistence types and helpers.
 
 ## What Exists Today
 
@@ -41,7 +40,8 @@ The long-term product direction is broader than a basic Android phone app. The a
 - Library fetch and local library cache.
 - Audiobook list fetch for the selected library.
 - Local Room-backed catalog state and sync status.
-- Server-backed Continue Listening synced from personalized shelves and cached locally.
+- Server-backed Continue Listening synced from the items-in-progress API and cached locally, with per-book playback positions and time-left-at-1x card subtitles.
+- Ordered, fail-open logout flow (stop playback, clear session, wipe caches/downloads), confirmed via a Settings dialog; only the last server URL and appearance settings survive.
 - Audiobook detail overlay reachable from the home catalog (glance vs playing states in `NowPlayingUiState`; there is no detail destination in the Navigation Compose graph).
 - Chapter fetch for a selected audiobook via item-detail API call, cached in Room along with ordered remote tracks.
 - Real audio playback from the `Play` action using Media3 (ExoPlayer + MediaSession).
@@ -55,7 +55,7 @@ The long-term product direction is broader than a basic Android phone app. The a
 
 - Playback queue model and queue UI (tracks play in order, but there is no queue management yet).
 - Local playback progress persistence (progress syncs with the server; nothing is cached locally and saves are skipped while offline).
-- Download manager / offline storage.
+- Download manager / offline storage (a `DownloadStore` seam exists for logout wiping; no implementation yet).
 - Download action and offline media storage.
 - Local-file playback source resolution (remote streaming only today).
 - Bookmarks and sleep timer (the sleep action in the player footer is a placeholder with no handler).

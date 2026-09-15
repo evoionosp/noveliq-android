@@ -8,6 +8,8 @@ Current implementation snapshot:
 - Catalog expansion is in progress.
 - The app supports audiobook detail via an overlay (glance mode) and chapter loading from the server, cached in Room.
 - Real audio playback is implemented with Media3 (ExoPlayer + MediaSession) in the `:playback` module, including background playback, a media notification, server-side progress sync/resume, chapter navigation, and speed control.
+- Logout runs a single ordered flow (`LogoutUserUseCase`): stops playback, clears the session, wipes catalog/cover caches and (future) downloads, and keeps only the last server URL plus appearance settings.
+- Continue Listening shows per-book time left at 1x, hydrated from the server progress API.
 - Still not implemented: local progress persistence, queue UI, downloads/offline storage, sleep timer, search/filter, Android Auto, and Wear OS.
 
 Files in this directory:

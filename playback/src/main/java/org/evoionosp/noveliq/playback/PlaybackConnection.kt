@@ -29,6 +29,7 @@ import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCa
 import org.evoionosp.noveliq.domain.audiobook.usecase.PreparePlaybackUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.SavePlaybackProgressUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 
 /**
  * Acquires the [MediaController] for [PlaybackService]. The production implementation performs the
@@ -74,6 +75,7 @@ class PlaybackConnection
         private val savePlaybackProgress: SavePlaybackProgressUseCase,
         private val controllerConnector: MediaControllerConnector,
         private val connectionScope: CoroutineScope,
+        private val observeSessionUseCase: ObserveSessionUseCase,
     ) {
         private val _playbackState = MutableStateFlow(PlaybackState())
         val playbackState = _playbackState.asStateFlow()
@@ -98,6 +100,20 @@ class PlaybackConnection
             }
 
             startProgressUpdateLoop()
+            stopWhenSignedOut()
+        }
+
+        /**
+         * Every logout path (settings, bootstrap screen, expired-session
+         * auto-logout) funnels through the session store, so watching it here
+         * stops playback exactly once no matter which path signed the user out.
+         */
+        private fun stopWhenSignedOut() {
+            connectionScope.launch {
+                observeSessionUseCase().collect { session ->
+                    if (session == null) stopPlayback()
+                }
+            }
         }
 
         fun playAudiobook(
@@ -217,6 +233,39 @@ class PlaybackConnection
         fun pause() {
             mediaController?.pause()
             saveCurrentProgressAsync()
+        }
+
+        /**
+         * Halts playback entirely and forgets the loaded book. Resetting to a
+         * fresh [PlaybackState] clears the audiobook, which is what hides the
+         * mini player and the Now Playing screen.
+         */
+        fun stopPlayback() {
+            saveCurrentProgressAsync()
+            stopNow()
+        }
+
+        /**
+         * Logout entry: awaits the final progress flush (which needs the still-valid session)
+         * before stopping. The player always stops, even when the flush throws — the failure
+         * propagates so the logout flow can record it.
+         */
+        suspend fun stopForLogout() {
+            try {
+                saveCurrentProgressNow()
+            } finally {
+                stopNow()
+            }
+        }
+
+        private fun stopNow() {
+            mediaController?.stop()
+            mediaController?.clearMediaItems()
+            currentAudiobookId = null
+            currentTracks = emptyList()
+            currentTotalDurationSeconds = 0.0
+            secondsSinceServerSave = 0
+            _playbackState.value = PlaybackState()
         }
 
         fun seekTo(positionMs: Long) {

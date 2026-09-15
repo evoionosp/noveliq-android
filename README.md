@@ -9,20 +9,12 @@ Implemented:
 - [x] Connect to your Audiobookshelf server (URL validation and health check).
 - [x] Log in and persist your session across app launches.
 - [x] Browse libraries and audiobooks, cached locally for offline-first reads.
-- [x] Continue Listening shelf on the home dashboard.
+- [x] Continue Listening shelf on the home dashboard, with per-book time left at 1x.
 - [x] Audiobook detail overlay with chapters and cached track metadata.
 - [x] Stream and play audiobooks with background playback, a media notification, and media session controls.
 - [x] Track playback progress and sync it with the server (resume from saved position; local/offline persistence still open).
 - [x] Chapter navigation and playback speed control.
-
-### Coverage
-
-- Per module: `./gradlew :data:jacocoTestReport` → `data/build/reports/jacoco/test/html/index.html`
-- Whole app: `./gradlew jacocoMergedReport` → `build/reports/jacoco/merged/html/index.html`
-
-Both show line and branch coverage per file — an untested `if`/`else` branch appears
-as a partially-covered (yellow) or missed (red) line. Generated code (`R`,
-`BuildConfig`, Hilt/Room impls) is excluded.
+- [x] Log out with confirmation — stops playback and wipes cached books, covers, and session (keeps the server URL for quick sign-in).
 
 Planned:
 
@@ -132,7 +124,8 @@ org.gradle.java.installations.paths=/Applications/Android Studio.app/Contents/jb
 
 - `.github/workflows/android-ci.yml` — static analysis, unit tests + coverage, and
   assemble, all running in parallel on every push and pull request to `master`/`dev`.
-- `.github/workflows/instrumentation.yml` — emulator tests, nightly and on demand.
+- `.github/workflows/instrumentation.yml` — emulator tests, manual dispatch only for
+  now (no device-test suite exists yet, so the nightly schedule is disabled).
   Kept off the pull request path because booting an emulator costs 10-15 minutes.
 - `.github/workflows/release.yml` — CD: on every push to `master` builds the
   release APK and publishes it as a GitHub Release asset (the download link).

@@ -56,12 +56,12 @@ Current note:
 
 ## Playback Direction
 
-When playback starts, it should be built around:
+Playback is built around:
 
-- Media3 player
+- Media3 player (`PlaybackService`)
 - MediaSession / MediaSessionService
-- shared playback controller abstractions
-- shared queue/progress persistence
+- shared playback controller abstractions (`PlaybackConnection`, `PlaybackState`)
+- shared queue/progress persistence (queue and local progress persistence still open)
 
 Android Auto and Wear OS should integrate with the same playback/session core rather than duplicating playback logic.
 
@@ -77,14 +77,11 @@ Downloads should be built around:
 
 ## Data Model Direction
 
-Before playback and downloads ship, the app will need richer local models for:
+Playback shipped on richer local models for library item details, tracks, and chapters
+(`audiobook_details`, `audiobooks`, chapters/tracks tables, DB v4). Still missing before
+offline playback is viable:
 
-- library item details
-- tracks/files
-- chapters
-- playback progress
+- playback progress (server-synced today; per-book positions cached only for Continue Listening)
 - bookmarks
 - download state
 - remote/local media source resolution
-
-The current `Audiobook` list model plus network-fetched chapter detail is useful for the current catalog flow, but it is not sufficient as the central media model for the full product.

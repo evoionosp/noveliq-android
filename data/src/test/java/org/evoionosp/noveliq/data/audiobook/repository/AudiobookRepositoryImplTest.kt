@@ -24,6 +24,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -221,6 +222,76 @@ class AudiobookRepositoryImplTest {
             }
             repository.observeContinueListening("lib2").test {
                 assertTrue(awaitItem().isEmpty())
+            }
+        }
+
+    @Test
+    fun `refreshContinueListening persists the reported playback position`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(
+                200,
+                """{"results": [${bookJson(id = "item1", currentTime = 120.5)}]}""",
+            )
+
+            val result =
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                )
+
+            assertEquals(DomainResult.Success(Unit), result)
+            repository.observeContinueListening("lib1").test {
+                val item = awaitItem().single()
+                assertEquals("item1", item.id)
+                assertEquals(120.5, item.progressSeconds!!, 0.001)
+            }
+        }
+
+    @Test
+    fun `refreshContinueListening hydrates positions missing from the list response`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(
+                200,
+                """{"results": [${bookJson(id = "item1")}]}""",
+            )
+            serverRule.enqueueJson(
+                200,
+                """{"currentTime": 120.5, "duration": 600.0, "isFinished": false}""",
+            )
+
+            val result =
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                )
+
+            assertEquals(DomainResult.Success(Unit), result)
+            repository.observeContinueListening("lib1").test {
+                assertEquals(120.5, awaitItem().single().progressSeconds!!, 0.001)
+            }
+        }
+
+    @Test
+    fun `refreshContinueListening tolerates failed per-item progress`() =
+        runTest(testDispatcher) {
+            serverRule.enqueueJson(
+                200,
+                """{"results": [${bookJson(id = "item1")}]}""",
+            )
+            serverRule.enqueueJson(404, "{}")
+
+            val result =
+                repository.refreshContinueListening(
+                    baseUrl = serverRule.baseUrl(),
+                    accessToken = "token",
+                    libraryId = "lib1",
+                )
+
+            assertEquals(DomainResult.Success(Unit), result)
+            repository.observeContinueListening("lib1").test {
+                assertNull(awaitItem().single().progressSeconds)
             }
         }
 
@@ -704,10 +775,14 @@ class AudiobookRepositoryImplTest {
         id: String,
         libraryId: String = "lib1",
         mediaType: String = "book",
-    ): String =
-        """{"id": "$id", "libraryId": "$libraryId", "mediaType": "$mediaType",
+        currentTime: Double? = null,
+    ): String {
+        val progress =
+            currentTime?.let { """, "userMediaProgress": {"currentTime": $it, "isFinished": false}""" }.orEmpty()
+        return """{"id": "$id", "libraryId": "$libraryId", "mediaType": "$mediaType",
             "media": {"duration": 7265.0,
-              "metadata": {"title": "Dune", "authorName": "Herbert, Frank"}}}"""
+              "metadata": {"title": "Dune", "authorName": "Herbert, Frank"}}$progress}"""
+    }
 
     private fun fullBookJson(): String =
         """{"id": "item1", "libraryId": "lib1", "mediaType": "book",

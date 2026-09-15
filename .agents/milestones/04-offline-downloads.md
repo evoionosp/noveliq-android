@@ -26,6 +26,10 @@ Enable users to download audiobooks onto the device for offline listening with d
 - Offline playback works when network is unavailable.
 - Download state survives app restarts.
 
+## Seams Already In Place
+
+- The logout flow defines `DownloadStore.deleteAll` (domain) with a no-op data binding. A future implementation replaces the binding and is wiped on logout with no logout-flow change.
+
 ## Dependencies
 
 - Playback core must exist first.

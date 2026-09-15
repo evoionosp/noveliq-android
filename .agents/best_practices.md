@@ -97,6 +97,6 @@
 
 ## Project Hygiene
 
-- Keep README and `.agent` docs updated as the architecture evolves.
+- Keep README and `.agents` docs updated as the architecture evolves.
 - Record major architectural decisions before large refactors.
 - Prefer small, targeted changes over broad rewrites without milestones.

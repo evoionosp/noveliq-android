@@ -10,9 +10,13 @@ name: Instrumentation Tests
 # Move the `instrumentation` job back into android-ci.yml once there is a real
 # device-test suite worth blocking a merge on.
 on:
-  schedule:
-    # 04:00 UTC — after the working day in America/Los_Angeles.
-    - cron: '0 4 * * *'
+  # Nightly schedule disabled: no real instrumented tests exist yet, so the
+  # 10-15 minute emulator boot buys nothing. Manual dispatch stays available;
+  # re-enable the cron below (and the merge-gate note at the top of this file)
+  # once there is a device-test suite worth running.
+  # schedule:
+  #   # 04:00 UTC — after the working day in America/Los_Angeles.
+  #   - cron: '0 4 * * *'
   workflow_dispatch:
     inputs:
       api-level:

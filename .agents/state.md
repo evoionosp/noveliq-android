@@ -16,7 +16,9 @@ The remaining gap to a full playback product is not the player itself but the du
 - Select one library.
 - Fetch audiobook list for the selected library.
 - Cache libraries and audiobooks in Room.
-- Sync server-backed Continue Listening from Audiobookshelf personalized shelves and cache it locally.
+- Sync server-backed Continue Listening from the Audiobookshelf items-in-progress API and cache it locally, including per-book playback positions (hydrated per item when the list response omits them).
+- Show per-book time left at 1x on Continue Listening cards, falling back to the author line when position or duration is unknown.
+- Log out through a single ordered flow: stop playback (flushing progress first), clear the session, wipe catalog/cover caches and downloads, keeping only the last server URL and appearance settings.
 - Show sync status for current library.
 - Open an audiobook detail overlay (glance mode) from the catalog grid — there is no detail route in the nav graph.
 - Fetch and display audiobook chapters from the Audiobookshelf item-detail API.
@@ -32,7 +34,7 @@ The remaining gap to a full playback product is not the player itself but the du
 
 ### Good Foundations
 
-- Separate modules already exist: `app`, `presentation`, `domain`, `data`, `core`.
+- Separate modules already exist: `app`, `presentation`, `domain`, `data`, `playback`.
 - Domain layer defines repository interfaces and use cases.
 - Data layer owns Retrofit and Room implementations.
 - Compose UI uses screen ViewModels and `StateFlow`.
@@ -60,7 +62,7 @@ Impact:
 
 #### 2. Downloads are still not implemented
 
-There is still no offline download pipeline, file storage strategy, download state model, or source selection between local and remote audio.
+There is still no offline download pipeline, file storage strategy, download state model, or source selection between local and remote audio. The logout flow already defines the integration seam (`DownloadStore.deleteAll`, currently a no-op), so a future implementation is wiped on logout with no logout-flow change.
 
 Impact:
 
@@ -131,12 +133,23 @@ Impact:
   expiry tracking on the stored session, and proactive rotation via `GetValidSessionUseCase`.
 - The login form remembers the last server URL and protocol across logout, so signing back in
   does not start from a blank field.
+- Logout is a single ordered, fail-open flow (`LogoutUserUseCase` in domain, Hilt-bound
+  cleaners per module): stop playback with an awaited progress flush, clear the session,
+  delete downloads (no-op seam until downloads ship), clear Coil cover caches, wipe the
+  Room catalog. All logout paths (Settings, expired-session auto-logout, splash) run it;
+  Settings shows a Material3 confirm dialog with logout progress. Only the last server
+  URL and appearance settings survive.
+- Continue Listening cards show time left at 1x (`"5h 30m left"`), computed from cached
+  per-book positions; grid cover art is square with 4dp rounded corners.
+- Pre-release schema policy: Room is at v4 with `fallbackToDestructiveMigration` — no
+  upgrade path is maintained past v3. Proper migrations are required before release.
 
 ## Current Product Fit
 
 ### Good enough for current scope
 
 - Login and server validation.
+- Logout with full local wipe (session, caches, downloads seam).
 - Initial catalog browsing.
 - Basic cached library experience.
 - Detail-oriented catalog browsing.

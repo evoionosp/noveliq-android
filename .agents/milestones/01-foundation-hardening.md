@@ -52,3 +52,5 @@ Turn the current prototype foundation into a safer and cleaner base for future c
 - Main repository/coordinator paths now use injected dispatchers.
 - Key transient UI messages use `SharedFlow`.
 - The connectivity contract lives in `domain` (`ConnectivityObserver`), implemented in `data` (`AndroidConnectivityObserver`).
+- Token lifetime is handled centrally: `SessionRefreshCoordinator` (domain) plus an OkHttp `Authenticator` and proactive rotation via `GetValidSessionUseCase`; only the coordinator clears the session, and only on definitive refresh rejection.
+- Logout is a single ordered, fail-open flow (`LogoutUserUseCase`): stop playback with an awaited progress flush, clear the session, delete downloads (no-op seam), clear Coil cover caches, wipe the Room catalog. Only the last server URL and appearance settings survive. All logout paths run it; Settings confirms via dialog with progress state.

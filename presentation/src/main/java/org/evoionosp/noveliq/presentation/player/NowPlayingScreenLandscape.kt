@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.playback.PlaybackState
+import org.evoionosp.noveliq.presentation.utils.SheetDragState
 
 /**
  * Landscape Now Playing: 40/60 split with artwork + titles on the left and
@@ -53,13 +53,13 @@ internal fun NowPlayingScreenLandscape(
     onNextChapter: () -> Unit,
     onSpeedClick: () -> Unit,
     onChaptersClick: () -> Unit,
-    detailsListState: LazyListState,
+    sheetDrag: SheetDragState,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (isGlance) {
-            BookDetailsScreen(
+            BookDetailsLandscape(
                 modifier = Modifier.weight(1f),
                 audiobook = audiobook,
                 bookProgress = bookProgress,
@@ -67,7 +67,7 @@ internal fun NowPlayingScreenLandscape(
                 inProgressSeconds = inProgressSeconds,
                 onPlay = onPlayViewed,
                 onPlayChapter = onPlayChapter,
-                listState = detailsListState,
+                sheetDrag = sheetDrag,
             )
         } else {
             Row(

@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.library.model.BootstrapHomeCatalogResult
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
 import org.evoionosp.noveliq.domain.session.LoginSession
-import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.LogoutUserUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 
 @HiltViewModel
@@ -26,7 +26,7 @@ class SplashViewModel
     @Inject
     constructor(
         private val observeSessionUseCase: ObserveSessionUseCase,
-        private val clearSessionUseCase: ClearSessionUseCase,
+        private val logoutUserUseCase: LogoutUserUseCase,
         private val getValidSessionUseCase: GetValidSessionUseCase,
         private val bootstrapHomeCatalogUseCase: BootstrapHomeCatalogUseCase,
     ) : ViewModel() {
@@ -103,7 +103,7 @@ class SplashViewModel
 
         fun logout() {
             viewModelScope.launch {
-                clearSessionUseCase()
+                logoutUserUseCase()
             }
         }
 

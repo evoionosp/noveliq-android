@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.evoionosp.noveliq.domain.session.PlayerLogoutHandler
 import org.evoionosp.noveliq.domain.session.SessionStore
 
 internal const val AUTHORIZATION_HEADER = "Authorization"
@@ -76,4 +77,8 @@ internal object PlaybackConnectionBindings {
     @Provides
     @Singleton
     fun provideControllerConnector(impl: SessionMediaControllerConnector): MediaControllerConnector = impl
+
+    @Provides
+    @Singleton
+    fun providePlayerLogoutHandler(impl: PlaybackConnectionLogoutHandler): PlayerLogoutHandler = impl
 }

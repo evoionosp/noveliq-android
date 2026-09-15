@@ -8,6 +8,9 @@ import javax.inject.Named
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -15,11 +18,13 @@ import kotlinx.coroutines.withContext
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDao
 import org.evoionosp.noveliq.data.audiobook.local.dao.AudiobookDetailDao
 import org.evoionosp.noveliq.data.audiobook.local.dao.ContinueListeningDao
+import org.evoionosp.noveliq.data.audiobook.local.entity.ContinueListeningEntity
 import org.evoionosp.noveliq.data.audiobook.local.mapper.toDomain
 import org.evoionosp.noveliq.data.library.local.dao.LibrarySyncStateDao
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
 import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
 import org.evoionosp.noveliq.data.library.local.mapper.toDomain
+import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryApiService
 import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServiceFactory
 import org.evoionosp.noveliq.data.library.remote.dto.UpdateProgressRequestDto
 import org.evoionosp.noveliq.data.library.remote.mapper.toChapterEntities
@@ -87,8 +92,8 @@ class AudiobookRepositoryImpl
             }
 
         override fun observeContinueListening(libraryId: String): Flow<List<Audiobook>> =
-            continueListeningDao.observeContinueListening(libraryId).map { entities ->
-                entities.map { it.toDomain() }
+            continueListeningDao.observeContinueListening(libraryId).map { items ->
+                items.map { it.audiobook.toDomain().copy(progressSeconds = it.currentTimeSeconds) }
             }
 
         override fun observeLibrarySyncStatus(libraryId: String): Flow<SyncStatus> =
@@ -295,8 +300,9 @@ class AudiobookRepositoryImpl
                 }
 
                 try {
+                    val service = serviceFactory.create(baseUrl)
                     val response =
-                        serviceFactory.create(baseUrl).itemsInProgress(
+                        service.itemsInProgress(
                             authorization = "Bearer $accessToken",
                             limit = 50,
                         )
@@ -315,21 +321,22 @@ class AudiobookRepositoryImpl
                         entities.mapNotNull { item ->
                             item.toContinueListeningEntity(fallbackLibraryId = libraryId)
                         }
+                    val hydratedItems = hydrateCurrentTime(service, accessToken, continueItems)
 
                     database.withTransaction {
                         if (audiobooks.isNotEmpty()) {
                             audiobookDao.upsertAudiobooks(audiobooks)
                         }
                         continueListeningDao.deleteByLibraryId(libraryId)
-                        if (continueItems.isNotEmpty()) {
-                            continueListeningDao.upsert(continueItems)
+                        if (hydratedItems.isNotEmpty()) {
+                            continueListeningDao.upsert(hydratedItems)
                         }
                     }
 
                     if (org.evoionosp.noveliq.data.BuildConfig.DEBUG) {
                         Log.d(
                             TAG,
-                            "Continue Listening refresh success libraryId=$libraryId itemCount=${continueItems.size}",
+                            "Continue Listening refresh success libraryId=$libraryId itemCount=${hydratedItems.size}",
                         )
                     }
                     DomainResult.Success(Unit)
@@ -361,6 +368,55 @@ class AudiobookRepositoryImpl
                 }
             }
         }
+
+        /**
+         * Fills in playback positions the list response did not embed. Real servers return a
+         * minified item shape from `GET /api/me/items-in-progress`, so items without an
+         * embedded position are hydrated concurrently through the per-item progress endpoint.
+         * Best-effort per item: a failed lookup leaves null progress and the UI falls back
+         * to the author line instead of failing the whole refresh.
+         */
+        private suspend fun hydrateCurrentTime(
+            service: AudiobookshelfLibraryApiService,
+            accessToken: String,
+            items: List<ContinueListeningEntity>,
+        ): List<ContinueListeningEntity> =
+            coroutineScope {
+                items
+                    .map { item ->
+                        async {
+                            if (item.currentTimeSeconds != null) {
+                                item
+                            } else {
+                                item.copy(
+                                    currentTimeSeconds =
+                                        fetchCurrentTimeSeconds(
+                                            service = service,
+                                            accessToken = accessToken,
+                                            audiobookId = item.audiobookId,
+                                        ),
+                                )
+                            }
+                        }
+                    }.awaitAll()
+            }
+
+        private suspend fun fetchCurrentTimeSeconds(
+            service: AudiobookshelfLibraryApiService,
+            accessToken: String,
+            audiobookId: String,
+        ): Double? =
+            try {
+                service
+                    .mediaProgress(
+                        authorization = "Bearer $accessToken",
+                        itemId = audiobookId,
+                    ).currentTime
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: Exception) {
+                null
+            }
 
         override suspend fun fetchProgress(
             baseUrl: String,

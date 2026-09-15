@@ -1,16 +1,16 @@
 package org.evoionosp.noveliq.presentation.player
 
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -29,36 +31,16 @@ import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.presentation.utils.SheetDragState
 
 /**
- * Index of the chapter containing [positionSeconds], or -1 when unknown. Works for
- * saved (details) and live (playing) positions alike — play state only animates the
- * marker, it never changes which row is current.
- */
-internal fun inProgressChapterIndex(
-    chapters: List<AudiobookChapter>,
-    positionSeconds: Double,
-): Int = chapters.indexOfLast { it.startInSeconds <= positionSeconds }
-
-/**
- * Position of the titles block inside the details list. The parent watches
- * [LazyListState.firstVisibleItemIndex] against this to show the book title in
- * the app bar once the titles have scrolled off screen.
- */
-internal const val BOOK_DETAILS_TITLE_ITEM_INDEX = 1
-
-/**
- * Book-details view shown when the viewed book is not the playing one:
- * full-size cover, titles, a normal-sized play bar, and the embedded chapters
- * list. Stateless by design — all data and actions come from NowPlayingViewModel,
- * which already loads exactly this content. The whole page is a single
- * LazyColumn so it scrolls as one unit on short screens.
- *
- * @param listState hoisted so the host can react to scroll position (e.g. show
- * the book title in the app bar once [BOOK_DETAILS_TITLE_ITEM_INDEX] scrolls off).
+ * Landscape book preview: same 40/60 split as the landscape Now Playing, with
+ * artwork + titles static on the left and the Continue action over a scrolling
+ * chapters list on the right. Stateless — data and actions come from
+ * NowPlayingViewModel, like the portrait details page.
  */
 @Composable
-internal fun BookDetailsScreen(
+internal fun BookDetailsLandscape(
     modifier: Modifier = Modifier,
     audiobook: Audiobook,
     bookProgress: Float,
@@ -66,23 +48,45 @@ internal fun BookDetailsScreen(
     inProgressSeconds: Double,
     onPlay: () -> Unit,
     onPlayChapter: (AudiobookChapter) -> Unit,
-    listState: LazyListState = rememberLazyListState(),
+    sheetDrag: SheetDragState,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
     val inProgressIndex = inProgressChapterIndex(chapters, inProgressSeconds)
 
-    LazyColumn(
+    Row(
         modifier = modifier.fillMaxWidth(),
-        state = listState,
-        contentPadding = PaddingValues(top = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        item {
+        Column(
+            modifier =
+                Modifier
+                    .weight(0.4f)
+                    // Static pane: nothing scrollable underneath, so the sheet
+                    // can own vertical drags here directly. (List drags on the
+                    // right arrive via nested scroll instead.)
+                    .pointerInput(Unit) {
+                        val tracker = VelocityTracker()
+                        detectVerticalDragGestures(
+                            onDragStart = { tracker.resetTracking() },
+                            onDragEnd = {
+                                if (sheetDrag.offsetPx.floatValue > 0f) {
+                                    sheetDrag.onDragEnd(tracker.calculateVelocity().y)
+                                }
+                            },
+                            onDragCancel = { sheetDrag.onDragCancel() },
+                            onVerticalDrag = { change, dragDelta ->
+                                tracker.addPosition(change.uptimeMillis, change.position)
+                                sheetDrag.dragBy(dragDelta)
+                            },
+                        )
+                    },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             BookCoverArtwork(
                 audiobook = audiobook,
                 modifier =
                     Modifier
-                        .fillMaxWidth()
+                        .weight(1f, fill = false)
                         .aspectRatio(1f)
                         .onSizeChanged { coverWidthPx = it.width }
                         .clip(RoundedCornerShape(12.dp)),
@@ -97,16 +101,15 @@ internal fun BookDetailsScreen(
                         .clip(RoundedCornerShape(50)),
             )
             Spacer(modifier = Modifier.height(16.dp))
+            BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
         }
-        item {
-            BookTitleBlock(
-                audiobook = audiobook,
-                textAlign = TextAlign.Start,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-        item {
+        Spacer(modifier = Modifier.width(24.dp))
+        Column(
+            modifier =
+                Modifier
+                    .weight(0.6f)
+                    .fillMaxHeight(),
+        ) {
             ContinueListeningButton(onPlay = onPlay)
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -116,45 +119,26 @@ internal fun BookDetailsScreen(
                 textAlign = TextAlign.Start,
             )
             Spacer(modifier = Modifier.height(8.dp))
-        }
-        if (chapters.isEmpty()) {
-            item {
+            if (chapters.isEmpty()) {
                 Text(
                     text = stringResource(R.string.now_playing_chapters_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        } else {
-            items(chapters.size) { index ->
-                val chapter = chapters[index]
-                ChapterRow(
-                    chapter = chapter,
-                    isCurrent = index == inProgressIndex,
-                    // Viewed book is never the playing one here; nothing may animate.
-                    isPlaying = false,
-                    onPlay = { onPlayChapter(chapter) },
-                )
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(chapters.size) { index ->
+                        val chapter = chapters[index]
+                        ChapterRow(
+                            chapter = chapter,
+                            isCurrent = index == inProgressIndex,
+                            // Viewed book is never the playing one here; nothing may animate.
+                            isPlaying = false,
+                            onPlay = { onPlayChapter(chapter) },
+                        )
+                    }
+                }
             }
         }
-    }
-}
-
-/**
- * Text action shared by the portrait details page and the landscape preview:
- * same recipe as the login button — full width, 14dp vertical padding,
- * default fully-rounded Material3 shape.
- */
-@Composable
-internal fun ContinueListeningButton(
-    onPlay: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = onPlay,
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 14.dp),
-    ) {
-        Text(text = stringResource(R.string.continue_listening))
     }
 }

@@ -209,10 +209,18 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            HeaderRow(
-                onMinimize = onMinimize,
-                title = if (showDetailsTitle) audiobook.title else null,
-            )
+            // Landscape drops the bar: just the arrow pinned to the start, and
+            // the content below moves up into the reclaimed space.
+            if (isLandscape) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    MinimizeButton(onMinimize = onMinimize)
+                }
+            } else {
+                HeaderRow(
+                    onMinimize = onMinimize,
+                    title = if (showDetailsTitle) audiobook.title else null,
+                )
+            }
 
             if (isLandscape) {
                 NowPlayingScreenLandscape(
@@ -235,7 +243,7 @@ internal fun NowPlayingScreen(
                     onNextChapter = viewModel::nextChapter,
                     onSpeedClick = { showSpeedSheet = true },
                     onChaptersClick = { showChaptersSheet = true },
-                    detailsListState = detailsListState,
+                    sheetDrag = sheetDrag,
                 )
             } else {
                 if (uiState.isGlance) {
@@ -444,6 +452,20 @@ internal fun PlayingTransport(
 }
 
 @Composable
+private fun MinimizeButton(onMinimize: () -> Unit) {
+    IconButton(
+        onClick = onMinimize,
+        modifier = Modifier.size(48.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.KeyboardArrowDown,
+            contentDescription = stringResource(R.string.close),
+            modifier = Modifier.size(30.dp),
+        )
+    }
+}
+
+@Composable
 private fun HeaderRow(
     onMinimize: () -> Unit,
     title: String?,
@@ -455,16 +477,7 @@ private fun HeaderRow(
                 .heightIn(min = 64.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onMinimize,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.close),
-                modifier = Modifier.size(30.dp),
-            )
-        }
+        MinimizeButton(onMinimize = onMinimize)
         Spacer(modifier = Modifier.width(8.dp))
         AnimatedVisibility(
             visible = title != null,

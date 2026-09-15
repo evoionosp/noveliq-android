@@ -181,7 +181,6 @@ private fun AudiobookCarouselCard(
     AudiobookGridCard(
         audiobook = audiobook,
         onClick = onClick,
-        coverAspectRatio = 0.72f,
         modifier =
             Modifier
                 .width(150.dp),

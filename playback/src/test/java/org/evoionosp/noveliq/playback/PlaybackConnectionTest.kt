@@ -9,6 +9,7 @@ import app.cash.turbine.test
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -18,6 +19,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -36,10 +38,12 @@ import org.evoionosp.noveliq.domain.audiobook.usecase.SavePlaybackProgressUseCas
 import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class PlaybackConnectionTest {
@@ -352,6 +356,86 @@ class PlaybackConnectionTest {
         }
 
     @Test
+    fun `signing out stops playback and clears the loaded book`() =
+        runTest {
+            val graph = graph()
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            graph.session.value = null
+            runCurrent()
+
+            verify { graph.controller.stop() }
+            verify { graph.controller.clearMediaItems() }
+            graph.connection.playbackState.test {
+                assertNull(awaitItem().audiobook)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `stopForLogout flushes progress before stopping`() =
+        runTest {
+            val graph = graph()
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            graph.connection.stopForLogout()
+
+            // The flush must complete before the stop: after the media items are cleared the
+            // position is gone, and after logout the session it needs is gone too.
+            coVerifyOrder {
+                graph.saveProgress("https://example.com", "access-1", "book-1", 0.0, 300.0)
+                graph.controller.stop()
+            }
+            verify { graph.controller.clearMediaItems() }
+            graph.connection.playbackState.test {
+                assertNull(awaitItem().audiobook)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `stopForLogout still stops when the flush fails`() =
+        runTest {
+            val graph = graph()
+            coEvery { graph.saveProgress(any(), any(), any(), any(), any()) } throws RuntimeException("save boom")
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            try {
+                graph.connection.stopForLogout()
+                fail("expected the flush failure to propagate")
+            } catch (_: RuntimeException) {
+                // Expected: the logout flow records the failed step.
+            }
+
+            verify { graph.controller.stop() }
+            verify { graph.controller.clearMediaItems() }
+            graph.connection.playbackState.test {
+                assertNull(awaitItem().audiobook)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `player logout handler stops the connection for logout`() =
+        runTest {
+            val graph = graph()
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            PlaybackConnectionLogoutHandler(graph.connection).onLogout()
+
+            verify { graph.controller.stop() }
+            verify { graph.controller.clearMediaItems() }
+            graph.connection.playbackState.test {
+                assertNull(awaitItem().audiobook)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun `player listener playing changes update the state`() =
         runTest {
             val graph = graph()
@@ -386,6 +470,7 @@ class PlaybackConnectionTest {
     private data class Graph(
         val connection: PlaybackConnection,
         val controller: Player,
+        val session: MutableStateFlow<LoginSession?>,
         val getValidSession: GetValidSessionUseCase,
         val prepare: PreparePlaybackUseCase,
         val fetchProgress: FetchPlaybackProgressUseCase,
@@ -407,6 +492,8 @@ class PlaybackConnectionTest {
         every { controller.seekTo(any<Int>(), any<Long>()) } just Runs
         every { controller.setMediaItems(any<List<MediaItem>>(), any<Int>(), any<Long>()) } just Runs
         every { controller.setPlaybackSpeed(any()) } just Runs
+        every { controller.stop() } just Runs
+        every { controller.clearMediaItems() } just Runs
 
         val getValidSession = mockk<GetValidSessionUseCase>()
         coEvery { getValidSession() } returns testSession()
@@ -423,6 +510,9 @@ class PlaybackConnectionTest {
         // launches (connect + first loop tick) here: every test then starts from a
         // connected, initialized connection.
         val scope = CoroutineScope(backgroundScope.coroutineContext + StandardTestDispatcher(testScheduler))
+        val session = MutableStateFlow<LoginSession?>(testSession())
+        val observeSession = mockk<ObserveSessionUseCase>()
+        every { observeSession() } returns session
         val connection =
             PlaybackConnection(
                 getValidSessionUseCase = getValidSession,
@@ -432,9 +522,10 @@ class PlaybackConnectionTest {
                 savePlaybackProgress = saveProgress,
                 controllerConnector = FakeConnector(if (connected) controller else null),
                 connectionScope = scope,
+                observeSessionUseCase = observeSession,
             )
         runCurrent()
-        return Graph(connection, controller, getValidSession, prepare, fetchProgress, saveProgress)
+        return Graph(connection, controller, session, getValidSession, prepare, fetchProgress, saveProgress)
     }
 
     private class FakeConnector(

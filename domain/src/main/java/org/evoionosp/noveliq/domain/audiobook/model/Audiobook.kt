@@ -8,4 +8,9 @@ data class Audiobook(
     val coverUrl: String,
     val series: String?,
     val durationInSeconds: Long?,
+    /**
+     * Absolute playback position across the whole book, in seconds. Only populated for
+     * continue-listening items, which are the one place progress is observed.
+     */
+    val progressSeconds: Double? = null,
 )

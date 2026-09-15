@@ -32,8 +32,8 @@ import org.evoionosp.noveliq.domain.library.usecase.ObserveLibrariesUseCase
 import org.evoionosp.noveliq.domain.library.usecase.ObserveSelectedLibraryUseCase
 import org.evoionosp.noveliq.domain.library.usecase.SelectLibraryUseCase
 import org.evoionosp.noveliq.domain.session.LoginSession
-import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.LogoutUserUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 import org.evoionosp.noveliq.presentation.R
 import org.evoionosp.noveliq.presentation.common.model.AuthorUiModel
@@ -45,7 +45,7 @@ class HomeViewModel
     @Inject
     constructor(
         private val observeSessionUseCase: ObserveSessionUseCase,
-        private val clearSessionUseCase: ClearSessionUseCase,
+        private val logoutUserUseCase: LogoutUserUseCase,
         private val getValidSessionUseCase: GetValidSessionUseCase,
         private val observeLibrariesUseCase: ObserveLibrariesUseCase,
         private val observeSelectedLibraryUseCase: ObserveSelectedLibraryUseCase,
@@ -279,7 +279,7 @@ class HomeViewModel
 
         fun clearExpiredSession() {
             viewModelScope.launch {
-                clearSessionUseCase()
+                logoutUserUseCase()
             }
         }
 
@@ -290,7 +290,7 @@ class HomeViewModel
         private fun expireSession() {
             _events.tryEmit(HomeUiEvent.SessionExpired)
             viewModelScope.launch {
-                clearSessionUseCase()
+                logoutUserUseCase()
             }
         }
 

@@ -16,6 +16,8 @@ data class AudiobookUiModel(
     val coverUrl: String,
     val durationInSeconds: Long?,
     val durationLabel: String,
+    val progressSeconds: Double?,
+    val timeLeftLabel: String?,
 )
 
 /**
@@ -50,6 +52,8 @@ fun Audiobook.toUiModel(): AudiobookUiModel {
         coverUrl = coverUrl,
         durationInSeconds = durationInSeconds,
         durationLabel = durationInSeconds?.toDurationLabel() ?: "",
+        progressSeconds = progressSeconds,
+        timeLeftLabel = timeLeftLabel(durationInSeconds, progressSeconds),
     )
 }
 
@@ -67,6 +71,7 @@ fun AudiobookUiModel.toDomain(): Audiobook =
         coverUrl = coverUrl,
         series = null,
         durationInSeconds = durationInSeconds,
+        progressSeconds = progressSeconds,
     )
 
 /**
@@ -87,6 +92,28 @@ internal fun String.toAuthorNames(): List<String> =
         .map { it.trim() }
         .filter { it.isNotBlank() }
         .ifEmpty { listOf("Unknown Author") }
+
+/**
+ * Formats the remaining listening time at 1x speed ("5h 30m left", "45m left").
+ * Null when the remaining time is unknown (no duration or no progress) or the book is
+ * finished — callers fall back to the author line then.
+ */
+internal fun timeLeftLabel(
+    durationInSeconds: Long?,
+    progressSeconds: Double?,
+): String? {
+    if (durationInSeconds == null || progressSeconds == null) return null
+    val remainingSeconds = durationInSeconds - progressSeconds
+    if (remainingSeconds <= 0) return null
+    val totalMinutes = Math.round(remainingSeconds / 60.0).coerceAtLeast(1L)
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) {
+        "%dh %02dm left".format(hours, minutes)
+    } else {
+        "%dm left".format(totalMinutes)
+    }
+}
 
 /**
  * Formats seconds into a duration label (H:MM:SS or M:SS).

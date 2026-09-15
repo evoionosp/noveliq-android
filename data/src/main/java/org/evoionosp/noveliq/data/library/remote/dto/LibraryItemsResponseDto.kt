@@ -18,6 +18,22 @@ data class LibraryItemDto(
     val media: LibraryItemMediaDto? = null,
     @SerializedName("progressLastUpdate")
     val progressLastUpdateMillis: Long? = null,
+    @SerializedName("userMediaProgress")
+    val userMediaProgress: UserMediaProgressDto? = null,
+)
+
+/**
+ * Per-user progress embedded in library items (e.g. `GET /api/me/items-in-progress`).
+ * Same object shape as [MediaProgressDto]; all times are absolute across the whole book,
+ * in seconds.
+ */
+data class UserMediaProgressDto(
+    @SerializedName("currentTime")
+    val currentTime: Double? = null,
+    @SerializedName("duration")
+    val duration: Double? = null,
+    @SerializedName("isFinished")
+    val isFinished: Boolean? = null,
 )
 
 data class LibraryItemMediaDto(

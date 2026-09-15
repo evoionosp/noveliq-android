@@ -14,7 +14,9 @@ The goal is not to add features as quickly as possible. The goal is to add them 
 - The app syncs server-backed Continue Listening into Room for the home dashboard.
 - Milestone 2.5 established a playback-ready detail cache as the bridge from catalog browsing to playback.
 - Milestone 3 has started: real Media3 playback (ExoPlayer + MediaSession) in the `:playback` module, a background media session service, now-playing surfaces, server-side progress sync/resume, chapter navigation, and speed control are implemented. Local progress persistence and a queue model/UI are still outstanding.
-- Downloads have not started.
+- Foundation additions since: centralized token refresh (`SessionRefreshCoordinator` + OkHttp `Authenticator` + proactive rotation), and a single ordered logout flow (`LogoutUserUseCase`) that stops playback, clears the session, and wipes catalog/cover caches plus future downloads.
+- Continue Listening now carries per-book playback positions with time-left-at-1x subtitles.
+- Downloads have not started (only the `DownloadStore` logout seam exists).
 
 ## Cross-Cutting Standards
 

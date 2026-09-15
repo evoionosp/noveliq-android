@@ -25,7 +25,7 @@ import org.evoionosp.noveliq.data.library.local.entity.LibrarySyncStateEntity
         ContinueListeningEntity::class,
         LibrarySyncStateEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class NoveliqDatabase : RoomDatabase() {

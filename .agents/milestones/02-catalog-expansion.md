@@ -44,7 +44,7 @@ Evolve from a basic list of audiobooks into a richer browsing foundation that ca
 - The detail overlay shows cached summary metadata from the local catalog model.
 - Chapters are fetched from the Audiobookshelf item-detail API and shown at the bottom of the detail screen.
 - The detail screen exposes a `Play` action that is now wired to the Media3 playback core (see Milestone 3).
-- The Home dashboard now reads Continue Listening from a Room-backed cache populated from Audiobookshelf personalized shelves.
+- The Home dashboard now reads Continue Listening from a Room-backed cache populated from the Audiobookshelf items-in-progress API, including per-book playback positions (hydrated per item when the list response omits them) surfaced as time-left-at-1x card subtitles.
 - Expanded item detail is now persisted in Room, including detail metadata, chapters, and ordered remote audio tracks from Audiobookshelf item detail responses.
 - The detail screen observes the cached expanded detail model and refreshes it through the repository, rather than treating chapters as network-only UI state.
 - Home/catalog UI has been decomposed from one large `HomeScreen.kt` file into dedicated screen and component files.

@@ -22,6 +22,13 @@ Prepare Noveliq for broader release with stronger reliability, testing, observab
 - Quality should improve continuously before this milestone.
 - This milestone exists to force explicit stabilization work rather than always chasing the next feature.
 
+## Started In Repo
+
+- 249 unit tests across all modules (domain use cases, repository sync/cache behavior, ViewModel state, logout ordering/fail-open, progress hydration), run with `runTest`, test dispatchers, Turbine, and MockK/fakes.
+- Kover coverage wired with per-module floor ratchet in `settings.gradle.kts` (all floors start at 0); CI reports per-module numbers and largest gaps.
+- CI gates: ktlint, Android Lint, unit tests + coverage verify, debug/release assemble; emulator tests are manual-dispatch only until a device suite exists.
+- Pre-release schema policy: destructive migration fallback past DB v3 — proper migrations from the released schema are still required before release (see Exit Criteria).
+
 ## Exit Criteria
 
 - Core user flows are covered by tests.

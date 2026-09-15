@@ -7,6 +7,7 @@ import org.evoionosp.noveliq.data.library.remote.dto.LibraryItemDto
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryItemMediaDto
 import org.evoionosp.noveliq.data.library.remote.dto.LibraryItemMetadataDto
 import org.evoionosp.noveliq.data.library.remote.dto.SeriesDto
+import org.evoionosp.noveliq.data.library.remote.dto.UserMediaProgressDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -254,6 +255,24 @@ class LibraryRemoteMappersTest {
     }
 
     @Test
+    fun `item toContinueListeningEntity maps the reported playback position`() {
+        val entity =
+            bookItem(userMediaProgress = UserMediaProgressDto(currentTime = 120.5))
+                .toContinueListeningEntity(fallbackLibraryId = "lib1")!!
+
+        assertEquals(120.5, entity.currentTimeSeconds!!, 0.001)
+    }
+
+    @Test
+    fun `item toContinueListeningEntity leaves position null without progress`() {
+        val entity =
+            bookItem(userMediaProgress = null)
+                .toContinueListeningEntity(fallbackLibraryId = "lib1")!!
+
+        assertNull(entity.currentTimeSeconds)
+    }
+
+    @Test
     fun `item toContinueListeningEntity rejects blank ids and non-books`() {
         assertNull(
             bookItem().copy(id = null).toContinueListeningEntity(fallbackLibraryId = "lib1"),
@@ -275,6 +294,7 @@ class LibraryRemoteMappersTest {
         chapters: List<ChapterDto>? = null,
         tracks: List<AudioTrackDto>? = null,
         progressLastUpdateMillis: Long? = 42L,
+        userMediaProgress: UserMediaProgressDto? = null,
     ): LibraryItemDto =
         LibraryItemDto(
             id = "item1",
@@ -288,5 +308,6 @@ class LibraryRemoteMappersTest {
                     metadata = metadata,
                 ),
             progressLastUpdateMillis = progressLastUpdateMillis,
+            userMediaProgress = userMediaProgress,
         )
 }

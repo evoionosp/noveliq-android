@@ -25,10 +25,14 @@ import org.evoionosp.noveliq.domain.library.model.DomainResult
 import org.evoionosp.noveliq.domain.library.model.SyncStatus
 import org.evoionosp.noveliq.domain.library.repository.LibraryRepository
 import org.evoionosp.noveliq.domain.library.usecase.BootstrapHomeCatalogUseCase
+import org.evoionosp.noveliq.domain.session.CoverArtCache
+import org.evoionosp.noveliq.domain.session.DownloadStore
+import org.evoionosp.noveliq.domain.session.LocalCatalogCleaner
 import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.PlayerLogoutHandler
 import org.evoionosp.noveliq.domain.session.SessionStore
-import org.evoionosp.noveliq.domain.session.usecase.ClearSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.session.usecase.LogoutUserUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -57,7 +61,7 @@ class SplashViewModelTest {
             val viewModel =
                 SplashViewModel(
                     observeSessionUseCase = ObserveSessionUseCase(sessionStore),
-                    clearSessionUseCase = ClearSessionUseCase(sessionStore),
+                    logoutUserUseCase = logoutUseCase(sessionStore),
                     getValidSessionUseCase =
                         GetValidSessionUseCase(
                             sessionStore,
@@ -80,7 +84,7 @@ class SplashViewModelTest {
             val viewModel =
                 SplashViewModel(
                     observeSessionUseCase = ObserveSessionUseCase(sessionStore),
-                    clearSessionUseCase = ClearSessionUseCase(sessionStore),
+                    logoutUserUseCase = logoutUseCase(sessionStore),
                     getValidSessionUseCase =
                         GetValidSessionUseCase(
                             sessionStore,
@@ -124,7 +128,7 @@ class SplashViewModelTest {
             val viewModel =
                 SplashViewModel(
                     observeSessionUseCase = ObserveSessionUseCase(sessionStore),
-                    clearSessionUseCase = ClearSessionUseCase(sessionStore),
+                    logoutUserUseCase = logoutUseCase(sessionStore),
                     getValidSessionUseCase =
                         GetValidSessionUseCase(
                             sessionStore,
@@ -158,7 +162,7 @@ class SplashViewModelTest {
             val viewModel =
                 SplashViewModel(
                     observeSessionUseCase = ObserveSessionUseCase(sessionStore),
-                    clearSessionUseCase = ClearSessionUseCase(sessionStore),
+                    logoutUserUseCase = logoutUseCase(sessionStore),
                     getValidSessionUseCase =
                         GetValidSessionUseCase(
                             sessionStore,
@@ -275,6 +279,15 @@ private class FakeSessionStore(
         backingFlow.value = null
     }
 }
+
+private fun logoutUseCase(sessionStore: SessionStore) =
+    LogoutUserUseCase(
+        playerLogoutHandler = PlayerLogoutHandler { },
+        sessionStore = sessionStore,
+        downloadStore = DownloadStore { },
+        coverArtCache = CoverArtCache { },
+        localCatalogCleaner = LocalCatalogCleaner { },
+    )
 
 private class FakeLibraryRepository(
     private val libraries: MutableStateFlow<List<AudiobookLibrary>>,

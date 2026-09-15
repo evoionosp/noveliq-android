@@ -4,7 +4,12 @@ import app.cash.turbine.test
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.evoionosp.noveliq.domain.auth.FakeSessionStore
+import org.evoionosp.noveliq.domain.session.CoverArtCache
+import org.evoionosp.noveliq.domain.session.DownloadStore
+import org.evoionosp.noveliq.domain.session.LocalCatalogCleaner
 import org.evoionosp.noveliq.domain.session.LoginSession
+import org.evoionosp.noveliq.domain.session.PlayerLogoutHandler
+import org.evoionosp.noveliq.domain.session.SessionStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,11 +46,11 @@ class SessionUseCasesTest {
         }
 
     @Test
-    fun `clear session ends the stored session but keeps the last server url`() =
+    fun `logout ends the stored session but keeps the last server url`() =
         runTest {
             val store = FakeSessionStore(session)
 
-            ClearSessionUseCase(store)()
+            logoutUseCase(store)()
 
             assertNull(store.session.first())
             assertEquals("https://example.com", store.lastServerUrl.first())
@@ -61,4 +66,13 @@ class SessionUseCasesTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    private fun logoutUseCase(sessionStore: SessionStore) =
+        LogoutUserUseCase(
+            playerLogoutHandler = PlayerLogoutHandler { },
+            sessionStore = sessionStore,
+            downloadStore = DownloadStore { },
+            coverArtCache = CoverArtCache { },
+            localCatalogCleaner = LocalCatalogCleaner { },
+        )
 }

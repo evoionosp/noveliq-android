@@ -128,6 +128,7 @@ internal fun LibraryItemDto.toContinueListeningEntity(fallbackLibraryId: String)
         audiobookId = idValue,
         libraryId = libraryId ?: fallbackLibraryId,
         progressLastUpdateMillis = progressLastUpdateMillis ?: 0L,
+        currentTimeSeconds = userMediaProgress?.currentTime,
     )
 }
 

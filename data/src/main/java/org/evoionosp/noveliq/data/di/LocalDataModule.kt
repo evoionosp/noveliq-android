@@ -123,6 +123,10 @@ object LocalDataModule {
                 NoveliqDatabase::class.java,
                 "noveliq.db",
             ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            // Pre-release: no upgrade path is maintained past v3. A version bump without a
+            // migration wipes and recreates the database instead of crashing. Revisit before
+            // release — real users will need proper migrations from the released schema.
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides

@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
@@ -21,7 +23,7 @@ import org.evoionosp.noveliq.presentation.utils.BookCoverArtwork
 internal fun AudiobookGridCard(
     audiobook: AudiobookUiModel,
     onClick: () -> Unit,
-    coverAspectRatio: Float = 0.72f,
+    coverAspectRatio: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -40,7 +42,8 @@ internal fun AudiobookGridCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(coverAspectRatio),
+                        .aspectRatio(coverAspectRatio)
+                        .clip(RoundedCornerShape(4.dp)),
             ) {
                 BookCoverArtwork(
                     coverUrl = audiobook.coverUrl,
@@ -64,7 +67,9 @@ internal fun AudiobookGridCard(
                     maxLines = 2,
                 )
                 Text(
-                    text = audiobook.author,
+                    // Only continue-listening items carry progress, so only they show time
+                    // left — every other surface keeps the author line.
+                    text = audiobook.timeLeftLabel ?: audiobook.author,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

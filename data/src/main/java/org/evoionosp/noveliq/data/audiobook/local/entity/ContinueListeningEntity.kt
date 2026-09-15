@@ -15,4 +15,9 @@ data class ContinueListeningEntity(
     @PrimaryKey val audiobookId: String,
     val libraryId: String,
     val progressLastUpdateMillis: Long,
+    /**
+     * Absolute playback position across the whole book, in seconds. Null when the server
+     * did not report a position (or the row predates progress tracking).
+     */
+    val currentTimeSeconds: Double? = null,
 )

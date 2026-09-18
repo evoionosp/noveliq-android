@@ -9,12 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
-import org.evoionosp.noveliq.domain.audiobook.usecase.FetchPlaybackProgressUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveAudiobookDetailUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshAudiobookDetailUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
@@ -22,22 +23,16 @@ import org.evoionosp.noveliq.playback.PlaybackConnection
 import org.evoionosp.noveliq.playback.PlaybackState
 
 /**
- * UI state for the Now Playing screen. The screen renders one of two states, derived from whether
- * the book being *viewed* is also the book currently *playing*:
- *  - at-a-glance: viewing a book that is not the active one (preview; playback untouched)
- *  - playing: viewing the active book (full transport controls)
+ * UI state for the Now Playing screen. Playing-only: the screen always shows
+ * the active book from [PlaybackState]; book browsing lives on the standalone
+ * details page. Chapter detail for the playing book loads automatically, so
+ * transport (chapters sheet, chapter skip, progress bar) always has data.
  */
 data class NowPlayingUiState(
     val playback: PlaybackState = PlaybackState(),
-    val viewedAudiobook: Audiobook? = null,
-    val viewedProgressSeconds: Double = 0.0,
-    val viewedTotalSeconds: Double = 0.0,
-    val viewedHasProgress: Boolean = false,
+    val totalSeconds: Double = 0.0,
     val chapters: List<AudiobookChapter> = emptyList(),
-) {
-    val isGlance: Boolean
-        get() = viewedAudiobook != null && viewedAudiobook.id != playback.audiobook?.id
-}
+)
 
 @HiltViewModel
 class NowPlayingViewModel
@@ -46,51 +41,43 @@ class NowPlayingViewModel
         private val playbackConnection: PlaybackConnection,
         private val observeAudiobookDetail: ObserveAudiobookDetailUseCase,
         private val refreshAudiobookDetail: RefreshAudiobookDetailUseCase,
-        private val fetchPlaybackProgress: FetchPlaybackProgressUseCase,
         private val getValidSessionUseCase: GetValidSessionUseCase,
     ) : ViewModel() {
         val playbackState: StateFlow<PlaybackState> = playbackConnection.playbackState
 
-        private val viewedAudiobook = MutableStateFlow<Audiobook?>(null)
-        private val glance = MutableStateFlow(GlanceData())
+        private val totalSeconds = MutableStateFlow(0.0)
         private val chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
 
-        private var viewedJob: Job? = null
+        private var detailJob: Job? = null
 
         val uiState: StateFlow<NowPlayingUiState> =
             combine(
                 playbackConnection.playbackState,
-                viewedAudiobook,
-                glance,
+                totalSeconds,
                 chapters,
-            ) { playback, viewed, glanceData, chapterList ->
+            ) { playback, total, chapterList ->
                 NowPlayingUiState(
                     playback = playback,
-                    viewedAudiobook = viewed,
-                    viewedProgressSeconds = glanceData.progressSeconds,
-                    viewedTotalSeconds = glanceData.totalSeconds,
-                    viewedHasProgress = glanceData.hasProgress,
+                    totalSeconds = total,
                     chapters = chapterList,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowPlayingUiState())
 
-        /** Preview a book (from the catalog). Does not change playback. */
-        fun openAudiobook(audiobook: Audiobook) {
-            viewedAudiobook.value = audiobook
-            loadViewed(audiobook)
-        }
-
-        /** View the currently-playing book (e.g. expanding from the mini bar). */
-        fun viewCurrentlyPlaying() {
-            val playing = playbackConnection.playbackState.value.audiobook ?: return
-            viewedAudiobook.value = playing
-            loadViewed(playing)
-        }
-
-        /** Start playing the previewed book, switching the screen into the playing state. */
-        fun playViewedAudiobook() {
-            val audiobook = viewedAudiobook.value ?: return
-            playbackConnection.playAudiobook(audiobook)
+        init {
+            viewModelScope.launch {
+                playbackConnection.playbackState
+                    .map { it.audiobook }
+                    .distinctUntilChangedBy { it?.id }
+                    .collect { audiobook ->
+                        if (audiobook != null) {
+                            loadPlaying(audiobook)
+                        } else {
+                            detailJob?.cancel()
+                            chapters.value = emptyList()
+                            totalSeconds.value = 0.0
+                        }
+                    }
+            }
         }
 
         fun togglePlayPause() {
@@ -125,29 +112,17 @@ class NowPlayingViewModel
             playbackConnection.skipToPreviousChapter(chapters.value)
         }
 
-        /**
-         * Starts playback of the viewed book from the given chapter and updates progress. If the viewed
-         * book is already the active one, it just seeks; otherwise it starts it at the chapter.
-         */
+        /** Seeks the playing book to the given chapter. */
         fun playChapter(chapter: AudiobookChapter) {
-            val viewed = viewedAudiobook.value ?: return
-            val playing = playbackConnection.playbackState.value.audiobook
-            if (playing?.id == viewed.id) {
-                playbackConnection.seekToBookSeconds(chapter.startInSeconds.toDouble())
-            } else {
-                playbackConnection.playAudiobook(
-                    viewed,
-                    startPositionSeconds = chapter.startInSeconds.toDouble(),
-                )
-            }
+            playbackConnection.seekToBookSeconds(chapter.startInSeconds.toDouble())
         }
 
-        private fun loadViewed(audiobook: Audiobook) {
-            viewedJob?.cancel()
+        private fun loadPlaying(audiobook: Audiobook) {
+            detailJob?.cancel()
             chapters.value = emptyList()
-            glance.value = GlanceData(totalSeconds = audiobook.durationInSeconds?.toDouble() ?: 0.0)
+            totalSeconds.value = audiobook.durationInSeconds?.toDouble() ?: 0.0
 
-            viewedJob =
+            detailJob =
                 viewModelScope.launch {
                     val session = getValidSessionUseCase()
 
@@ -176,42 +151,11 @@ class NowPlayingViewModel
                                                         .toDouble()
                                                 }
                                     if (total != null && total > 0) {
-                                        glance.update { it.copy(totalSeconds = total) }
+                                        totalSeconds.update { total }
                                     }
                                 }
                             }
                     }
-
-                    // Fetch saved progress for the remaining-time line.
-                    if (session != null) {
-                        val progress =
-                            fetchPlaybackProgress(
-                                baseUrl = session.baseUrl,
-                                accessToken = session.accessToken,
-                                audiobookId = audiobook.id,
-                            )
-                        val resume = progress?.resumeSeconds
-                        if (progress != null && resume != null) {
-                            glance.update {
-                                it.copy(
-                                    progressSeconds = resume,
-                                    hasProgress = true,
-                                    totalSeconds =
-                                        if (it.totalSeconds > 0) {
-                                            it.totalSeconds
-                                        } else {
-                                            progress.durationSeconds ?: 0.0
-                                        },
-                                )
-                            }
-                        }
-                    }
                 }
         }
-
-        private data class GlanceData(
-            val progressSeconds: Double = 0.0,
-            val totalSeconds: Double = 0.0,
-            val hasProgress: Boolean = false,
-        )
     }

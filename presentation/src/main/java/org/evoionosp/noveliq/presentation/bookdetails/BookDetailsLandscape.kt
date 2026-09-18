@@ -1,7 +1,7 @@
-package org.evoionosp.noveliq.presentation.player
+package org.evoionosp.noveliq.presentation.bookdetails
 
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,23 +21,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.presentation.R
-import org.evoionosp.noveliq.presentation.utils.SheetDragState
+import org.evoionosp.noveliq.presentation.player.BookCoverArtwork
+import org.evoionosp.noveliq.presentation.player.BookProgressBar
+import org.evoionosp.noveliq.presentation.player.BookTitleBlock
+import org.evoionosp.noveliq.presentation.player.ChapterRow
+import org.evoionosp.noveliq.presentation.player.inProgressChapterIndex
 
 /**
- * Landscape book preview: same 40/60 split as the landscape Now Playing, with
- * artwork + titles static on the left and the Continue action over a scrolling
- * chapters list on the right. Stateless — data and actions come from
- * NowPlayingViewModel, like the portrait details page.
+ * Landscape book details: same 40/60 split as the landscape Now Playing,
+ * with artwork + titles static on the left and the Continue action over a
+ * scrolling chapters list on the right. Hosted by the standalone details
+ * route — no sheet behavior. Stateless: data and actions come from the caller.
  */
 @Composable
 internal fun BookDetailsLandscape(
@@ -46,9 +49,10 @@ internal fun BookDetailsLandscape(
     bookProgress: Float,
     chapters: List<AudiobookChapter>,
     inProgressSeconds: Double,
+    isPlaying: Boolean,
     onPlay: () -> Unit,
     onPlayChapter: (AudiobookChapter) -> Unit,
-    sheetDrag: SheetDragState,
+    miniTrailPadding: Dp = 0.dp,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
     val inProgressIndex = inProgressChapterIndex(chapters, inProgressSeconds)
@@ -58,28 +62,7 @@ internal fun BookDetailsLandscape(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
-            modifier =
-                Modifier
-                    .weight(0.4f)
-                    // Static pane: nothing scrollable underneath, so the sheet
-                    // can own vertical drags here directly. (List drags on the
-                    // right arrive via nested scroll instead.)
-                    .pointerInput(Unit) {
-                        val tracker = VelocityTracker()
-                        detectVerticalDragGestures(
-                            onDragStart = { tracker.resetTracking() },
-                            onDragEnd = {
-                                if (sheetDrag.offsetPx.floatValue > 0f) {
-                                    sheetDrag.onDragEnd(tracker.calculateVelocity().y)
-                                }
-                            },
-                            onDragCancel = { sheetDrag.onDragCancel() },
-                            onVerticalDrag = { change, dragDelta ->
-                                tracker.addPosition(change.uptimeMillis, change.position)
-                                sheetDrag.dragBy(dragDelta)
-                            },
-                        )
-                    },
+            modifier = Modifier.weight(0.4f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BookCoverArtwork(
@@ -126,14 +109,16 @@ internal fun BookDetailsLandscape(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = miniTrailPadding),
+                ) {
                     items(chapters.size) { index ->
                         val chapter = chapters[index]
                         ChapterRow(
                             chapter = chapter,
                             isCurrent = index == inProgressIndex,
-                            // Viewed book is never the playing one here; nothing may animate.
-                            isPlaying = false,
+                            isPlaying = isPlaying && index == inProgressIndex,
                             onPlay = { onPlayChapter(chapter) },
                         )
                     }

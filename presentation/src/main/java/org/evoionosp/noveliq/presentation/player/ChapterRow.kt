@@ -82,3 +82,13 @@ fun ChapterRow(
         }
     }
 }
+
+/**
+ * Index of the chapter containing [positionSeconds], or -1 when unknown. Works for
+ * saved (details) and live (playing) positions alike — play state only animates the
+ * marker, it never changes which row is current.
+ */
+internal fun inProgressChapterIndex(
+    chapters: List<AudiobookChapter>,
+    positionSeconds: Double,
+): Int = chapters.indexOfLast { it.startInSeconds <= positionSeconds }

@@ -22,6 +22,7 @@ class AppSettingsDataStore(
     private object Keys {
         val themePreference = stringPreferencesKey("theme_preference")
         val useDynamicColor = booleanPreferencesKey("use_dynamic_color")
+        val useCoverTheme = booleanPreferencesKey("use_cover_theme")
     }
 
     override val settings: Flow<AppSettings> =
@@ -46,11 +47,18 @@ class AppSettingsDataStore(
         }
     }
 
+    override suspend fun setCoverTheme(enabled: Boolean) {
+        context.appSettingsDataStore.edit { preferences ->
+            preferences[Keys.useCoverTheme] = enabled
+        }
+    }
+
     private fun toAppSettings(preferences: Preferences): AppSettings =
         AppSettings(
             themePreference =
                 preferences[Keys.themePreference]
                     ?: AppSettings.DEFAULT_THEME_PREFERENCE,
             useDynamicColor = preferences[Keys.useDynamicColor] ?: true,
+            useCoverTheme = preferences[Keys.useCoverTheme] ?: true,
         )
 }

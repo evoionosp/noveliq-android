@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.presentation.R
 import org.evoionosp.noveliq.presentation.theme.ThemePreference
@@ -48,6 +49,8 @@ fun AppearanceSettingsScreen(
     onBackClick: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onCoverThemeChange: (Boolean) -> Unit,
+    miniTrailPadding: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -77,7 +80,7 @@ fun AppearanceSettingsScreen(
                     start = 20.dp,
                     end = 20.dp,
                     top = innerPadding.calculateTopPadding() + 12.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 24.dp,
+                    bottom = innerPadding.calculateBottomPadding() + 24.dp + miniTrailPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -173,6 +176,15 @@ fun AppearanceSettingsScreen(
                         description = stringResource(R.string.use_dynamic_color_desc),
                         checked = settingsState.useDynamicColor,
                         onCheckedChange = onDynamicColorChange,
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    PreferenceSwitchRow(
+                        label = stringResource(R.string.now_playing_cover_theme),
+                        description = stringResource(R.string.now_playing_cover_theme_desc),
+                        checked = settingsState.useCoverTheme,
+                        onCheckedChange = onCoverThemeChange,
                     )
                 }
             }

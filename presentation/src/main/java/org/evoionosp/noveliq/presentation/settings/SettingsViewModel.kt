@@ -27,6 +27,7 @@ class SettingsViewModel
                                 it.name == settings.themePreference
                             } ?: ThemePreference.SYSTEM,
                         useDynamicColor = settings.useDynamicColor,
+                        useCoverTheme = settings.useCoverTheme,
                     )
                 }.stateIn(
                     scope = viewModelScope,
@@ -43,6 +44,12 @@ class SettingsViewModel
         fun onDynamicColorChange(enabled: Boolean) {
             viewModelScope.launch {
                 appSettingsStore.setDynamicColor(enabled)
+            }
+        }
+
+        fun onCoverThemeChange(enabled: Boolean) {
+            viewModelScope.launch {
+                appSettingsStore.setCoverTheme(enabled)
             }
         }
     }

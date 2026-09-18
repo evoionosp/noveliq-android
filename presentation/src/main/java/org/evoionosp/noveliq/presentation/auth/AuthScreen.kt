@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -89,6 +90,8 @@ fun AuthScreen(
             modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.ime)
+                // Bottom bar only: the TopAppBar already consumes the status inset.
+                .navigationBarsPadding()
                 .background(homeBackgroundBrush())
                 .verticalScroll(scrollState),
     ) {

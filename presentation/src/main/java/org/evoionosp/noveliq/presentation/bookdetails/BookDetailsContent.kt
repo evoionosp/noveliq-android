@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
@@ -75,7 +76,6 @@ import org.evoionosp.noveliq.presentation.player.ChapterRow
 import org.evoionosp.noveliq.presentation.player.PlayPauseGlyph
 import org.evoionosp.noveliq.presentation.player.animatePlayPauseCorner
 import org.evoionosp.noveliq.presentation.player.inProgressChapterIndex
-import kotlin.math.roundToInt
 
 private const val DETAILS_HEADER_HEIGHT_FRACTION = 0.4f
 private val DETAILS_HEADER_MIN_BAR_HEIGHT = 64.dp
@@ -124,10 +124,11 @@ internal fun BookDetailsContent(
     val topBarHeight = remember { Animatable(maxTopBarHeightPx) }
     val collapseFraction by remember(minTopBarHeightPx, maxTopBarHeightPx) {
         derivedStateOf {
-            1f - ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(
-                0f,
-                1f,
-            )
+            1f -
+                ((topBarHeight.value - minTopBarHeightPx) / (maxTopBarHeightPx - minTopBarHeightPx)).coerceIn(
+                    0f,
+                    1f,
+                )
         }
     }
 
@@ -141,7 +142,9 @@ internal fun BookDetailsContent(
                     val delta = available.y
                     val isScrollingDown = delta < 0
 
-                    if (!isScrollingDown && (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0)) {
+                    if (!isScrollingDown &&
+                        (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0)
+                    ) {
                         return Offset.Zero
                     }
 
@@ -163,9 +166,7 @@ internal fun BookDetailsContent(
                 override suspend fun onPostFling(
                     consumed: Velocity,
                     available: Velocity,
-                ): Velocity {
-                    return super.onPostFling(consumed, available)
-                }
+                ): Velocity = super.onPostFling(consumed, available)
             }
         }
 

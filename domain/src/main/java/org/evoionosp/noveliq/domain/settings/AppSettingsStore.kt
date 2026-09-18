@@ -8,4 +8,6 @@ interface AppSettingsStore {
     suspend fun setThemePreference(themePreference: String)
 
     suspend fun setDynamicColor(enabled: Boolean)
+
+    suspend fun setCoverTheme(enabled: Boolean)
 }

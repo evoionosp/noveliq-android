@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
                     onLogout = splashViewModel::logout,
                     onThemePreferenceChange = settingsViewModel::onThemePreferenceChange,
                     onDynamicColorChange = settingsViewModel::onDynamicColorChange,
+                    onCoverThemeChange = settingsViewModel::onCoverThemeChange,
                 )
             }
         }

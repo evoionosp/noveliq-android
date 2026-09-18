@@ -227,7 +227,7 @@ class HomeViewModel
             }
         }
 
-        /** Manual pull-to-refresh: shows the refresh indicator and reports the outcome. */
+        /** Manual pull-to-refresh: shows the refresh indicator and reports failures only. */
         fun refresh() {
             performRefresh(silent = false)
         }
@@ -249,9 +249,8 @@ class HomeViewModel
 
                 when (val result = refreshHomeCatalogUseCase()) {
                     is RefreshHomeCatalogResult.Success -> {
-                        if (!silent) {
-                            emitMessage(R.string.home_refresh_complete)
-                        }
+                        // No success message: the refreshed content speaks for itself. Only
+                        // failures surface a message.
                     }
 
                     is RefreshHomeCatalogResult.SessionExpired -> {

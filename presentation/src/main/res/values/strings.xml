@@ -43,6 +43,8 @@
     <string name="dynamic_color_section">Dynamic Color</string>
     <string name="use_dynamic_color">Use Dynamic Color</string>
     <string name="use_dynamic_color_desc">Adapt accents to the wallpaper and system palette when available.</string>
+    <string name="now_playing_cover_theme">Now Playing cover theme</string>
+    <string name="now_playing_cover_theme_desc">Match the mini player and Now Playing colors to the current book cover. When off, the player uses the default app theme.</string>
     <string name="close">Close</string>
     <string name="welcome_user">Welcome %1$s</string>
     <string name="home_title">Home</string>
@@ -85,7 +87,6 @@
     <string name="home_synced">Up to date</string>
     <string name="home_showing_cached">Showing cached books</string>
     <string name="home_sync_failed">Sync failed</string>
-    <string name="home_refresh_complete">Library updated.</string>
     <string name="home_no_libraries">No audiobook libraries found.</string>
     <string name="home_no_libraries_hint">Add or enable an audiobook library on your Audiobookshelf server.</string>
     <string name="home_no_books">No audiobooks yet.</string>
@@ -98,6 +99,10 @@
     <string name="audiobook_detail_chapters_auth">Couldn\'t load chapters because your session was rejected by the server.</string>
     <string name="audiobook_detail_chapters_network">Couldn\'t load chapters. Check your connection and try again.</string>
     <string name="audiobook_detail_chapters_error">Couldn\'t load chapters right now.</string>
+    <plurals name="book_details_chapters_count">
+        <item quantity="one">%d chapter</item>
+        <item quantity="other">%d chapters</item>
+    </plurals>
     <string name="audiobook_detail_author_label">Author</string>
     <string name="audiobook_detail_library_label">Library ID</string>
     <string name="audiobook_detail_duration_label">Duration</string>
@@ -114,6 +119,7 @@
     <string name="now_playing_chapters_empty">No chapters available for this audiobook.</string>
     <string name="continue_listening">Continue Listening</string>
     <string name="now_playing_play">Play</string>
+    <string name="now_playing_pause">Pause</string>
     <string name="now_playing_previous_chapter">Previous chapter</string>
     <string name="now_playing_next_chapter">Next chapter</string>
     <string name="search_no_results">No matching books.</string>

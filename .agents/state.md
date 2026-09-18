@@ -129,6 +129,7 @@ Impact:
 - Presentation UI files have been split into screen-specific and component-specific Kotlin files for home/catalog, detail, and now-playing surfaces.
 - App navigation, route definitions, transition helpers, root bottom navigation, and now-playing scaffold state have been extracted from `MainActivity` into a dedicated `presentation.navigation` package.
 - Real Media3 playback wired behind the detail `Play` action, with a background media session service and now-playing surfaces synchronized through shared playback state.
+- Continuous mini-bar-to-full-sheet transition: one hoisted bidirectional `SheetDragState` (offset + expansion fraction with a unit-tested settle policy) drives a unified sheet that morphs from the mini card (16dp corners) to full-bleed, with a staged mini/full handoff and parallax; tap-to-expand/minimize behavior is preserved. Both surfaces share one cover-tinted background; the mini shows the chapter title over "book - author" with 15/30 seek buttons; the nav bar slides away with expansion.
 - Centralised access-token refresh: `SessionRefreshCoordinator`, an OkHttp `Authenticator`, JWT
   expiry tracking on the stored session, and proactive rotation via `GetValidSessionUseCase`.
 - The login form remembers the last server URL and protocol across logout, so signing back in

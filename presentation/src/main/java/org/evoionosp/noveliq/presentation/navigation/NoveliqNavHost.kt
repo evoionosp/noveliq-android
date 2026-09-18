@@ -3,10 +3,14 @@ package org.evoionosp.noveliq.presentation.navigation
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import org.evoionosp.noveliq.presentation.auth.AuthScreen
+import org.evoionosp.noveliq.presentation.bookdetails.BookDetailsRoute
 import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.library.LibraryScreen
@@ -25,10 +29,12 @@ internal fun NoveliqNavHost(
     splashState: SplashUiState,
     settingsState: SettingsUiState,
     contentPadding: PaddingValues,
+    miniTrailPadding: Dp,
     onRetryCatalogBootstrap: () -> Unit,
     onLogout: () -> Unit,
     onThemePreferenceChange: (ThemePreference) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onCoverThemeChange: (Boolean) -> Unit,
     onOpenAudiobook: (AudiobookUiModel) -> Unit,
 ) {
     NavHost(
@@ -112,6 +118,7 @@ internal fun NoveliqNavHost(
                 onOpenAppearance = { navController.navigate(AppRoute.Appearance.route) },
                 onLoggedOut = { navController.navigateToAuthRoot() },
                 showLogout = splashState.startupDestination != StartupDestination.Auth,
+                miniTrailPadding = miniTrailPadding,
                 modifier = Modifier,
             )
         }
@@ -127,7 +134,26 @@ internal fun NoveliqNavHost(
                 onBackClick = { navController.popBackStack() },
                 onThemePreferenceChange = onThemePreferenceChange,
                 onDynamicColorChange = onDynamicColorChange,
+                onCoverThemeChange = onCoverThemeChange,
+                miniTrailPadding = miniTrailPadding,
                 modifier = Modifier,
+            )
+        }
+        composable(
+            route = AppRoute.BookDetails.route,
+            arguments =
+                listOf(
+                    navArgument(BOOK_DETAILS_ARG_LIBRARY_ID) { type = NavType.StringType },
+                    navArgument(BOOK_DETAILS_ARG_AUDIOBOOK_ID) { type = NavType.StringType },
+                ),
+            enterTransition = { forwardEnterTransition() },
+            exitTransition = { forwardExitTransition() },
+            popEnterTransition = { backEnterTransition() },
+            popExitTransition = { backExitTransition() },
+        ) {
+            BookDetailsRoute(
+                onBackClick = { navController.popBackStack() },
+                miniTrailPadding = miniTrailPadding,
             )
         }
     }

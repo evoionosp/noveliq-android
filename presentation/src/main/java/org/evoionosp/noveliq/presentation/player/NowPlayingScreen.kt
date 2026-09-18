@@ -1,8 +1,6 @@
 package org.evoionosp.noveliq.presentation.player
 
 import android.content.res.Configuration
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -19,22 +17,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,20 +42,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,40 +71,20 @@ internal fun NowPlayingScreen(
     sheetDrag: SheetDragState,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val audiobook = uiState.viewedAudiobook ?: return
     val playbackState = uiState.playback
+    val audiobook = playbackState.audiobook ?: return
     // Saveable like the expanded state above: an open sheet must survive rotation too.
     var showSpeedSheet by rememberSaveable { mutableStateOf(false) }
     var showChaptersSheet by rememberSaveable { mutableStateOf(false) }
     var coverWidthPx by remember { mutableIntStateOf(0) }
-    // Hoisted details-list state so the header can show the book title once its
-    // titles block scrolls off screen. Only one host (portrait/landscape) is
-    // composed at a time, so a single state serves both.
-    val detailsListState = rememberLazyListState()
-    // Shown the moment the titles block starts sliding behind the app bar:
-    // it is the first visible item with a nonzero offset, or already past it.
-    val showDetailsTitle =
-        uiState.isGlance &&
-            (
-                detailsListState.firstVisibleItemIndex > BOOK_DETAILS_TITLE_ITEM_INDEX ||
-                    (
-                        detailsListState.firstVisibleItemIndex == BOOK_DETAILS_TITLE_ITEM_INDEX &&
-                            detailsListState.firstVisibleItemScrollOffset > 0
-                    )
-            )
     val isLandscape =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Overall book progress (0..1): live position while playing, saved position while previewing.
+    // Overall book progress (0..1): live position over the playing book's total.
     val bookProgress =
         run {
-            val total = uiState.viewedTotalSeconds
-            val position =
-                if (uiState.isGlance) {
-                    uiState.viewedProgressSeconds
-                } else {
-                    playbackState.currentBookPositionSeconds
-                }
+            val total = uiState.totalSeconds
+            val position = playbackState.currentBookPositionSeconds
             if (total > 0) (position / total).toFloat().coerceIn(0f, 1f) else 0f
         }
 
@@ -122,88 +95,40 @@ internal fun NowPlayingScreen(
             }?.title
     val speedLabel = "${"%.2f".format(playbackState.playbackSpeed)}x"
 
-    // Sheet dragging shares gestures with the details list through nested
-    // scrolling: the list consumes what it can first, and only the leftover —
-    // pulling down while parked at the top — moves the sheet. While the sheet
-    // is mid-drag it consumes everything, like a bottom sheet. A fling the
-    // sheet doesn't spend settling is handed back to the list.
-    val sheetNestedScroll =
-        remember(sheetDrag) {
-            object : NestedScrollConnection {
-                override fun onPreScroll(
-                    available: Offset,
-                    source: NestedScrollSource,
-                ): Offset {
-                    if (source != NestedScrollSource.UserInput) return Offset.Zero
-                    if (sheetDrag.offsetPx.floatValue <= 0f) return Offset.Zero
-                    return Offset(0f, sheetDrag.dragBy(available.y))
-                }
-
-                override fun onPostScroll(
-                    consumed: Offset,
-                    available: Offset,
-                    source: NestedScrollSource,
-                ): Offset {
-                    if (source != NestedScrollSource.UserInput) return Offset.Zero
-                    if (available.y <= 0f) return Offset.Zero
-                    return Offset(0f, sheetDrag.dragBy(available.y))
-                }
-
-                override suspend fun onPreFling(available: Velocity): Velocity {
-                    if (sheetDrag.offsetPx.floatValue <= 0f) return Velocity.Zero
-                    sheetDrag.settle(available.y)
-                    return if (sheetDrag.offsetPx.floatValue > 0f) available else Velocity.Zero
-                }
-
-                override suspend fun onPostFling(
-                    consumed: Velocity,
-                    available: Velocity,
-                ): Velocity {
-                    if (sheetDrag.offsetPx.floatValue <= 0f) return Velocity.Zero
-                    sheetDrag.settle(available.y)
-                    return if (sheetDrag.offsetPx.floatValue > 0f) available else Velocity.Zero
-                }
-            }
-        }
-
     Surface(
         modifier =
             Modifier
                 .fillMaxSize()
-                .then(
-                    if (uiState.isGlance) {
-                        // No drag detector here: it would race the chapter list
-                        // and starve it of scroll gestures. Nested scrolling
-                        // above carries sheet drags instead.
-                        Modifier.nestedScroll(sheetNestedScroll)
-                    } else {
-                        // Playback has no scrollable content, so the sheet can
-                        // own the drag detector directly.
-                        Modifier.pointerInput(Unit) {
-                            val tracker = VelocityTracker()
-                            detectVerticalDragGestures(
-                                onDragStart = { tracker.resetTracking() },
-                                onDragEnd = {
-                                    if (sheetDrag.offsetPx.floatValue > 0f) {
-                                        sheetDrag.onDragEnd(tracker.calculateVelocity().y)
-                                    }
-                                },
-                                onDragCancel = { sheetDrag.onDragCancel() },
-                                onVerticalDrag = { change, dragDelta ->
-                                    tracker.addPosition(change.uptimeMillis, change.position)
-                                    sheetDrag.dragBy(dragDelta)
-                                },
-                            )
-                        }
-                    },
-                ),
-        color = MaterialTheme.colorScheme.surface,
+                // Playback has no scrollable content, so the sheet owns the
+                // drag detector directly.
+                .pointerInput(Unit) {
+                    val tracker = VelocityTracker()
+                    detectVerticalDragGestures(
+                        onDragStart = { tracker.resetTracking() },
+                        onDragEnd = {
+                            if (sheetDrag.offsetPx.floatValue != 0f) {
+                                sheetDrag.onDragEnd(tracker.calculateVelocity().y)
+                            }
+                        },
+                        onDragCancel = { sheetDrag.onDragCancel() },
+                        onVerticalDrag = { change, dragDelta ->
+                            tracker.addPosition(change.uptimeMillis, change.position)
+                            sheetDrag.dragBy(dragDelta)
+                        },
+                    )
+                },
+        // Transparent: the unified sheet owns the single tinted background
+        // behind both this and the mini card, so they always match.
+        color = Color.Transparent,
+        // Explicit: Transparent has no scheme content color, so the default
+        // would resolve implicit text/icon colors to black. The player text
+        // role keeps them on-palette instead.
+        contentColor = LocalPlayerColors.current.textPrimary,
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
                     .statusBarsPadding()
                     .navigationBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
@@ -216,10 +141,7 @@ internal fun NowPlayingScreen(
                     MinimizeButton(onMinimize = onMinimize)
                 }
             } else {
-                HeaderRow(
-                    onMinimize = onMinimize,
-                    title = if (showDetailsTitle) audiobook.title else null,
-                )
+                HeaderRow(onMinimize = onMinimize)
             }
 
             if (isLandscape) {
@@ -227,14 +149,9 @@ internal fun NowPlayingScreen(
                     modifier = Modifier.weight(1f),
                     audiobook = audiobook,
                     bookProgress = bookProgress,
-                    isGlance = uiState.isGlance,
-                    chapters = uiState.chapters,
-                    inProgressSeconds = uiState.viewedProgressSeconds,
                     playbackState = playbackState,
                     chapterTitle = chapterTitle,
                     speedLabel = speedLabel,
-                    onPlayViewed = viewModel::playViewedAudiobook,
-                    onPlayChapter = viewModel::playChapter,
                     onSeekTo = viewModel::seekTo,
                     onSeekBackward = viewModel::seekBackward,
                     onSeekForward = viewModel::seekForward,
@@ -243,83 +160,69 @@ internal fun NowPlayingScreen(
                     onNextChapter = viewModel::nextChapter,
                     onSpeedClick = { showSpeedSheet = true },
                     onChaptersClick = { showChaptersSheet = true },
-                    sheetDrag = sheetDrag,
                 )
             } else {
-                if (uiState.isGlance) {
-                    BookDetailsScreen(
-                        modifier = Modifier.weight(1f),
+                // Book info block. Weighted so it fills the space above the controls; its content is
+                // top-aligned, which pushes the flexible gap to sit between the info and the controls
+                // (rather than leaving dead space at the bottom).
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Cover Image
+                    BookCoverArtwork(
                         audiobook = audiobook,
-                        bookProgress = bookProgress,
-                        chapters = uiState.chapters,
-                        inProgressSeconds = uiState.viewedProgressSeconds,
-                        onPlay = viewModel::playViewedAudiobook,
-                        onPlayChapter = viewModel::playChapter,
-                        listState = detailsListState,
-                    )
-                } else {
-                    // Book info block. Weighted so it fills the space above the controls; its content is
-                    // top-aligned, which pushes the flexible gap to sit between the info and the controls
-                    // (rather than leaving dead space at the bottom).
-                    Column(
                         modifier =
                             Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                                .weight(1f, fill = false)
+                                .aspectRatio(1f)
+                                .onSizeChanged { coverWidthPx = it.width }
+                                .clip(RoundedCornerShape(12.dp)),
+                    )
 
-                        // Cover Image
-                        BookCoverArtwork(
-                            audiobook = audiobook,
-                            modifier =
-                                Modifier
-                                    .weight(1f, fill = false)
-                                    .aspectRatio(1f)
-                                    .onSizeChanged { coverWidthPx = it.width }
-                                    .clip(RoundedCornerShape(12.dp)),
-                        )
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Thin, read-only overall-book progress bar, matched to the cover width.
-                        BookProgressBar(
-                            progress = bookProgress,
-                            modifier =
-                                Modifier
-                                    .width(with(LocalDensity.current) { coverWidthPx.toDp() })
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(50)),
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Title and Author
-                        BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
-                    }
-
-                    PlayingTransport(
-                        playbackState = playbackState,
-                        chapterTitle = chapterTitle,
-                        onSeekTo = viewModel::seekTo,
-                        onSeekBackward = viewModel::seekBackward,
-                        onSeekForward = viewModel::seekForward,
-                        onTogglePlayPause = viewModel::togglePlayPause,
-                        onPreviousChapter = viewModel::previousChapter,
-                        onNextChapter = viewModel::nextChapter,
+                    // Thin, read-only overall-book progress bar, matched to the cover width.
+                    BookProgressBar(
+                        progress = bookProgress,
+                        modifier =
+                            Modifier
+                                .width(with(LocalDensity.current) { coverWidthPx.toDp() })
+                                .height(3.dp)
+                                .clip(RoundedCornerShape(50)),
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    FooterActionsRow(
-                        speedLabel = speedLabel,
-                        onSpeedClick = { showSpeedSheet = true },
-                        onChaptersClick = { showChaptersSheet = true },
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // Title and Author
+                    BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
                 }
+
+                PlayingTransport(
+                    playbackState = playbackState,
+                    chapterTitle = chapterTitle,
+                    onSeekTo = viewModel::seekTo,
+                    onSeekBackward = viewModel::seekBackward,
+                    onSeekForward = viewModel::seekForward,
+                    onTogglePlayPause = viewModel::togglePlayPause,
+                    onPreviousChapter = viewModel::previousChapter,
+                    onNextChapter = viewModel::nextChapter,
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                FooterActionsRow(
+                    speedLabel = speedLabel,
+                    onSpeedClick = { showSpeedSheet = true },
+                    onChaptersClick = { showChaptersSheet = true },
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -334,17 +237,13 @@ internal fun NowPlayingScreen(
 
     if (showChaptersSheet) {
         val currentChapterIndex =
-            if (!uiState.isGlance) {
-                uiState.chapters.indexOfLast {
-                    it.startInSeconds <= playbackState.currentBookPositionSeconds
-                }
-            } else {
-                -1
+            uiState.chapters.indexOfLast {
+                it.startInSeconds <= playbackState.currentBookPositionSeconds
             }
         ChaptersSheet(
             chapters = uiState.chapters,
             currentChapterIndex = currentChapterIndex,
-            isPlaying = playbackState.isPlaying && !uiState.isGlance,
+            isPlaying = playbackState.isPlaying,
             onPlayChapter = viewModel::playChapter,
             onDismiss = { showChaptersSheet = false },
         )
@@ -363,6 +262,10 @@ internal fun PlayingTransport(
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+
+    fun tick() = hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    val pc = LocalPlayerColors.current
     val progress =
         if (playbackState.durationMs > 0) {
             playbackState.currentPositionMs.toFloat() / playbackState.durationMs
@@ -378,6 +281,7 @@ internal fun PlayingTransport(
             textAlign = TextAlign.Start,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            color = pc.textPrimary,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -387,6 +291,12 @@ internal fun PlayingTransport(
         value = progress,
         onValueChange = { onSeekTo((it * playbackState.durationMs).toLong()) },
         modifier = Modifier.fillMaxWidth(),
+        colors =
+            SliderDefaults.colors(
+                activeTrackColor = pc.accent,
+                inactiveTrackColor = pc.trackSubtle,
+                thumbColor = pc.accent,
+            ),
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -395,12 +305,12 @@ internal fun PlayingTransport(
         Text(
             text = playbackState.currentPositionMs.msToDurationLabel(),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = pc.textSecondary,
         )
         Text(
             text = playbackState.durationMs.msToDurationLabel(),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = pc.textSecondary,
         )
     }
 
@@ -412,39 +322,41 @@ internal fun PlayingTransport(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
-            onClick = onPreviousChapter,
+            onClick = {
+                tick()
+                onPreviousChapter()
+            },
             modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 imageVector = Icons.Rounded.SkipPrevious,
                 contentDescription = stringResource(R.string.now_playing_previous_chapter),
+                tint = pc.textPrimary,
                 modifier = Modifier.size(32.dp),
             )
         }
         SeekButton(label = "15", onClick = onSeekBackward)
-        FilledIconButton(
-            onClick = onTogglePlayPause,
-            modifier = Modifier.size(96.dp),
-        ) {
-            Icon(
-                imageVector =
-                    if (playbackState.isPlaying) {
-                        Icons.Rounded.Pause
-                    } else {
-                        Icons.Rounded.PlayArrow
-                    },
-                contentDescription = null,
-                modifier = Modifier.size(56.dp),
-            )
-        }
+        MorphingPlayPauseButton(
+            isPlaying = playbackState.isPlaying,
+            onClick = {
+                tick()
+                onTogglePlayPause()
+            },
+            buttonSize = 96.dp,
+            iconSize = 56.dp,
+        )
         SeekButton(label = "30", onClick = onSeekForward)
         IconButton(
-            onClick = onNextChapter,
+            onClick = {
+                tick()
+                onNextChapter()
+            },
             modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = stringResource(R.string.now_playing_next_chapter),
+                tint = pc.textPrimary,
                 modifier = Modifier.size(32.dp),
             )
         }
@@ -466,10 +378,7 @@ private fun MinimizeButton(onMinimize: () -> Unit) {
 }
 
 @Composable
-private fun HeaderRow(
-    onMinimize: () -> Unit,
-    title: String?,
-) {
+private fun HeaderRow(onMinimize: () -> Unit) {
     Row(
         modifier =
             Modifier
@@ -478,18 +387,6 @@ private fun HeaderRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MinimizeButton(onMinimize = onMinimize)
-        Spacer(modifier = Modifier.width(8.dp))
-        AnimatedVisibility(
-            visible = title != null,
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = title.orEmpty(),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 
@@ -512,11 +409,13 @@ internal fun BookProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
 ) {
+    val pc = LocalPlayerColors.current
     // Thin, read-only overall-book progress bar.
     LinearProgressIndicator(
         progress = { progress },
         modifier = modifier,
-        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        color = pc.accent,
+        trackColor = pc.trackSubtle,
         gapSize = 0.dp,
         drawStopIndicator = {},
     )
@@ -528,6 +427,7 @@ internal fun BookTitleBlock(
     textAlign: TextAlign,
     modifier: Modifier = Modifier,
 ) {
+    val pc = LocalPlayerColors.current
     Column(modifier = modifier) {
         Text(
             text = audiobook.title,
@@ -536,12 +436,13 @@ internal fun BookTitleBlock(
             textAlign = textAlign,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            color = pc.textPrimary,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = audiobook.author,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = pc.accent,
             textAlign = textAlign,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -555,6 +456,7 @@ internal fun FooterActionsRow(
     onSpeedClick: () -> Unit,
     onChaptersClick: () -> Unit,
 ) {
+    val pc = LocalPlayerColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround,
@@ -574,12 +476,14 @@ internal fun FooterActionsRow(
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 contentDescription = null,
+                tint = pc.textPrimary,
                 modifier = Modifier.size(24.dp),
             )
             Text(
                 text = stringResource(R.string.now_playing_chapters),
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
+                color = pc.textSecondary,
             )
         }
     }

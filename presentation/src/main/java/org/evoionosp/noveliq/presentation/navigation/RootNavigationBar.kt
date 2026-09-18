@@ -1,12 +1,5 @@
 package org.evoionosp.noveliq.presentation.navigation
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Home
@@ -15,12 +8,13 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
-import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
 import org.evoionosp.noveliq.presentation.R
-import org.evoionosp.noveliq.presentation.player.NowPlayingBar
+import org.evoionosp.noveliq.presentation.utils.SheetDragState
 
 private data class RootNavItem(
     val route: AppRoute,
@@ -34,52 +28,43 @@ private val rootNavItems =
         RootNavItem(AppRoute.Library, Icons.Rounded.AutoStories, R.string.root_library),
     )
 
+/**
+ * Root tab bar. The mini player used to live above this bar; it now renders
+ * inside the unified Now Playing sheet, so this stays a constant-height nav.
+ */
 @Composable
 internal fun RootNavigationBottomBar(
     navController: NavHostController,
     currentRoute: String?,
-    nowPlayingAudiobook: Audiobook?,
-    isNowPlayingExpanded: Boolean,
-    onExpandNowPlaying: () -> Unit,
+    sheetDrag: SheetDragState,
 ) {
     if (currentRoute in mainRootRoutes) {
-        Column {
-            // Fade/slide only (no resize) so the nav bar below never jumps while
-            // the sheet lands on top of the bar being revealed underneath.
-            AnimatedVisibility(
-                visible = nowPlayingAudiobook != null && !isNowPlayingExpanded,
-                enter =
-                    fadeIn(animationSpec = tween(200)) +
-                        slideInVertically(animationSpec = tween(250)) { fullHeight -> fullHeight / 4 },
-                exit =
-                    fadeOut(animationSpec = tween(120)) +
-                        slideOutVertically(animationSpec = tween(150)) { fullHeight -> fullHeight / 4 },
-            ) {
-                val audiobook = nowPlayingAudiobook
-                if (audiobook != null) {
-                    NowPlayingBar(
-                        audiobook = audiobook,
-                        onExpand = onExpandNowPlaying,
-                    )
-                }
-            }
-            NavigationBar {
-                rootNavItems.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentRoute == item.route.route,
-                        onClick = {
-                            navController.navigate(item.route.route) {
-                                popUpTo(AppRoute.Home.route) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+        // Driven continuously by the sheet fraction (draw phase, no
+        // recomposition): slides down and fades as the player expands,
+        // returns as it minimizes. Scaffold keeps reserving the space.
+        NavigationBar(
+            modifier =
+                Modifier.graphicsLayer {
+                    val fraction = sheetDrag.expansionFraction
+                    translationY = fraction * size.height
+                    alpha = (1f - fraction * 2f).coerceIn(0f, 1f)
+                },
+        ) {
+            rootNavItems.forEach { item ->
+                NavigationBarItem(
+                    selected = currentRoute == item.route.route,
+                    onClick = {
+                        navController.navigate(item.route.route) {
+                            popUpTo(AppRoute.Home.route) {
+                                saveState = true
                             }
-                        },
-                        icon = { Icon(imageVector = item.icon, contentDescription = null) },
-                        label = { Text(text = stringResource(item.labelResId)) },
-                    )
-                }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(imageVector = item.icon, contentDescription = null) },
+                    label = { Text(text = stringResource(item.labelResId)) },
+                )
             }
         }
     }

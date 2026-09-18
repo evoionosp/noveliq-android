@@ -21,30 +21,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.evoionosp.noveliq.domain.audiobook.model.Audiobook
-import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.playback.PlaybackState
-import org.evoionosp.noveliq.presentation.utils.SheetDragState
 
 /**
  * Landscape Now Playing: 40/60 split with artwork + titles on the left and
  * transport + actions on the right. Everything is sized to fit without
  * scrolling — the cover shrinks by weight instead of overflowing, and the
- * panes center vertically in the available height. The glance state reuses
- * the shared [BookDetailsScreen] full-width instead.
+ * panes center vertically in the available height.
  */
 @Composable
 internal fun NowPlayingScreenLandscape(
     modifier: Modifier = Modifier,
     audiobook: Audiobook,
     bookProgress: Float,
-    isGlance: Boolean,
-    chapters: List<AudiobookChapter>,
-    inProgressSeconds: Double,
     playbackState: PlaybackState,
     chapterTitle: String?,
     speedLabel: String,
-    onPlayViewed: () -> Unit,
-    onPlayChapter: (AudiobookChapter) -> Unit,
     onSeekTo: (Long) -> Unit,
     onSeekBackward: () -> Unit,
     onSeekForward: () -> Unit,
@@ -53,75 +45,59 @@ internal fun NowPlayingScreenLandscape(
     onNextChapter: () -> Unit,
     onSpeedClick: () -> Unit,
     onChaptersClick: () -> Unit,
-    sheetDrag: SheetDragState,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        if (isGlance) {
-            BookDetailsLandscape(
-                modifier = Modifier.weight(1f),
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(0.4f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            BookCoverArtwork(
                 audiobook = audiobook,
-                bookProgress = bookProgress,
-                chapters = chapters,
-                inProgressSeconds = inProgressSeconds,
-                onPlay = onPlayViewed,
-                onPlayChapter = onPlayChapter,
-                sheetDrag = sheetDrag,
+                modifier =
+                    Modifier
+                        .weight(1f, fill = false)
+                        .aspectRatio(1f)
+                        .onSizeChanged { coverWidthPx = it.width }
+                        .clip(RoundedCornerShape(12.dp)),
             )
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(0.4f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    BookCoverArtwork(
-                        audiobook = audiobook,
-                        modifier =
-                            Modifier
-                                .weight(1f, fill = false)
-                                .aspectRatio(1f)
-                                .onSizeChanged { coverWidthPx = it.width }
-                                .clip(RoundedCornerShape(12.dp)),
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    BookProgressBar(
-                        progress = bookProgress,
-                        modifier =
-                            Modifier
-                                .width(with(LocalDensity.current) { coverWidthPx.toDp() })
-                                .height(3.dp)
-                                .clip(RoundedCornerShape(50)),
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
-                }
-                Spacer(modifier = Modifier.width(24.dp))
-                Column(
-                    modifier = Modifier.weight(0.6f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    PlayingTransport(
-                        playbackState = playbackState,
-                        chapterTitle = chapterTitle,
-                        onSeekTo = onSeekTo,
-                        onSeekBackward = onSeekBackward,
-                        onSeekForward = onSeekForward,
-                        onTogglePlayPause = onTogglePlayPause,
-                        onPreviousChapter = onPreviousChapter,
-                        onNextChapter = onNextChapter,
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    FooterActionsRow(
-                        speedLabel = speedLabel,
-                        onSpeedClick = onSpeedClick,
-                        onChaptersClick = onChaptersClick,
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(12.dp))
+            BookProgressBar(
+                progress = bookProgress,
+                modifier =
+                    Modifier
+                        .width(with(LocalDensity.current) { coverWidthPx.toDp() })
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50)),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
+        }
+        Spacer(modifier = Modifier.width(24.dp))
+        Column(
+            modifier = Modifier.weight(0.6f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            PlayingTransport(
+                playbackState = playbackState,
+                chapterTitle = chapterTitle,
+                onSeekTo = onSeekTo,
+                onSeekBackward = onSeekBackward,
+                onSeekForward = onSeekForward,
+                onTogglePlayPause = onTogglePlayPause,
+                onPreviousChapter = onPreviousChapter,
+                onNextChapter = onNextChapter,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            FooterActionsRow(
+                speedLabel = speedLabel,
+                onSpeedClick = onSpeedClick,
+                onChaptersClick = onChaptersClick,
+            )
         }
     }
 }

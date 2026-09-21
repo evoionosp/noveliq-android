@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
@@ -23,6 +24,7 @@ class AppSettingsDataStore(
         val themePreference = stringPreferencesKey("theme_preference")
         val useDynamicColor = booleanPreferencesKey("use_dynamic_color")
         val useCoverTheme = booleanPreferencesKey("use_cover_theme")
+        val sleepTimerMinutes = intPreferencesKey("sleep_timer_minutes")
     }
 
     override val settings: Flow<AppSettings> =
@@ -53,6 +55,19 @@ class AppSettingsDataStore(
         }
     }
 
+    override suspend fun setSleepTimerMinutes(minutes: Int) {
+        // Coerce on the one path into storage so a stale or corrupt write
+        // can never persist a value outside the slider range.
+        val coerced =
+            minutes.coerceIn(
+                AppSettings.MIN_SLEEP_TIMER_MINUTES,
+                AppSettings.MAX_SLEEP_TIMER_MINUTES,
+            )
+        context.appSettingsDataStore.edit { preferences ->
+            preferences[Keys.sleepTimerMinutes] = coerced
+        }
+    }
+
     private fun toAppSettings(preferences: Preferences): AppSettings =
         AppSettings(
             themePreference =
@@ -60,5 +75,11 @@ class AppSettingsDataStore(
                     ?: AppSettings.DEFAULT_THEME_PREFERENCE,
             useDynamicColor = preferences[Keys.useDynamicColor] ?: true,
             useCoverTheme = preferences[Keys.useCoverTheme] ?: true,
+            sleepTimerMinutes =
+                (preferences[Keys.sleepTimerMinutes] ?: AppSettings.DEFAULT_SLEEP_TIMER_MINUTES)
+                    .coerceIn(
+                        AppSettings.MIN_SLEEP_TIMER_MINUTES,
+                        AppSettings.MAX_SLEEP_TIMER_MINUTES,
+                    ),
         )
 }

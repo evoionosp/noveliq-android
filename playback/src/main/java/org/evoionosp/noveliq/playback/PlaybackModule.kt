@@ -93,4 +93,8 @@ internal object PlaybackConnectionBindings {
     @Provides
     @Singleton
     fun providePlayerLogoutHandler(impl: PlaybackConnectionLogoutHandler): PlayerLogoutHandler = impl
+
+    @Provides
+    @Singleton
+    fun providePlaybackClock(): PlaybackClock = PlaybackClock(System::currentTimeMillis)
 }

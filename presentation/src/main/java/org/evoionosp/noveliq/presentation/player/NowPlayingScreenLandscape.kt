@@ -44,7 +44,9 @@ internal fun NowPlayingScreenLandscape(
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
     onSpeedClick: () -> Unit,
+    onSleepClick: () -> Unit,
     onChaptersClick: () -> Unit,
+    sleepLabel: String,
     onOpenBookDetails: (Audiobook) -> Unit,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
@@ -100,7 +102,9 @@ internal fun NowPlayingScreenLandscape(
             Spacer(modifier = Modifier.height(24.dp))
             FooterActionsRow(
                 speedLabel = speedLabel,
+                sleepLabel = sleepLabel,
                 onSpeedClick = onSpeedClick,
+                onSleepClick = onSleepClick,
                 onChaptersClick = onChaptersClick,
             )
         }

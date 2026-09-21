@@ -77,6 +77,7 @@ internal fun NowPlayingScreen(
     // Saveable like the expanded state above: an open sheet must survive rotation too.
     var showSpeedSheet by rememberSaveable { mutableStateOf(false) }
     var showChaptersSheet by rememberSaveable { mutableStateOf(false) }
+    var showSleepSheet by rememberSaveable { mutableStateOf(false) }
     var coverWidthPx by remember { mutableIntStateOf(0) }
     val isLandscape =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -95,6 +96,8 @@ internal fun NowPlayingScreen(
                 it.startInSeconds <= playbackState.currentBookPositionSeconds
             }?.title
     val speedLabel = "${"%.2f".format(playbackState.playbackSpeed)}x"
+    val sleepLabel = sleepFooterLabel(playbackState.sleepTimer, playbackState.sleepRemainingMs)
+    val sleepTimerMinutes by viewModel.sleepTimerMinutes.collectAsStateWithLifecycle()
 
     Surface(
         modifier =
@@ -152,7 +155,9 @@ internal fun NowPlayingScreen(
                     onPreviousChapter = viewModel::previousChapter,
                     onNextChapter = viewModel::nextChapter,
                     onSpeedClick = { showSpeedSheet = true },
+                    onSleepClick = { showSleepSheet = true },
                     onChaptersClick = { showChaptersSheet = true },
+                    sleepLabel = sleepLabel,
                     onOpenBookDetails = onOpenBookDetails,
                 )
             } else {
@@ -218,7 +223,9 @@ internal fun NowPlayingScreen(
 
                 FooterActionsRow(
                     speedLabel = speedLabel,
+                    sleepLabel = sleepLabel,
                     onSpeedClick = { showSpeedSheet = true },
+                    onSleepClick = { showSleepSheet = true },
                     onChaptersClick = { showChaptersSheet = true },
                 )
 
@@ -246,6 +253,26 @@ internal fun NowPlayingScreen(
             isPlaying = playbackState.isPlaying,
             onPlayChapter = viewModel::playChapter,
             onDismiss = { showChaptersSheet = false },
+        )
+    }
+
+    if (showSleepSheet) {
+        SleepSheet(
+            sleepTimer = playbackState.sleepTimer,
+            sleepRemainingMs = playbackState.sleepRemainingMs,
+            currentChapterTitle = chapterTitle,
+            endOfChapterAvailable =
+                sleepChapterTargetSeconds(
+                    uiState.chapters,
+                    playbackState.currentBookPositionSeconds,
+                    uiState.totalSeconds,
+                ) != null,
+            persistedMinutes = sleepTimerMinutes,
+            onArmTimer = viewModel::armSleepTimer,
+            onArmEndOfChapter = viewModel::armSleepEndOfChapter,
+            onDurationChange = viewModel::saveSleepTimerMinutes,
+            onCancel = viewModel::cancelSleepTimer,
+            onDismiss = { showSleepSheet = false },
         )
     }
 }
@@ -461,7 +488,9 @@ internal fun BookTitleBlock(
 @Composable
 internal fun FooterActionsRow(
     speedLabel: String,
+    sleepLabel: String,
     onSpeedClick: () -> Unit,
+    onSleepClick: () -> Unit,
     onChaptersClick: () -> Unit,
 ) {
     val pc = LocalPlayerColors.current
@@ -470,7 +499,11 @@ internal fun FooterActionsRow(
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PlayerAction(title = stringResource(R.string.now_playing_sleep), icon = "Zz")
+        PlayerAction(
+            title = stringResource(R.string.now_playing_sleep),
+            icon = sleepLabel,
+            onClick = onSleepClick,
+        )
         PlayerAction(
             title = stringResource(R.string.now_playing_speed),
             icon = speedLabel,

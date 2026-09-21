@@ -15,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,6 +77,7 @@ class PlaybackConnection
         private val controllerConnector: MediaControllerConnector,
         private val connectionScope: CoroutineScope,
         private val observeSessionUseCase: ObserveSessionUseCase,
+        private val clock: PlaybackClock,
     ) {
         private val _playbackState = MutableStateFlow(PlaybackState())
         val playbackState = _playbackState.asStateFlow()
@@ -87,6 +89,7 @@ class PlaybackConnection
         private var currentTracks: List<AudiobookTrack> = emptyList()
         private var currentTotalDurationSeconds: Double = 0.0
         private var secondsSinceServerSave: Int = 0
+        private var sleepJob: Job? = null
 
         init {
             connectionScope.launch {
@@ -124,6 +127,9 @@ class PlaybackConnection
                 // Persist the currently-playing book's progress before switching away from it, so
                 // returning to it later resumes from the right spot.
                 saveCurrentProgressNow()
+                // A timer armed for the previous book (especially a chapter
+                // target) is meaningless for the new one.
+                cancelSleepTimer()
 
                 val session = getValidSessionUseCase() ?: return@launch
 
@@ -261,6 +267,8 @@ class PlaybackConnection
         private fun stopNow() {
             mediaController?.stop()
             mediaController?.clearMediaItems()
+            sleepJob?.cancel()
+            sleepJob = null
             currentAudiobookId = null
             currentTracks = emptyList()
             currentTotalDurationSeconds = 0.0
@@ -322,11 +330,29 @@ class PlaybackConnection
         private fun updateProgress() {
             val controller = mediaController ?: return
             val absoluteSeconds = currentAbsoluteSeconds(controller)
+            val nowMs = clock.nowMs()
             _playbackState.update {
                 it.copy(
                     currentPositionMs = controller.currentPosition,
                     currentBookPositionSeconds = absoluteSeconds,
+                    sleepRemainingMs = (it.sleepTimer as? SleepTimerState.Timer)?.remainingMs(nowMs),
                 )
+            }
+
+            // Sleep watch: chapter mode fires on position; timer mode also gets
+            // a wall-clock check here in case the delay job woke late (doze).
+            when (val sleep = _playbackState.value.sleepTimer) {
+                is SleepTimerState.Timer -> {
+                    if (nowMs >= sleep.endsAtMs) fireSleepTimer()
+                }
+
+                is SleepTimerState.EndOfChapter -> {
+                    if (absoluteSeconds >= sleep.targetBookSeconds) fireSleepTimer()
+                }
+
+                SleepTimerState.Off -> {
+                    Unit
+                }
             }
 
             // Periodically push progress to the server while actively playing.
@@ -343,6 +369,60 @@ class PlaybackConnection
             val controller = mediaController ?: return
             controller.setPlaybackSpeed(speed)
             _playbackState.update { it.copy(playbackSpeed = speed) }
+        }
+
+        /**
+         * Arms a wall-clock sleep timer: playback pauses [minutes] from now.
+         * Re-arming replaces any previous timer or chapter target.
+         */
+        fun startSleepTimer(minutes: Int) {
+            cancelSleepTimer()
+            val durationMs = minutes.coerceAtLeast(1) * 60_000L
+            _playbackState.update {
+                it.copy(
+                    sleepTimer = SleepTimerState.Timer(endsAtMs = clock.nowMs() + durationMs),
+                    sleepRemainingMs = durationMs,
+                )
+            }
+            sleepJob =
+                connectionScope.launch {
+                    delay(durationMs)
+                    fireSleepTimer()
+                }
+        }
+
+        /**
+         * Arms sleep-at-chapter-end: playback pauses once the book position
+         * reaches [targetBookSeconds]. The progress loop watches the position,
+         * so no delay job is needed.
+         */
+        fun startSleepAtChapterEnd(targetBookSeconds: Double) {
+            cancelSleepTimer()
+            _playbackState.update {
+                it.copy(
+                    sleepTimer = SleepTimerState.EndOfChapter(targetBookSeconds),
+                    sleepRemainingMs = null,
+                )
+            }
+        }
+
+        fun cancelSleepTimer() {
+            sleepJob?.cancel()
+            sleepJob = null
+            _playbackState.update { it.copy(sleepTimer = SleepTimerState.Off, sleepRemainingMs = null) }
+        }
+
+        /**
+         * Pauses for the armed timer and disarms it. Both the delay job and
+         * the progress-loop check can trigger; the Off guard makes the second
+         * trigger a no-op. Suspension-free, so no interleaving mid-fire.
+         */
+        private fun fireSleepTimer() {
+            if (_playbackState.value.sleepTimer is SleepTimerState.Off) return
+            sleepJob?.cancel()
+            sleepJob = null
+            _playbackState.update { it.copy(sleepTimer = SleepTimerState.Off, sleepRemainingMs = null) }
+            pause()
         }
 
         private fun updateState() {

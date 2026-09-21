@@ -1,10 +1,8 @@
 package org.evoionosp.noveliq.data.auth.remote.api
 
 import javax.inject.Inject
-import javax.inject.Named
 import javax.inject.Singleton
-import okhttp3.OkHttpClient
-import org.evoionosp.noveliq.data.di.NetworkModule
+import org.evoionosp.noveliq.data.network.ManagedOkHttpClients
 import org.evoionosp.noveliq.data.network.UrlUtils
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -13,9 +11,17 @@ import retrofit2.converter.gson.GsonConverterFactory
 class LoginServiceFactory
     @Inject
     constructor(
-        @param:Named(NetworkModule.AUTH_CLIENT) private val okHttpClient: OkHttpClient,
+        private val httpClients: ManagedOkHttpClients,
     ) {
         private val serviceCache = mutableMapOf<String, LoginApiService>()
+
+        init {
+            httpClients.registerInvalidator {
+                synchronized(this) {
+                    serviceCache.clear()
+                }
+            }
+        }
 
         @Synchronized
         fun create(baseUrl: String): LoginApiService {
@@ -24,7 +30,7 @@ class LoginServiceFactory
                 Retrofit
                     .Builder()
                     .baseUrl(normalizedBaseUrl)
-                    .client(okHttpClient)
+                    .client(httpClients.authClient)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build()
                     .create(LoginApiService::class.java)

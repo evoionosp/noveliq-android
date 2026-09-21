@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import org.evoionosp.noveliq.presentation.common.LocalAccessToken
 import org.evoionosp.noveliq.presentation.permissions.RequestNotificationPermissionEffect
+import org.evoionosp.noveliq.presentation.player.LocalPlayerCardColor
 import org.evoionosp.noveliq.presentation.player.LocalPlayerColors
 import org.evoionosp.noveliq.presentation.player.MINI_BOTTOM_GAP
 import org.evoionosp.noveliq.presentation.player.NowPlayingOverlay
@@ -139,6 +140,7 @@ fun NoveliqApp(
             LocalSnackbarHostState provides snackbarHostState,
             LocalAccessToken provides accessToken,
             LocalPlayerColors provides playerColorsFallback(MaterialTheme.colorScheme),
+            LocalPlayerCardColor provides MaterialTheme.colorScheme.surface,
         ) {
             val showSearchFab =
                 currentRoute == AppRoute.Home.route || currentRoute == AppRoute.Library.route
@@ -228,6 +230,20 @@ fun NoveliqApp(
                     themeFromCover = settingsState.useCoverTheme,
                     bottomInsetDp = bottomInsetDp,
                     onMinimize = { isNowPlayingExpanded = false },
+                    onOpenBookDetails = { audiobook ->
+                        isNowPlayingExpanded = false
+                        // Tapping the title while already on this book's
+                        // details must not stack a duplicate destination.
+                        val entry = navController.currentBackStackEntry
+                        val alreadyThere =
+                            entry?.destination?.route == AppRoute.BookDetails.route &&
+                                entry.arguments?.getString(BOOK_DETAILS_ARG_AUDIOBOOK_ID) == audiobook.id
+                        if (!alreadyThere) {
+                            navController.navigate(
+                                bookDetailsRoute(audiobook.libraryId, audiobook.id),
+                            )
+                        }
+                    },
                     onExpandMini = { isNowPlayingExpanded = true },
                     onMiniHeightKnown = { miniHeightDp = it },
                 )

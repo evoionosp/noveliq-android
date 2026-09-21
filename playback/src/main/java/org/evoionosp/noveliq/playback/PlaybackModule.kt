@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dagger.Module
@@ -21,6 +21,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okhttp3.Call
+import org.evoionosp.noveliq.data.network.ManagedOkHttpClients
 import org.evoionosp.noveliq.domain.session.PlayerLogoutHandler
 import org.evoionosp.noveliq.domain.session.SessionStore
 
@@ -39,11 +41,21 @@ object PlaybackModule {
     @OptIn(UnstableApi::class)
     @Provides
     @ServiceScoped
-    fun provideDataSourceFactory(sessionStore: SessionStore): DataSource.Factory {
+    fun provideDataSourceFactory(
+        sessionStore: SessionStore,
+        httpClients: ManagedOkHttpClients,
+    ): DataSource.Factory {
         // Resolve the Authorization header per request so streaming (and notification artwork)
         // always use the CURRENT session token. The token is refreshed/rotated on app start, so a
         // token captured once at service creation goes stale and causes 401s.
-        val upstreamFactory = DefaultHttpDataSource.Factory()
+        //
+        // The upstream resolves the shared client per call (not once here) so
+        // custom headers, the User-Agent, and TLS settings always reflect the
+        // current connection settings, including after a client rebuild.
+        val upstreamFactory =
+            OkHttpDataSource.Factory(
+                Call.Factory { request -> httpClients.apiClient.newCall(request) },
+            )
         return ResolvingDataSource.Factory(upstreamFactory) { dataSpec ->
             val token = runBlocking { sessionStore.currentAccessToken() }
             dataSpec.withRequestHeaders(authorizationHeaders(token))

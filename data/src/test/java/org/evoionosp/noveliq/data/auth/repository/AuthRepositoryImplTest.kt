@@ -2,9 +2,9 @@ package org.evoionosp.noveliq.data.auth.repository
 
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
-import okhttp3.OkHttpClient
 import org.evoionosp.noveliq.data.auth.remote.api.LoginServiceFactory
 import org.evoionosp.noveliq.data.test.MockWebServerRule
+import org.evoionosp.noveliq.data.test.testManagedClients
 import org.evoionosp.noveliq.domain.auth.model.AuthError
 import org.evoionosp.noveliq.domain.auth.model.LoginData
 import org.evoionosp.noveliq.domain.auth.model.LoginResult
@@ -20,7 +20,7 @@ class AuthRepositoryImplTest {
     private val testDispatcher = StandardTestDispatcher()
     private val repository =
         AuthRepositoryImpl(
-            serviceFactory = LoginServiceFactory(OkHttpClient()),
+            serviceFactory = LoginServiceFactory(testManagedClients()),
             ioDispatcher = testDispatcher,
         )
 

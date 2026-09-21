@@ -122,7 +122,7 @@ fun HomeScreen(
                             } else {
                                 HorizontalBookRow(
                                     audiobooks = state.continueListening,
-                                    onOpenAudiobook = onOpenAudiobook,
+                                    onBookClick = viewModel::playAudiobook,
                                 )
                             }
                         }
@@ -134,7 +134,7 @@ fun HomeScreen(
                         ) {
                             HorizontalBookRow(
                                 audiobooks = state.recentlyAdded,
-                                onOpenAudiobook = onOpenAudiobook,
+                                onBookClick = onOpenAudiobook,
                             )
                         }
                     }
@@ -145,7 +145,7 @@ fun HomeScreen(
                         ) {
                             HorizontalBookRow(
                                 audiobooks = state.discover,
-                                onOpenAudiobook = onOpenAudiobook,
+                                onBookClick = onOpenAudiobook,
                             )
                         }
                     }

@@ -47,7 +47,7 @@ import org.evoionosp.noveliq.presentation.utils.CoverArt
 import org.evoionosp.noveliq.presentation.utils.SheetDragState
 import org.evoionosp.noveliq.presentation.utils.rememberArtPalette
 
-private val MINI_SIDE_PADDING = 12.dp
+private val MINI_SIDE_PADDING = 8.dp
 internal val MINI_CORNER_RADIUS = 16.dp
 internal val MINI_BOTTOM_GAP = 8.dp
 private val MINI_FALLBACK_HEIGHT = 64.dp
@@ -86,6 +86,7 @@ fun NowPlayingOverlay(
     themeFromCover: Boolean,
     bottomInsetDp: Dp,
     onMinimize: () -> Unit,
+    onOpenBookDetails: (Audiobook) -> Unit,
     onExpandMini: () -> Unit,
     onMiniHeightKnown: (Dp) -> Unit,
     modifier: Modifier = Modifier,
@@ -262,9 +263,13 @@ fun NowPlayingOverlay(
                                         translationY = parallaxPx
                                     },
                         ) {
-                            CompositionLocalProvider(LocalPlayerColors provides playerColors) {
+                            CompositionLocalProvider(
+                                LocalPlayerColors provides playerColors,
+                                LocalPlayerCardColor provides cardColor,
+                            ) {
                                 NowPlayingScreen(
                                     onMinimize = onMinimize,
+                                    onOpenBookDetails = onOpenBookDetails,
                                     sheetDrag = sheetDrag,
                                 )
                             }
@@ -297,7 +302,10 @@ fun NowPlayingOverlay(
                                         onClick = { currentOnExpandMini() },
                                     ),
                         ) {
-                            CompositionLocalProvider(LocalPlayerColors provides playerColors) {
+                            CompositionLocalProvider(
+                                LocalPlayerColors provides playerColors,
+                                LocalPlayerCardColor provides cardColor,
+                            ) {
                                 MiniPlayerContent(audiobook = playingAudiobook)
                             }
                         }

@@ -38,6 +38,14 @@ internal data class PlayerColors(
 internal val LocalPlayerColors =
     compositionLocalOf<PlayerColors> { error("LocalPlayerColors not provided") }
 
+/**
+ * Player card background: the cover tint while the cover theme is on and a
+ * dominant color resolved, otherwise the flat theme surface. The bottom
+ * sheets read this so they sit on the same background as Now Playing.
+ */
+internal val LocalPlayerCardColor =
+    compositionLocalOf<Color> { error("LocalPlayerCardColor not provided") }
+
 /** Theme-based roles: the pre-load look, and the look outside the sheet. */
 internal fun playerColorsFallback(scheme: ColorScheme): PlayerColors =
     PlayerColors(

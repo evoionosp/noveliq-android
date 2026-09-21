@@ -62,11 +62,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
+    implementation(libs.gson)
     implementation(libs.retrofit.converter.scalars)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.security.crypto)
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.bundles.unitTest)

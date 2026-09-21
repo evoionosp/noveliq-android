@@ -50,7 +50,7 @@ internal fun SectionBlock(
 @Composable
 internal fun HorizontalBookRow(
     audiobooks: List<AudiobookUiModel>,
-    onOpenAudiobook: (AudiobookUiModel) -> Unit,
+    onBookClick: (AudiobookUiModel) -> Unit,
 ) {
     if (audiobooks.isEmpty()) {
         PlaceholderSectionCard(
@@ -71,7 +71,7 @@ internal fun HorizontalBookRow(
         ) { audiobook ->
             AudiobookCarouselCard(
                 audiobook = audiobook,
-                onClick = { onOpenAudiobook(audiobook) },
+                onClick = { onBookClick(audiobook) },
             )
         }
     }

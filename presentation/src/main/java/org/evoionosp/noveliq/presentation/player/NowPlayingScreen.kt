@@ -24,12 +24,12 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +67,7 @@ import org.evoionosp.noveliq.presentation.utils.SheetDragState
 @Composable
 internal fun NowPlayingScreen(
     onMinimize: () -> Unit,
+    onOpenBookDetails: (Audiobook) -> Unit,
     viewModel: NowPlayingViewModel = hiltViewModel(),
     sheetDrag: SheetDragState,
 ) {
@@ -134,15 +135,7 @@ internal fun NowPlayingScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Landscape drops the bar: just the arrow pinned to the start, and
-            // the content below moves up into the reclaimed space.
-            if (isLandscape) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    MinimizeButton(onMinimize = onMinimize)
-                }
-            } else {
-                HeaderRow(onMinimize = onMinimize)
-            }
+            PlayerTopBar(onMinimize = onMinimize)
 
             if (isLandscape) {
                 NowPlayingScreenLandscape(
@@ -160,6 +153,7 @@ internal fun NowPlayingScreen(
                     onNextChapter = viewModel::nextChapter,
                     onSpeedClick = { showSpeedSheet = true },
                     onChaptersClick = { showChaptersSheet = true },
+                    onOpenBookDetails = onOpenBookDetails,
                 )
             } else {
                 // Book info block. Weighted so it fills the space above the controls; its content is
@@ -197,11 +191,17 @@ internal fun NowPlayingScreen(
                                 .clip(RoundedCornerShape(50)),
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Title and Author
-                    BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
+                    BookTitleBlock(
+                        audiobook = audiobook,
+                        textAlign = TextAlign.Center,
+                        onClick = { onOpenBookDetails(audiobook) },
+                    )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 PlayingTransport(
                     playbackState = playbackState,
@@ -266,12 +266,6 @@ internal fun PlayingTransport(
 
     fun tick() = hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     val pc = LocalPlayerColors.current
-    val progress =
-        if (playbackState.durationMs > 0) {
-            playbackState.currentPositionMs.toFloat() / playbackState.durationMs
-        } else {
-            0f
-        }
 
     if (!chapterTitle.isNullOrBlank()) {
         Text(
@@ -287,32 +281,12 @@ internal fun PlayingTransport(
         Spacer(modifier = Modifier.height(8.dp))
     }
 
-    Slider(
-        value = progress,
-        onValueChange = { onSeekTo((it * playbackState.durationMs).toLong()) },
-        modifier = Modifier.fillMaxWidth(),
-        colors =
-            SliderDefaults.colors(
-                activeTrackColor = pc.accent,
-                inactiveTrackColor = pc.trackSubtle,
-                thumbColor = pc.accent,
-            ),
+    PlayerSeekBar(
+        positionMs = playbackState.currentPositionMs,
+        durationMs = playbackState.durationMs,
+        isPlaying = playbackState.isPlaying,
+        onSeekTo = onSeekTo,
     )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = playbackState.currentPositionMs.msToDurationLabel(),
-            style = MaterialTheme.typography.bodySmall,
-            color = pc.textSecondary,
-        )
-        Text(
-            text = playbackState.durationMs.msToDurationLabel(),
-            style = MaterialTheme.typography.bodySmall,
-            color = pc.textSecondary,
-        )
-    }
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -363,22 +337,14 @@ internal fun PlayingTransport(
     }
 }
 
+/**
+ * Full-player top bar: a tonal down-arrow button like the Preferences back
+ * button, plus the SemiBold "Now Playing" title. Shared by portrait and
+ * landscape.
+ */
 @Composable
-private fun MinimizeButton(onMinimize: () -> Unit) {
-    IconButton(
-        onClick = onMinimize,
-        modifier = Modifier.size(48.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.KeyboardArrowDown,
-            contentDescription = stringResource(R.string.close),
-            modifier = Modifier.size(30.dp),
-        )
-    }
-}
-
-@Composable
-private fun HeaderRow(onMinimize: () -> Unit) {
+private fun PlayerTopBar(onMinimize: () -> Unit) {
+    val pc = LocalPlayerColors.current
     Row(
         modifier =
             Modifier
@@ -386,7 +352,34 @@ private fun HeaderRow(onMinimize: () -> Unit) {
                 .heightIn(min = 64.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MinimizeButton(onMinimize = onMinimize)
+        FilledTonalIconButton(
+            onClick = onMinimize,
+            colors =
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = pc.containerSubtle,
+                    contentColor = pc.accent,
+                ),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = stringResource(R.string.close),
+            )
+        }
+        // Same rendering as a collapsed settings title.
+        val titleStyle = MaterialTheme.typography.headlineMedium
+        Text(
+            text = stringResource(R.string.now_playing_title),
+            modifier = Modifier.padding(start = 18.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style =
+                titleStyle.copy(
+                    fontSize = titleStyle.fontSize * 0.8f,
+                    lineHeight = titleStyle.fontSize * 0.8f * 1.1f,
+                    fontWeight = FontWeight.Bold,
+                ),
+            color = pc.textPrimary,
+        )
     }
 }
 
@@ -426,9 +419,24 @@ internal fun BookTitleBlock(
     audiobook: Audiobook,
     textAlign: TextAlign,
     modifier: Modifier = Modifier,
+    // Null on the details page itself, where the title navigates nowhere.
+    onClick: (() -> Unit)? = null,
 ) {
     val pc = LocalPlayerColors.current
-    Column(modifier = modifier) {
+    val clickableModifier =
+        if (onClick != null) {
+            Modifier.clickable(
+                onClickLabel = stringResource(R.string.now_playing_open_book_details),
+                onClick = onClick,
+            )
+        } else {
+            Modifier
+        }
+    Column(
+        modifier = modifier.then(clickableModifier),
+        horizontalAlignment =
+            if (textAlign == TextAlign.Center) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
         Text(
             text = audiobook.title,
             style = MaterialTheme.typography.headlineSmall,

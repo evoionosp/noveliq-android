@@ -10,4 +10,6 @@ interface AppSettingsStore {
     suspend fun setDynamicColor(enabled: Boolean)
 
     suspend fun setCoverTheme(enabled: Boolean)
+
+    suspend fun setSleepTimerMinutes(minutes: Int)
 }

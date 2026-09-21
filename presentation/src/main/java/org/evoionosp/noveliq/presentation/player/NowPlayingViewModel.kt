@@ -19,6 +19,8 @@ import org.evoionosp.noveliq.domain.audiobook.model.AudiobookChapter
 import org.evoionosp.noveliq.domain.audiobook.usecase.ObserveAudiobookDetailUseCase
 import org.evoionosp.noveliq.domain.audiobook.usecase.RefreshAudiobookDetailUseCase
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
+import org.evoionosp.noveliq.domain.settings.AppSettings
+import org.evoionosp.noveliq.domain.settings.AppSettingsStore
 import org.evoionosp.noveliq.playback.PlaybackConnection
 import org.evoionosp.noveliq.playback.PlaybackState
 
@@ -34,6 +36,34 @@ data class NowPlayingUiState(
     val chapters: List<AudiobookChapter> = emptyList(),
 )
 
+/**
+ * Book position where sleep-at-end-of-chapter fires: the current chapter's
+ * own end when known and ahead, else the next chapter's start, else the end
+ * of the book. Null when nothing bounds the current chapter (no chapters and
+ * no total, or already at the end), in which case the UI offers no chapter
+ * mode. Pure so the boundary rule stays testable.
+ */
+internal fun sleepChapterTargetSeconds(
+    chapters: List<AudiobookChapter>,
+    positionSeconds: Double,
+    totalSeconds: Double,
+): Double? {
+    val index = chapters.indexOfLast { it.startInSeconds <= positionSeconds }
+    chapters
+        .getOrNull(index)
+        ?.endInSeconds
+        ?.toDouble()
+        ?.takeIf { it > positionSeconds }
+        ?.let { return it }
+    chapters
+        .getOrNull(index + 1)
+        ?.startInSeconds
+        ?.toDouble()
+        ?.takeIf { it > positionSeconds }
+        ?.let { return it }
+    return totalSeconds.takeIf { it > positionSeconds }
+}
+
 @HiltViewModel
 class NowPlayingViewModel
     @Inject
@@ -42,8 +72,19 @@ class NowPlayingViewModel
         private val observeAudiobookDetail: ObserveAudiobookDetailUseCase,
         private val refreshAudiobookDetail: RefreshAudiobookDetailUseCase,
         private val getValidSessionUseCase: GetValidSessionUseCase,
+        private val appSettingsStore: AppSettingsStore,
     ) : ViewModel() {
         val playbackState: StateFlow<PlaybackState> = playbackConnection.playbackState
+
+        /** Last sleep-timer duration picked, surviving app kill; the armed timer itself does not. */
+        val sleepTimerMinutes: StateFlow<Int> =
+            appSettingsStore.settings
+                .map { it.sleepTimerMinutes }
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(5_000),
+                    AppSettings.DEFAULT_SLEEP_TIMER_MINUTES,
+                )
 
         private val totalSeconds = MutableStateFlow(0.0)
         private val chapters = MutableStateFlow<List<AudiobookChapter>>(emptyList())
@@ -102,6 +143,32 @@ class NowPlayingViewModel
 
         fun setPlaybackSpeed(speed: Float) {
             playbackConnection.setPlaybackSpeed(speed)
+        }
+
+        fun armSleepTimer(minutes: Int) {
+            playbackConnection.startSleepTimer(minutes)
+        }
+
+        /** Persists the staged duration without arming, so the sheet reopens where it left off. */
+        fun saveSleepTimerMinutes(minutes: Int) {
+            viewModelScope.launch {
+                appSettingsStore.setSleepTimerMinutes(minutes)
+            }
+        }
+
+        /** Arms sleep-at-chapter-end; no-op when no chapter boundary is known. */
+        fun armSleepEndOfChapter() {
+            val target =
+                sleepChapterTargetSeconds(
+                    chapters.value,
+                    playbackState.value.currentBookPositionSeconds,
+                    totalSeconds.value,
+                ) ?: return
+            playbackConnection.startSleepAtChapterEnd(target)
+        }
+
+        fun cancelSleepTimer() {
+            playbackConnection.cancelSleepTimer()
         }
 
         fun nextChapter() {

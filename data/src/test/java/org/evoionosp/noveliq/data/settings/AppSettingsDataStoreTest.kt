@@ -25,6 +25,7 @@ class AppSettingsDataStoreTest {
             // through the API rather than deleting the file underneath it.
             store.setThemePreference(AppSettings.DEFAULT_THEME_PREFERENCE)
             store.setDynamicColor(true)
+            store.setSleepTimerMinutes(AppSettings.DEFAULT_SLEEP_TIMER_MINUTES)
         }
 
     @Test
@@ -56,6 +57,23 @@ class AppSettingsDataStoreTest {
                 store.setDynamicColor(false)
 
                 assertEquals(false, awaitItem().useDynamicColor)
+            }
+        }
+
+    @Test
+    fun `sleep timer minutes round-trip and clamp to the slider range`() =
+        runTest {
+            store.settings.test {
+                assertEquals(AppSettings.DEFAULT_SLEEP_TIMER_MINUTES, awaitItem().sleepTimerMinutes)
+
+                store.setSleepTimerMinutes(45)
+                assertEquals(45, awaitItem().sleepTimerMinutes)
+
+                store.setSleepTimerMinutes(180)
+                assertEquals(AppSettings.MAX_SLEEP_TIMER_MINUTES, awaitItem().sleepTimerMinutes)
+
+                store.setSleepTimerMinutes(0)
+                assertEquals(AppSettings.MIN_SLEEP_TIMER_MINUTES, awaitItem().sleepTimerMinutes)
             }
         }
 }

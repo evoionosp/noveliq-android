@@ -146,6 +146,11 @@
     <string name="http_protocol">http://</string>
     <string name="https_protocol">https://</string>
     <string name="edit">Edit</string>
+    <string name="now_playing_sleep_sheet_title">Sleep timer</string>
+    <string name="now_playing_sleep_end_of_chapter">End of chapter</string>
+    <string name="now_playing_sleep_stop_at_end_of_chapter">Stop at the end of chapter</string>
+    <string name="now_playing_sleep_start_timer">Start timer</string>
+    <string name="now_playing_sleep_stop_timer">Stop timer</string>
     <string name="now_playing_open_book_details">Open book details</string>
     <string name="auth_trouble_connecting">Having trouble connecting?</string>
     <string name="preferences_server_connection">Server connection</string>

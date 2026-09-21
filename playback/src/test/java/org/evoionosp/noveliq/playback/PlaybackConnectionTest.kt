@@ -477,7 +477,10 @@ class PlaybackConnectionTest {
         val saveProgress: SavePlaybackProgressUseCase,
     )
 
-    private fun TestScope.graph(connected: Boolean = true): Graph {
+    private fun TestScope.graph(
+        connected: Boolean = true,
+        clock: PlaybackClock = PlaybackClock(System::currentTimeMillis),
+    ): Graph {
         val controller = mockk<Player>()
         every { controller.addListener(any()) } just Runs
         every { controller.isPlaying } returns false
@@ -523,6 +526,7 @@ class PlaybackConnectionTest {
                 controllerConnector = FakeConnector(if (connected) controller else null),
                 connectionScope = scope,
                 observeSessionUseCase = observeSession,
+                clock = clock,
             )
         runCurrent()
         return Graph(connection, controller, session, getValidSession, prepare, fetchProgress, saveProgress)
@@ -581,4 +585,126 @@ class PlaybackConnectionTest {
             tracks = listOf(testTrack(0, 0), testTrack(1, 100), testTrack(2, 200)),
             refreshedAtMillis = 0L,
         )
+
+    @Test
+    fun `sleep timer arms and pauses when the duration elapses`() =
+        runTest {
+            val graph = graph()
+
+            graph.connection.startSleepTimer(30)
+            val armed = graph.connection.playbackState.value.sleepTimer as SleepTimerState.Timer
+            assertTrue(armed.endsAtMs > System.currentTimeMillis())
+
+            advanceTimeBy(30 * 60_000L)
+            runCurrent()
+
+            assertEquals(SleepTimerState.Off, graph.connection.playbackState.value.sleepTimer)
+            verify { graph.controller.pause() }
+        }
+
+    @Test
+    fun `cancelled sleep timer never fires`() =
+        runTest {
+            val graph = graph()
+
+            graph.connection.startSleepTimer(30)
+            graph.connection.cancelSleepTimer()
+            advanceTimeBy(31 * 60_000L)
+            runCurrent()
+
+            assertEquals(SleepTimerState.Off, graph.connection.playbackState.value.sleepTimer)
+            verify(exactly = 0) { graph.controller.pause() }
+        }
+
+    @Test
+    fun `rearming replaces the previous timer`() =
+        runTest {
+            val graph = graph()
+
+            graph.connection.startSleepTimer(30)
+            graph.connection.startSleepTimer(60)
+            advanceTimeBy(31 * 60_000L)
+            runCurrent()
+            assertTrue(graph.connection.playbackState.value.sleepTimer is SleepTimerState.Timer)
+
+            advanceTimeBy(30 * 60_000L)
+            runCurrent()
+            assertEquals(SleepTimerState.Off, graph.connection.playbackState.value.sleepTimer)
+            verify { graph.controller.pause() }
+        }
+
+    @Test
+    fun `sleep at chapter end fires when the position crosses the target`() =
+        runTest {
+            val graph = graph()
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            graph.connection.startSleepAtChapterEnd(50.0)
+            advanceTimeBy(2_000L)
+            runCurrent()
+            assertTrue(graph.connection.playbackState.value.sleepTimer is SleepTimerState.EndOfChapter)
+
+            every { graph.controller.currentPosition } returns 60_000L
+            advanceTimeBy(1_000L)
+            runCurrent()
+
+            assertEquals(SleepTimerState.Off, graph.connection.playbackState.value.sleepTimer)
+            verify { graph.controller.pause() }
+            coVerify { graph.saveProgress("https://example.com", "access-1", "book-1", 60.0, 300.0) }
+        }
+
+    @Test
+    fun `switching books disarms the sleep timer`() =
+        runTest {
+            val graph = graph()
+            graph.connection.playAudiobook(testAudiobook())
+            graph.connection.playbackState.first { it.audiobook != null }
+
+            graph.connection.startSleepTimer(30)
+            graph.connection.playAudiobook(testAudiobook())
+            runCurrent()
+
+            assertEquals(SleepTimerState.Off, graph.connection.playbackState.value.sleepTimer)
+        }
+
+    @Test
+    fun `remaining time ticks every second while paused`() =
+        runTest {
+            // Deterministic clock: virtual time does not move the wall clock
+            // the countdown derives from, so drive it by hand through the
+            // injected fake. (Never mockkStatic(System::class) here: freezing
+            // currentTimeMillis JVM-wide wedges the test worker.)
+            var nowMs = 1_000_000L
+            val graph = graph(clock = PlaybackClock { nowMs })
+
+            graph.connection.playbackState.test {
+                awaitItem()
+
+                graph.connection.startSleepTimer(30)
+                val armed = awaitItem()
+                assertTrue(armed.sleepTimer is SleepTimerState.Timer)
+                assertEquals(30 * 60_000L, armed.sleepRemainingMs)
+
+                nowMs += 5_000L
+                advanceTimeBy(1_000L)
+                val tick = awaitItem()
+                assertEquals(30 * 60_000L - 5_000L, tick.sleepRemainingMs)
+
+                graph.connection.startSleepAtChapterEnd(50.0)
+                assertNull(awaitItem().sleepRemainingMs)
+                graph.connection.cancelSleepTimer()
+                assertNull(awaitItem().sleepRemainingMs)
+
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `remainingMs counts down to zero and nulls when idle`() {
+        assertNull(SleepTimerState.Off.remainingMs(1_000L))
+        assertNull(SleepTimerState.EndOfChapter(50.0).remainingMs(1_000L))
+        assertEquals(30_000L, SleepTimerState.Timer(endsAtMs = 31_000L).remainingMs(1_000L))
+        assertEquals(0L, SleepTimerState.Timer(endsAtMs = 500L).remainingMs(1_000L))
+    }
 }

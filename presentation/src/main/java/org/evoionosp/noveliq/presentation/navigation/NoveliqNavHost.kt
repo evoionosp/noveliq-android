@@ -16,6 +16,7 @@ import org.evoionosp.noveliq.presentation.home.HomeScreen
 import org.evoionosp.noveliq.presentation.library.LibraryScreen
 import org.evoionosp.noveliq.presentation.settings.AppearanceSettingsScreen
 import org.evoionosp.noveliq.presentation.settings.PreferencesScreen
+import org.evoionosp.noveliq.presentation.settings.ServerConnectionScreen
 import org.evoionosp.noveliq.presentation.settings.SettingsUiState
 import org.evoionosp.noveliq.presentation.splash.CatalogBootstrapErrorScreen
 import org.evoionosp.noveliq.presentation.splash.SplashUiState
@@ -51,6 +52,7 @@ internal fun NoveliqNavHost(
             AuthScreen(
                 modifier = Modifier,
                 onOpenSettings = { navController.navigate(AppRoute.Preferences.route) },
+                onOpenServerConnection = { navController.navigate(AppRoute.ServerConnection.route) },
             )
         }
         composable(
@@ -116,6 +118,7 @@ internal fun NoveliqNavHost(
             PreferencesScreen(
                 onBackClick = { navController.popBackStack() },
                 onOpenAppearance = { navController.navigate(AppRoute.Appearance.route) },
+                onOpenServerConnection = { navController.navigate(AppRoute.ServerConnection.route) },
                 onLoggedOut = { navController.navigateToAuthRoot() },
                 showLogout = splashState.startupDestination != StartupDestination.Auth,
                 miniTrailPadding = miniTrailPadding,
@@ -135,6 +138,19 @@ internal fun NoveliqNavHost(
                 onThemePreferenceChange = onThemePreferenceChange,
                 onDynamicColorChange = onDynamicColorChange,
                 onCoverThemeChange = onCoverThemeChange,
+                miniTrailPadding = miniTrailPadding,
+                modifier = Modifier,
+            )
+        }
+        composable(
+            route = AppRoute.ServerConnection.route,
+            enterTransition = { forwardEnterTransition() },
+            exitTransition = { forwardExitTransition() },
+            popEnterTransition = { backEnterTransition() },
+            popExitTransition = { backExitTransition() },
+        ) {
+            ServerConnectionScreen(
+                onBackClick = { navController.popBackStack() },
                 miniTrailPadding = miniTrailPadding,
                 modifier = Modifier,
             )

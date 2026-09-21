@@ -45,6 +45,7 @@ internal fun NowPlayingScreenLandscape(
     onNextChapter: () -> Unit,
     onSpeedClick: () -> Unit,
     onChaptersClick: () -> Unit,
+    onOpenBookDetails: (Audiobook) -> Unit,
 ) {
     var coverWidthPx by remember { mutableIntStateOf(0) }
 
@@ -75,7 +76,11 @@ internal fun NowPlayingScreenLandscape(
                         .clip(RoundedCornerShape(50)),
             )
             Spacer(modifier = Modifier.height(16.dp))
-            BookTitleBlock(audiobook = audiobook, textAlign = TextAlign.Center)
+            BookTitleBlock(
+                audiobook = audiobook,
+                textAlign = TextAlign.Center,
+                onClick = { onOpenBookDetails(audiobook) },
+            )
         }
         Spacer(modifier = Modifier.width(24.dp))
         Column(

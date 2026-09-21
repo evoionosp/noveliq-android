@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -28,9 +29,18 @@ fun ChaptersSheet(
     onPlayChapter: (AudiobookChapter) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // Player roles, not app theme: the sheet inherits the Now Playing scoped
+    // theme through the dialog composition, so it follows the cover tint and
+    // the cover-theme setting exactly like the player itself.
+    val pc = LocalPlayerColors.current
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
+        containerColor = LocalPlayerCardColor.current,
+        contentColor = pc.textPrimary,
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(color = pc.textSecondary.copy(alpha = 0.4f))
+        },
     ) {
         Column(
             modifier =
@@ -42,13 +52,14 @@ fun ChaptersSheet(
             Text(
                 text = stringResource(R.string.now_playing_chapters),
                 style = MaterialTheme.typography.titleLarge,
+                color = pc.textPrimary,
             )
 
             if (chapters.isEmpty()) {
                 Text(
                     text = stringResource(R.string.now_playing_chapters_empty),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = pc.textSecondary,
                 )
             } else {
                 LazyColumn(

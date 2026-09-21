@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,6 +65,7 @@ import org.evoionosp.noveliq.presentation.navigation.ObserveAsEvents
 @Composable
 fun AuthScreen(
     onOpenSettings: () -> Unit,
+    onOpenServerConnection: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
@@ -231,6 +234,25 @@ fun AuthScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
+            }
+
+            // Quiet escape hatch to the connection knobs (custom headers,
+            // self-signed TLS, client certs): only users who can't connect
+            // need it, so it stays a subtle link under the server setup.
+            if (state.serverStatus == null) {
+                TextButton(
+                    onClick = onOpenServerConnection,
+                    // Tight horizontal padding so the text starts flush with
+                    // the hint above instead of the default 12.dp inset.
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.auth_trouble_connecting),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

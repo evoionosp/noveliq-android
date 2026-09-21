@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.evoionosp.noveliq.data.audiobook.local.entity.AudiobookEntity
 import org.evoionosp.noveliq.data.library.local.db.NoveliqDatabase
@@ -16,6 +15,7 @@ import org.evoionosp.noveliq.data.library.remote.api.AudiobookshelfLibraryServic
 import org.evoionosp.noveliq.data.test.FakeConnectivityObserver
 import org.evoionosp.noveliq.data.test.MockWebServerRule
 import org.evoionosp.noveliq.data.test.TestDatabase
+import org.evoionosp.noveliq.data.test.testManagedClients
 import org.evoionosp.noveliq.domain.audiobook.model.PlaybackProgress
 import org.evoionosp.noveliq.domain.library.model.CatalogError
 import org.evoionosp.noveliq.domain.library.model.DomainResult
@@ -57,7 +57,7 @@ class AudiobookRepositoryImplTest {
                 audiobookDetailDao = database.audiobookDetailDao(),
                 continueListeningDao = database.continueListeningDao(),
                 syncStateDao = database.librarySyncStateDao(),
-                serviceFactory = AudiobookshelfLibraryServiceFactory(OkHttpClient()),
+                serviceFactory = AudiobookshelfLibraryServiceFactory(testManagedClients()),
                 connectivityObserver = connectivity,
                 ioDispatcher = testDispatcher,
             )

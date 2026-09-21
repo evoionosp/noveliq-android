@@ -35,8 +35,11 @@ import org.evoionosp.noveliq.domain.session.LoginSession
 import org.evoionosp.noveliq.domain.session.usecase.GetValidSessionUseCase
 import org.evoionosp.noveliq.domain.session.usecase.LogoutUserUseCase
 import org.evoionosp.noveliq.domain.session.usecase.ObserveSessionUseCase
+import org.evoionosp.noveliq.playback.PlaybackConnection
 import org.evoionosp.noveliq.presentation.R
+import org.evoionosp.noveliq.presentation.common.model.AudiobookUiModel
 import org.evoionosp.noveliq.presentation.common.model.AuthorUiModel
+import org.evoionosp.noveliq.presentation.common.model.toDomain
 import org.evoionosp.noveliq.presentation.common.model.toUiModel
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,6 +59,7 @@ class HomeViewModel
         private val refreshContinueListeningUseCase: RefreshContinueListeningUseCase,
         private val refreshSelectedLibraryAudiobooksUseCase: RefreshSelectedLibraryAudiobooksUseCase,
         private val selectLibraryUseCase: SelectLibraryUseCase,
+        private val playbackConnection: PlaybackConnection,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(HomeUiState())
         val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -189,6 +193,21 @@ class HomeViewModel
                     }.collectLatest { syncStatus ->
                         _uiState.update { it.copy(syncStatus = syncStatus) }
                     }
+            }
+        }
+
+        /**
+         * Starts the book from Continue Listening, or resumes it when it is
+         * already the active one. The mini player appears as a result; the
+         * user taps it to open the full Now Playing screen.
+         */
+        fun playAudiobook(audiobook: AudiobookUiModel) {
+            if (playbackConnection.playbackState.value.audiobook
+                    ?.id == audiobook.id
+            ) {
+                playbackConnection.play()
+            } else {
+                playbackConnection.playAudiobook(audiobook.toDomain())
             }
         }
 

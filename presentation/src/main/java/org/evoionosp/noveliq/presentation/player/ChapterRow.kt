@@ -32,6 +32,9 @@ fun ChapterRow(
     isPlaying: Boolean,
     onPlay: () -> Unit,
 ) {
+    // Player roles: identical to the app theme in Book Details (via the
+    // app-level fallback provider), cover-tinted inside the player sheets.
+    val pc = LocalPlayerColors.current
     Row(
         modifier =
             Modifier
@@ -46,9 +49,9 @@ fun ChapterRow(
                 fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                 color =
                     if (isCurrent) {
-                        MaterialTheme.colorScheme.primary
+                        pc.accent
                     } else {
-                        MaterialTheme.colorScheme.onSurface
+                        pc.textPrimary
                     },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -56,7 +59,7 @@ fun ChapterRow(
             Text(
                 text = chapter.startInSeconds.toDurationLabel(),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = pc.textSecondary,
             )
         }
 
@@ -69,13 +72,13 @@ fun ChapterRow(
             contentAlignment = Alignment.Center,
         ) {
             if (isCurrent) {
-                PlayingEqualizerIcon(isAnimating = isPlaying)
+                PlayingEqualizerIcon(isAnimating = isPlaying, color = pc.accent)
             } else {
                 IconButton(onClick = onPlay) {
                     Icon(
                         imageVector = Icons.Rounded.PlayArrow,
                         contentDescription = stringResource(R.string.now_playing_play),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = pc.accent,
                     )
                 }
             }

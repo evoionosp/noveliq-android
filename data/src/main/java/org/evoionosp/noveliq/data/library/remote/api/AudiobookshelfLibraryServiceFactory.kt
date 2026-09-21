@@ -2,7 +2,7 @@ package org.evoionosp.noveliq.data.library.remote.api
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import okhttp3.OkHttpClient
+import org.evoionosp.noveliq.data.network.ManagedOkHttpClients
 import org.evoionosp.noveliq.data.network.UrlUtils
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -11,9 +11,17 @@ import retrofit2.converter.gson.GsonConverterFactory
 class AudiobookshelfLibraryServiceFactory
     @Inject
     constructor(
-        private val okHttpClient: OkHttpClient,
+        private val httpClients: ManagedOkHttpClients,
     ) {
         private val serviceCache = mutableMapOf<String, AudiobookshelfLibraryApiService>()
+
+        init {
+            httpClients.registerInvalidator {
+                synchronized(this) {
+                    serviceCache.clear()
+                }
+            }
+        }
 
         @Synchronized
         fun create(baseUrl: String): AudiobookshelfLibraryApiService {
@@ -22,7 +30,7 @@ class AudiobookshelfLibraryServiceFactory
                 Retrofit
                     .Builder()
                     .baseUrl(normalizedBaseUrl)
-                    .client(okHttpClient)
+                    .client(httpClients.apiClient)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build()
                     .create(AudiobookshelfLibraryApiService::class.java)

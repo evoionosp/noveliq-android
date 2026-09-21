@@ -66,6 +66,15 @@ fun ConnectToServerCard(
                 fontWeight = FontWeight.SemiBold,
             )
 
+            // Same selected-fill language as the speed presets: a solid
+            // accent pill for the active protocol, muted text otherwise.
+            val protocolColors =
+                SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             SingleChoiceSegmentedButtonRow(
                 content = {
                     SegmentedButton(
@@ -73,12 +82,18 @@ fun ConnectToServerCard(
                         onClick = { onProtocolChange(https) },
                         selected = state.protocol.equals(https, true),
                         label = { Text(text = https.uppercase(LocalLocale.current.platformLocale)) },
+                        colors = protocolColors,
+                        // No check icon: the accent fill already marks selection.
+                        icon = {},
                     )
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(1, 2),
                         onClick = { onProtocolChange(http) },
                         selected = state.protocol.equals(http, true),
                         label = { Text(text = http.uppercase(LocalLocale.current.platformLocale)) },
+                        colors = protocolColors,
+                        // No check icon: the accent fill already marks selection.
+                        icon = {},
                     )
                 },
             )

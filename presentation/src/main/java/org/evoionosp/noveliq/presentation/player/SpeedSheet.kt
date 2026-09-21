@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -11,6 +12,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -59,9 +61,18 @@ fun SpeedSheet(
     onSpeedChange: (Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // Player roles, not app theme: the sheet inherits the Now Playing scoped
+    // theme through the dialog composition, so it follows the cover tint and
+    // the cover-theme setting exactly like the player itself.
+    val pc = LocalPlayerColors.current
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
+        containerColor = LocalPlayerCardColor.current,
+        contentColor = pc.textPrimary,
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(color = pc.textSecondary.copy(alpha = 0.4f))
+        },
     ) {
         Column(
             modifier =
@@ -74,12 +85,13 @@ fun SpeedSheet(
             Text(
                 text = stringResource(R.string.now_playing_speed_sheet_title),
                 style = MaterialTheme.typography.titleLarge,
+                color = pc.textPrimary,
             )
 
             Text(
                 text = "${"%.2f".format(speed)}x",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary,
+                color = pc.accent,
             )
 
             Slider(
@@ -88,11 +100,25 @@ fun SpeedSheet(
                 // the only detents, at the magnet stops.
                 onValueChange = { onSpeedChange(it.snapPlaybackSpeed()) },
                 valueRange = MIN_SPEED..MAX_SPEED,
+                colors =
+                    SliderDefaults.colors(
+                        thumbColor = pc.accent,
+                        activeTrackColor = pc.accent,
+                        inactiveTrackColor = pc.trackSubtle,
+                    ),
             )
 
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                val presetColors =
+                    SegmentedButtonDefaults.colors(
+                        activeContainerColor = pc.accent,
+                        activeContentColor = pc.onAccent,
+                        activeBorderColor = pc.accent,
+                        inactiveContentColor = pc.textSecondary,
+                        inactiveBorderColor = pc.trackSubtle,
+                    )
                 SPEED_PRESETS.forEachIndexed { index, preset ->
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index, SPEED_PRESETS.size),
@@ -100,6 +126,9 @@ fun SpeedSheet(
                         // Epsilon, not ==: a drag-quantized value can carry float dust.
                         selected = abs(speed - preset) < 0.001f,
                         label = { Text(text = preset.formatSpeedLabel()) },
+                        colors = presetColors,
+                        // No check icon: the accent fill already marks selection.
+                        icon = {},
                     )
                 }
             }

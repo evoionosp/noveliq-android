@@ -87,11 +87,26 @@ internal fun PlayerAction(
 /**
  * Corner of the play/pause container as a fraction of its size: round while
  * paused (play triangle showing), squarer while playing (pause bars
- * showing). 0.41 / 0.23 reproduce the original mini-bar 18dp / 10dp
- * corners at 44dp.
+ * showing). 0.5 is a perfect circle (22dp at 44dp); 0.23 keeps the
+ * original mini-bar ~10dp squircle while playing.
  */
-private const val PLAY_PAUSE_PAUSED_CORNER_FRACTION = 0.41f
+private const val PLAY_PAUSE_PAUSED_CORNER_FRACTION = 0.5f
 private const val PLAY_PAUSE_PLAYING_CORNER_FRACTION = 0.23f
+
+/**
+ * Play/pause container corner for [buttonSize]: half the size (a perfect
+ * circle) while paused, smaller while playing. Pure so unit tests can pin
+ * the circle invariant without driving the animation.
+ */
+internal fun playPauseCorner(
+    isPlaying: Boolean,
+    buttonSize: Dp,
+): Dp =
+    if (isPlaying) {
+        buttonSize * PLAY_PAUSE_PLAYING_CORNER_FRACTION
+    } else {
+        buttonSize * PLAY_PAUSE_PAUSED_CORNER_FRACTION
+    }
 
 /**
  * Animated play/pause container corner for [buttonSize]. Shared by every
@@ -104,12 +119,7 @@ internal fun animatePlayPauseCorner(
     buttonSize: Dp,
 ): State<Dp> =
     animateDpAsState(
-        targetValue =
-            if (isPlaying) {
-                buttonSize * PLAY_PAUSE_PLAYING_CORNER_FRACTION
-            } else {
-                buttonSize * PLAY_PAUSE_PAUSED_CORNER_FRACTION
-            },
+        targetValue = playPauseCorner(isPlaying, buttonSize),
         label = "PlayPauseCorner",
     )
 

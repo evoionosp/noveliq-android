@@ -5,11 +5,11 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.evoionosp.noveliq.data.server.remote.api.ServerCheckServiceFactory
 import org.evoionosp.noveliq.data.test.FakeConnectivityObserver
 import org.evoionosp.noveliq.data.test.MockWebServerRule
+import org.evoionosp.noveliq.data.test.testManagedClients
 import org.evoionosp.noveliq.domain.server.model.ServerCheckResult
 import org.evoionosp.noveliq.domain.server.model.ServerError
 import org.evoionosp.noveliq.domain.server.model.ServerStatus
@@ -26,7 +26,7 @@ class ServerRepositoryImplTest {
     private val testDispatcher = StandardTestDispatcher()
     private val repository =
         ServerRepositoryImpl(
-            serviceFactory = ServerCheckServiceFactory(OkHttpClient()),
+            serviceFactory = ServerCheckServiceFactory(testManagedClients()),
             connectivityObserver = FakeConnectivityObserver(),
             ioDispatcher = testDispatcher,
         )
@@ -159,7 +159,7 @@ class ServerRepositoryImplTest {
         runTest(testDispatcher) {
             val offlineRepository =
                 ServerRepositoryImpl(
-                    serviceFactory = ServerCheckServiceFactory(OkHttpClient()),
+                    serviceFactory = ServerCheckServiceFactory(testManagedClients()),
                     connectivityObserver = FakeConnectivityObserver(connected = false),
                     ioDispatcher = testDispatcher,
                 )

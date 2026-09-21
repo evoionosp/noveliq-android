@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -30,8 +31,8 @@ import androidx.compose.ui.unit.dp
 fun PlayingEqualizerIcon(
     isAnimating: Boolean,
     modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    val color = MaterialTheme.colorScheme.primary
     val transition = rememberInfiniteTransition(label = "equalizer")
     val barCount = 4
 

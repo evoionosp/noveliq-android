@@ -49,6 +49,8 @@ android {
 
 dependencies {
     implementation(project(":domain"))
+    // Stream through the shared connection-aware HTTP stack (headers, UA, TLS).
+    implementation(project(":data"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.hilt.android)
@@ -57,6 +59,8 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.datasource)
+    implementation(libs.androidx.media3.datasource.okhttp)
+    implementation(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.bundles.unitTest)

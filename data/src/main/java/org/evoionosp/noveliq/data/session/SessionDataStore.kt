@@ -12,10 +12,11 @@ import org.evoionosp.noveliq.domain.session.SessionStore
 /**
  * Persists the login session. Takes the backing [SharedPreferences] as a constructor
  * dependency so tests can supply a plain in-memory instance; production passes the
- * encrypted file built by [EncryptedSessionPreferences].
+ * app-private file built by [SessionPreferences]. The file holds tokens, so it is
+ * excluded from backup (see backup_rules.xml).
  */
 class SessionDataStore(
-    private val encryptedPreferences: SharedPreferences,
+    private val preferences: SharedPreferences,
 ) : SessionStore {
     private object Keys {
         const val ACCESS_TOKEN = "access_token"
@@ -38,7 +39,7 @@ class SessionDataStore(
             Keys.BASE_URL,
         )
 
-    private val sessionState by lazy { MutableStateFlow(readEncryptedSession()) }
+    private val sessionState by lazy { MutableStateFlow(readSession()) }
     private val lastServerUrlState by lazy { MutableStateFlow(readLastServerUrl()) }
 
     override val session: Flow<LoginSession?> = sessionState.asStateFlow()
@@ -57,7 +58,7 @@ class SessionDataStore(
                     ),
             )
 
-        encryptedPreferences.edit(commit = true) {
+        preferences.edit(commit = true) {
             putString(Keys.ACCESS_TOKEN, stored.accessToken)
             putString(Keys.USERNAME, stored.username)
             putString(Keys.BASE_URL, stored.baseUrl)
@@ -74,21 +75,21 @@ class SessionDataStore(
     override suspend fun clearSession() {
         // Remove the session keys individually rather than clearing the file, so the remembered
         // server URL survives a logout and can prefill the login form.
-        encryptedPreferences.edit(commit = true) {
+        preferences.edit(commit = true) {
             sessionKeys.forEach(::remove)
         }
         sessionState.value = null
     }
 
-    private fun readEncryptedSession(): LoginSession? {
-        val accessToken = encryptedPreferences.getString(Keys.ACCESS_TOKEN, null).orEmpty()
+    private fun readSession(): LoginSession? {
+        val accessToken = preferences.getString(Keys.ACCESS_TOKEN, null).orEmpty()
         val session =
             LoginSession(
                 accessToken = accessToken,
-                refreshToken = encryptedPreferences.getString(Keys.REFRESH_TOKEN, null),
-                userId = encryptedPreferences.getString(Keys.USER_ID, null),
-                username = encryptedPreferences.getString(Keys.USERNAME, null).orEmpty(),
-                baseUrl = encryptedPreferences.getString(Keys.BASE_URL, null).orEmpty(),
+                refreshToken = preferences.getString(Keys.REFRESH_TOKEN, null),
+                userId = preferences.getString(Keys.USER_ID, null),
+                username = preferences.getString(Keys.USERNAME, null).orEmpty(),
+                baseUrl = preferences.getString(Keys.BASE_URL, null).orEmpty(),
                 // Sessions persisted before expiry tracking existed have no stored value, so fall
                 // back to reading it off the token. That way an install that has been sitting on a
                 // long-dead token picks up proactive refresh without needing to log in again first.
@@ -102,13 +103,13 @@ class SessionDataStore(
     }
 
     private fun readLastServerUrl(): String? =
-        encryptedPreferences.getString(Keys.LAST_SERVER_URL, null)
+        preferences.getString(Keys.LAST_SERVER_URL, null)
             // Installs that signed in before the server URL was remembered separately still have
             // the session's base URL, so seed from that.
-            ?: encryptedPreferences.getString(Keys.BASE_URL, null)
+            ?: preferences.getString(Keys.BASE_URL, null)
 
     private fun readExpiry(): Long? =
-        encryptedPreferences
+        preferences
             .getLong(Keys.ACCESS_TOKEN_EXPIRES_AT, NO_EXPIRY)
             .takeIf { it != NO_EXPIRY }
 

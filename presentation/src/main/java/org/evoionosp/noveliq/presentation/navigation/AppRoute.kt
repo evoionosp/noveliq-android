@@ -12,6 +12,7 @@ internal enum class AppRoute(
     CatalogError("catalog_error"),
     Preferences("preferences"),
     Appearance("appearance"),
+    ServerConnection("server_connection"),
     BookDetails("book_details/{$BOOK_DETAILS_ARG_LIBRARY_ID}/{$BOOK_DETAILS_ARG_AUDIOBOOK_ID}"),
 }
 
